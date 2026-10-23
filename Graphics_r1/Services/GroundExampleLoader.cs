@@ -174,6 +174,10 @@ namespace PileDesign.Services
                 groundInput.GroundMassesData.Add(massInput);
             }
 
+            // 地下水位・応力計算用の面・土層の標高も GL 深さから決める。例題は GL 深さだけを持ち、標高は
+            // 地盤ウィンドウが同期させるのに任せていたので、ウィンドウを通さずに読むと標高が 0 (地表) のまま残った
+            groundInput.SyncAltitudesFromGLDepths();
+
             // 整合性確保: 各 mass 点の VS0 / Density が、その点が含まれる土層の Vs / Density と
             // 異なる場合は土層の値で上書きする (土層側を正と扱う)。
             // 層の glDepth は負値・降順 (浅→深) で並んでいることを前提とする。

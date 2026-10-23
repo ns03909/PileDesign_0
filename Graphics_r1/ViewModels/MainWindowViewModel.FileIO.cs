@@ -426,6 +426,37 @@ namespace PileDesign.ViewModels
             }
         }
 
+        /// <summary>
+        /// 読み込んだ入力の地盤の標高を GL からの深さに合わせ、直したものを「地盤No.n: 項目」の形で返す (無ければ空)。
+        /// 直した地盤を使う土層-杭セットは、分割を保ったまま地盤ばね・支持力を組み直す。
+        /// </summary>
+        internal static List<string> SyncGroundAltitudesOnLoad(InputModel? model)
+        {
+            var result = new List<string>();
+            if (model?.GroundsInput == null) return result;
+            var changedGrounds = new HashSet<GroundInput>(ReferenceEqualityComparer.Instance);
+            for (int i = 0; i < model.GroundsInput.Count; i++)
+            {
+                var ground = model.GroundsInput[i];
+                var fixes = ground?.SyncAltitudesFromGLDepths() ?? [];
+                if (fixes.Count == 0) continue;
+                changedGrounds.Add(ground!);
+                result.Add($"地盤No.{i + 1}: {string.Join("・", fixes)}");
+            }
+            if (changedGrounds.Count == 0) return result;
+            foreach (var sp in model.ElementDivision?.SoilPiles ?? [])
+            {
+                if (sp?.GroundInput == null || sp.ZDataItems == null || sp.PileBodyInput == null) continue;
+                // 杭の土層-杭セットは地盤の実体を共有している (読込で $ref が解かれる)。共有していなくても番号で引き直す
+                var ground = model.GroundAt(sp.GroundNo) ?? sp.GroundInput;
+                if (!changedGrounds.Contains(ground) && !changedGrounds.Contains(sp.GroundInput)) continue;
+                foreach (var z in sp.ZDataItems) if (z != null) z.GroundInput = ground;
+                sp.GroundInput = ground;
+                sp.UpdateProperties();
+            }
+            return result;
+        }
+
         private void ApplyPostLoadProtocol(Models.ProjectData? projectData, string? filePath, string successMessage)
         {
             // ObservableCollection 変換（idempotent なので既に ObservableCollection なら維持）
@@ -484,6 +515,18 @@ namespace PileDesign.ViewModels
                 // 控えも同じ形式で書かれているので同じ読み替えをする (現在の入力とだけ食い違わないように)
                 loadedSnapshot?.MigratePileZSemantics_v1_to_v2();
                 compat.Add(PileDesign.Services.CompatibilityKind.Converted, "杭配置の Z を「杭頭の高さ」から「接合節点の高さ」の意味に読み替えました (形式 v1 → v2)。");
+            }
+
+            // 地盤の標高を GL からの深さに合わせる (GroundInput.SyncAltitudesFromGLDepths)。食い違ったまま読むと、
+            // 杭の地盤ばね・支持力 (標高を読む) と地盤の計算 (GL 深さを読む) が別の地下水位・層で計算される。
+            // 解析したときの入力の控えは、その結果を解いたときのまま残す (結果と組の入力を書き換えない)
+            var groundAltitudeFixes = SyncGroundAltitudesOnLoad(CurrentInputModel);
+            if (groundAltitudeFixes.Count > 0)
+            {
+                compat.Add(PileDesign.Services.CompatibilityKind.Converted,
+                    "地盤の標高が GL からの深さと食い違っていたので、GL からの深さに合わせました (" + string.Join(" / ", groundAltitudeFixes)
+                    + ")。杭の地盤ばねと支持力が変わります。解析結果がある場合は、解析をやり直してください。");
+                Serilog.Log.Warning("[読込] 地盤の標高を GL からの深さに合わせました: {Fixes}", string.Join(" / ", groundAltitudeFixes));
             }
 
             // 単杭沈下の荷重-沈下曲線を土層-杭セットへ戻す。
@@ -631,6 +674,13 @@ namespace PileDesign.ViewModels
             // 番号を振り直したら、読み込んだ解析結果は別のケースの軸力で解いた恐れがある。再解析を促す
             if (renumbered.Count > 0 && CurrentModel != null)
                 changedSinceAnalysisOnLoad = true;
+            // 地盤の標高を直したら、読み込んだ結果は直す前の地盤で解いている。再解析を促す
+            if (groundAltitudeFixes.Count > 0)
+            {
+                if (CurrentModel != null) changedSinceAnalysisOnLoad = true;
+                foreach (var kind in EachSettlementAnalysis)
+                    if (HasSettlementResultOf(kind)) settlementStaleOnLoad |= kind;
+            }
             _undoManager.Clear();
             SaveUndoState();
 

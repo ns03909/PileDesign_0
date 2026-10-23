@@ -359,7 +359,9 @@ namespace PileDesign.Models.InputData
         public GroundMassDataInput()
         {
             GLDepth = -1.0;
-            //AltitudeDepth = 0.0;
+            // 標高は GL 深さ + 孔口Z (既定の地盤は孔口Z = 0)。以前は 0 のままで、地盤ウィンドウを開くまで
+            // 標高と GL 深さが食い違っていた (杭の側は標高を読む。GroundInput.SyncAltitudesFromGLDepths)
+            AltitudeDepth = -1.0;
             //Spacing = 1.0;
             //H = 0.0;
             IsEngineeringBedrock = false;

@@ -225,6 +225,52 @@ namespace PileDesign.Models.InputData
         internal double ToGLDepth(double z) => z - GroundTopAltitude;
 
         /// <summary>
+        /// 標高を GL 深さから求め直す (標高 = GL 深さ + 孔口Z)。食い違っていた項目の名前を返す (無ければ空)。
+        ///
+        /// <para>地下水位・応力計算用の面・土層の下端・土質点は、標高と GL 深さの両方を持つ。杭の土層-杭セット
+        /// (有効応力・層の対応) は<b>標高</b>を、地盤の計算 (σ'・FL など) は<b>GL 深さ</b>を読む。画面の入力は両方を
+        /// 同期させるが、そこを通らずに作った入力 (例題を JSON から直接読んだもの・同期の無い時期のファイル) では
+        /// 食い違うことがあり、杭のばねだけが別の地下水位で計算された (2026-10-23 の調査。テストが読む例題は
+        /// 地下水位の標高が地表 0 のまま、GL 深さは −3 m だった)。正は GL 深さ (孔口Z を変えたときの
+        /// <see cref="InputModel.ShiftGroundZByDelta"/> と同じ不変関係)。</para>
+        /// </summary>
+        internal List<string> SyncAltitudesFromGLDepths()
+        {
+            const double tol = 1e-9;
+            var fixes = new List<string>();
+            double top = GroundTopAltitude;
+            bool Differs(double altitude, double glDepth) => !(Math.Abs(altitude - (glDepth + top)) <= tol);
+
+            if (Differs(GroundWaterTableAltitude, GroundWaterGLDepth))
+            {
+                fixes.Add($"地下水位 (標高 {GroundWaterTableAltitude:F3} → {GroundWaterGLDepth + top:F3})");
+                GroundWaterTableAltitude = GroundWaterGLDepth + top;
+            }
+            if (Differs(StressAltitude, StressGLDepth))
+            {
+                fixes.Add($"応力計算用の面 (標高 {StressAltitude:F3} → {StressGLDepth + top:F3})");
+                StressAltitude = StressGLDepth + top;
+            }
+            int layers = 0;
+            foreach (var layer in GroundLayers ?? [])
+            {
+                if (layer == null || !Differs(layer.BottomAltitude, layer.BottomGLDepth)) continue;
+                layer.BottomAltitude = layer.BottomGLDepth + top;
+                layers++;
+            }
+            if (layers > 0) fixes.Add($"土層の下端 {layers} 層");
+            int masses = 0;
+            foreach (var mass in GroundMassesData ?? [])
+            {
+                if (mass == null || !Differs(mass.AltitudeDepth, mass.GLDepth)) continue;
+                mass.AltitudeDepth = mass.GLDepth + top;
+                masses++;
+            }
+            if (masses > 0) fixes.Add($"土質点 {masses} 点");
+            return fixes;
+        }
+
+        /// <summary>
         /// 各土質点の変位 (U_i) が表す位置の標高 [m]。土質点 i は層 i の上端、つまり地表から層厚 H を
         /// 積んだ位置 −(H0 + … + H_{i−1}) にある。質量・モード形の漸化式 (U0 = 地表) と同じ置き方で、
         /// 最後の土質点が基盤面 (U* = 0)。土質点の GLDepth / AltitudeDepth は N 値などの土質データの

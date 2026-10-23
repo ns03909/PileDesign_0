@@ -15,6 +15,7 @@ namespace TestProject1
     /// <item>杭体ウィンドウの支持力は、画面用の仮の土層-杭セットで求めていた。仮のセットは杭区間の境だけで区切り、
     /// 地層の境で区切らなかったので、区間の土層がその区間の下端の 1 層で決まった (例題10 で Rfu が解析の 10,074 kN に対し 29,158 kN)。</item>
     /// <item>杭体ウィンドウの「杭頭Z」は開くたびに 0 から始まり、杭配置の杭頭と結び付いていなかった (地盤を重ねた姿図で杭頭が地表にあるように描いた)。</item>
+    /// <item>地盤の標高と GL 深さが食い違うと、杭のばね (標高) と地盤の計算 (GL 深さ) が別の地下水位で計算された。</item>
     /// </list>
     /// </summary>
     [TestClass]
@@ -113,6 +114,61 @@ namespace TestProject1
             string xaml = TestSource.Read("Graphics_r1", "Views", "PileBodyWindow.xaml");
             StringAssert.Contains(xaml, "SelectedItem=\"{Binding SelectedPileHeadChoice}\"", "杭配置の組を選ぶ欄がありません");
             Assert.IsFalse(xaml.Contains("-0.00;"), "負の値だけ小数 2 桁で出す書式が残っています");
+        }
+
+        [TestMethod]
+        public void GroundAltitudes_FollowTheirGLDepths()
+        {
+            var g = new GroundInput { GroundTopAltitude = 1.5 };
+            g.GroundWaterGLDepth = -3.0;
+            g.StressGLDepth = -1.0;
+            g.GroundWaterTableAltitude = 0.0;   // 食い違い (GL−3 なら −1.5)
+            g.StressAltitude = 0.5;              // 食い違いなし
+            g.GroundLayers = [new GroundLayerInput { BottomGLDepth = -4.0, BottomAltitude = -4.0, LayerThickness = 4.0 }];
+            g.GroundMassesData = [new GroundMassDataInput { GLDepth = -2.0, AltitudeDepth = -0.5 }];
+
+            var fixes = g.SyncAltitudesFromGLDepths();
+            Assert.AreEqual(-1.5, g.GroundWaterTableAltitude, 1e-12);
+            Assert.AreEqual(0.5, g.StressAltitude, 1e-12);
+            Assert.AreEqual(-2.5, g.GroundLayers[0].BottomAltitude, 1e-12);
+            Assert.AreEqual(-0.5, g.GroundMassesData[0].AltitudeDepth, 1e-12);
+            Assert.AreEqual(2, fixes.Count, "直した項目: " + string.Join(" / ", fixes));
+            Assert.IsTrue(fixes.Any(f => f.StartsWith("地下水位")) && fixes.Any(f => f.StartsWith("土層の下端")));
+            Assert.AreEqual(0, g.SyncAltitudesFromGLDepths().Count, "合っているのに直したと言っています");
+        }
+
+        /// <summary>
+        /// ファイルを開いたときに地盤の標高を GL 深さへ合わせ、その地盤を使う土層-杭セットの地盤ばねを組み直す。
+        /// 結果があれば再解析を促す。
+        /// </summary>
+        [TestMethod]
+        public void LoadingAFile_AlignsTheGroundAndRebuildsTheSoilPileSets()
+        {
+            var (input, err) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
+            if (input == null) { Assert.Inconclusive("例題ファイルなし: " + err); return; }
+            // 読み込んだ地盤は地盤ウィンドウ (の VM) が見ていて、標高を変えると GL 深さも合わせてしまう。
+            // ファイルから読んだ直後と同じく、誰も見ていない地盤にする
+            input.GroundsInput[0] = input.GroundsInput[0].DeepCopy();
+            input.GroundsInput[0].SyncAltitudesFromGLDepths();   // 揃った地盤から始める (読み方に依らない)
+            input.GenerateSoilPiles();
+            var ground = input.GroundAt(1)!;
+            var expected = input.ElementDivision.SoilPiles[0].HorizontalSoilReactions.Select(r => r.PyFrontTop).ToArray();
+
+            ground.GroundWaterTableAltitude = ground.GroundTopAltitude;   // 地下水位を地表にずらす (GL 深さはそのまま)
+            input.ElementDivision.SoilPiles[0].UpdateProperties();
+            var shifted = input.ElementDivision.SoilPiles[0].HorizontalSoilReactions.Select(r => r.PyFrontTop).ToArray();
+            CollectionAssert.AreNotEqual(expected, shifted, "テストの前提: 地下水位を変えても py が変わりません");
+
+            var fixes = MainWindowViewModel.SyncGroundAltitudesOnLoad(input);
+            Assert.AreEqual(1, fixes.Count);
+            StringAssert.Contains(fixes[0], "地盤No.1");
+            CollectionAssert.AreEqual(expected, input.ElementDivision.SoilPiles[0].HorizontalSoilReactions.Select(r => r.PyFrontTop).ToArray(),
+                "土層-杭セットの地盤ばねを、直した地盤で組み直していません");
+
+            string load = TestSource.MethodBody(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.FileIO.cs"),
+                "private void ApplyPostLoadProtocol(");
+            StringAssert.Contains(load, "SyncGroundAltitudesOnLoad(CurrentInputModel)");
+            StringAssert.Contains(load, "if (CurrentModel != null) changedSinceAnalysisOnLoad = true;", "直したのに再解析を促していません");
         }
 
     }
