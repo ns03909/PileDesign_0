@@ -861,6 +861,26 @@
 
             <StackPanel Visibility="{Binding IsGroundLayerOverwrapped, 
                     Converter={StaticResource BooleanToVisibilityConverter}}">
+                <!-- 杭配置のうち、この杭体を使う杭の (地盤・杭頭Z)。選ぶと地盤No と杭頭Z に入り、姿図と支持力が解析と同じ土層-杭セットになる -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                    <TextBlock Text="杭配置" Width="50" VerticalAlignment="Center"/>
+                    <ComboBox ItemsSource="{Binding PileHeadChoices}" SelectedItem="{Binding SelectedPileHeadChoice}"
+                              DisplayMemberPath="Label" MinWidth="200"
+                              AutomationProperties.Name="杭配置の地盤と杭頭Z"
+                              ToolTip="この杭体を使う杭の、地盤と杭頭Z の組。選ぶと地盤No と杭頭Z に入ります（杭頭レベルが複数あるときは、ここで切り替えます）"/>
+                </StackPanel>
+                <TextBlock Text="この杭体を使う杭はまだありません。杭頭Z を入力してください。" Foreground="#666" FontSize="11" Margin="0,0,0,2">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PileHeadChoices.Count}" Value="0">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="地盤No" Width="50"/>
                     <ComboBox ItemsSource="{Binding InputModel.GroundsInputCountList}" SelectedItem="{Binding SelectedGroundNo}" Width="50">
@@ -874,13 +894,13 @@
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="地表Z" Width="50"/>
-                    <TextBlock Text="{Binding SelectedGroundInput.GroundTopAltitude, StringFormat='{}{0:+0.000;-0.00;+0.000}', UpdateSourceTrigger=LostFocus}" Width="50"/>
+                    <TextBlock Text="{Binding SelectedGroundInput.GroundTopAltitude, StringFormat='{}{0:+0.000;-0.000;+0.000}', UpdateSourceTrigger=LostFocus}" Width="50"/>
                     <TextBlock Text="m"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="杭頭Z" Width="50"/>
-                    <TextBox Text="{Binding PileTopAltitude, StringFormat='{}{0:+0.000;-0.00;+0.000}'}" Width="50"
+                    <TextBox Text="{Binding PileTopAltitude, StringFormat='{}{0:+0.000;-0.000;+0.000}'}" Width="50"
                              KeyDown="PileTopAltitude_KeyDown" 
                              PreviewKeyDown="TextBox_PreviewKeyDown"
                              PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">

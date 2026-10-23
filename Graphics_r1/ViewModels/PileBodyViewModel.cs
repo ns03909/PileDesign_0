@@ -96,8 +96,77 @@ namespace PileDesign.ViewModels
 
         partial void OnPileTopAltitudeChanged(double value)
         {
+            if (!_isApplyingPileHeadChoice) SyncPileHeadChoiceToCurrent();
             DrawShapes();
             UpdateTemporarySoilPile();
+        }
+
+        /// <summary>杭配置のうち、この杭体を使う杭の (地盤・杭頭Z) の組 1 つ。</summary>
+        public sealed record PileHeadChoice(int GroundNo, double PileHeadZ, int PileCount)
+        {
+            public string Label => $"地盤No.{GroundNo}・杭頭Z {PileHeadZ:+0.000;-0.000;+0.000} m（{PileCount} 本）";
+        }
+
+        /// <summary>
+        /// 杭配置のうち、選んでいる杭体を使う杭の (地盤・杭頭Z) の組 (2026-10-23)。地盤を重ねた姿図と支持力は、
+        /// 解析と同じ土層-杭セットになるよう、この組から選べる。以前は「杭頭Z」を手で打つしかなく、開くたびに 0 から始まったので、
+        /// 杭頭が地表より下にある杭でも地表に杭頭があるように描き、支持力もその高さで求めていた。杭頭レベルが複数あっても、
+        /// どのレベルを表しているのか分からなかった。
+        /// </summary>
+        [ObservableProperty]
+        private ObservableCollection<PileHeadChoice> _pileHeadChoices = [];
+
+        private PileHeadChoice? _selectedPileHeadChoice;
+        private bool _isApplyingPileHeadChoice;
+
+        /// <summary>選んだ組の地盤と杭頭Z を、姿図と支持力に当てる。</summary>
+        public PileHeadChoice? SelectedPileHeadChoice
+        {
+            get => _selectedPileHeadChoice;
+            set
+            {
+                if (!SetProperty(ref _selectedPileHeadChoice, value) || value == null) return;
+                _isApplyingPileHeadChoice = true;
+                try
+                {
+                    SelectedGroundNo = value.GroundNo;
+                    PileTopAltitude = value.PileHeadZ;
+                }
+                finally { _isApplyingPileHeadChoice = false; }
+                DrawShapes();
+                UpdateTemporarySoilPile();
+            }
+        }
+
+        /// <summary>
+        /// 選んでいる杭体を使う杭の組を作り直す。<paramref name="selectFirst"/> なら最初の組を当てる (杭体を選んだとき)。
+        /// 杭配置はこの画面の編集では変わらないので、杭体は開いたときの番号 (<see cref="PileBodyInput.NoAtEditStart"/>) で引く。
+        /// この画面で足した杭体 (まだ杭配置に使われていない) は組が無く、杭頭Z を手で打つ。
+        /// </summary>
+        internal void RefreshPileHeadChoices(bool selectFirst)
+        {
+            int originalNo = PileBodies != null && PileBodies.Count > 0 ? CurrentBody?.NoAtEditStart ?? 0 : 0;
+            var piles = originalNo > 0 ? InputModel?.PileLayoutItems?.Where(p => p != null && p.PileBodyNo == originalNo) : null;
+            var choices = (piles ?? [])
+                .GroupBy(p => (p.GroundNo, Key: (long)Math.Round(p.PileHeadZ / NumericalConstants.COORDINATE_TOLERANCE)))
+                .Select(g => new PileHeadChoice(g.Key.GroundNo, g.First().PileHeadZ, g.Count()))
+                .OrderBy(c => c.GroundNo).ThenByDescending(c => c.PileHeadZ)
+                .ToList();
+            PileHeadChoices = new ObservableCollection<PileHeadChoice>(choices);
+            _selectedPileHeadChoice = null;
+            OnPropertyChanged(nameof(SelectedPileHeadChoice));
+            if (selectFirst && choices.Count > 0) SelectedPileHeadChoice = choices[0];
+            else SyncPileHeadChoiceToCurrent();
+        }
+
+        /// <summary>今の地盤No・杭頭Z に合う組を選んだ状態にする (当て直しはしない)。合わなければ選択なし。</summary>
+        private void SyncPileHeadChoiceToCurrent()
+        {
+            var match = PileHeadChoices?.FirstOrDefault(c => c.GroundNo == SelectedGroundNo
+                && Math.Abs(c.PileHeadZ - PileTopAltitude) <= NumericalConstants.COORDINATE_TOLERANCE);
+            if (ReferenceEquals(match, _selectedPileHeadChoice)) return;
+            _selectedPileHeadChoice = match;
+            OnPropertyChanged(nameof(SelectedPileHeadChoice));
         }
 
         // 地盤番号 — setter は値変化の有無に関わらず常に副作用を走らせる既存仕様のため
@@ -110,6 +179,7 @@ namespace PileDesign.ViewModels
             {
                 SetProperty(ref _selectedGroundNo, value);
                 SetGroundInput();
+                if (!_isApplyingPileHeadChoice) SyncPileHeadChoiceToCurrent();
                 UpdateTemporarySoilPile();
             }
         }
@@ -188,6 +258,7 @@ namespace PileDesign.ViewModels
 
                         PileBodyNo = PileBodies.Count;
                         PileBody = PileBodies.Last();
+                        RefreshPileHeadChoices(selectFirst: true);
                     }
                     else
                     {
@@ -198,6 +269,7 @@ namespace PileDesign.ViewModels
                             PileBody = PileBodies[idx];
                             // 杭体タイプに応じて杭頭タイプオプションを再設定
                             SyncPileTopTypeOption();
+                            RefreshPileHeadChoices(selectFirst: true);
                         }
                     }
                     DrawShapes();
@@ -467,52 +539,33 @@ namespace PileDesign.ViewModels
                 return; // または適切なエラー処理
 
             var pileBodyCopy = PileBody.DeepCopy();
-            var groundCopy = SelectedGroundInput.DeepCopy();
-
-            if (pileBodyCopy == null || groundCopy == null)
+            if (pileBodyCopy == null)
                 return; // または適切なエラー処理
-            // ZDataItemsの生成
-            var zDataItems = new ObservableCollection<PileZDataItem>();
-            double z = PileTopAltitude;
-            zDataItems.Add(new PileZDataItem
-            {
-                Z = z,
-                GroundInput = SelectedGroundInput
-            });
-            foreach (var seg in pileBodyCopy.PileBodySegments)
-            {
-                z -= seg.SegmentLength;
-                zDataItems.Add(new PileZDataItem
-                {
-                    Z = z,
-                    GroundInput = SelectedGroundInput
-                });
-            }
 
-            int temporalyPileBodyNo = 1;
-
-            //TemporarySoilPile = new SoilPile(
-            //    SelectedGroundNo,
-            //    InputModel.GroundsInput[SelectedGroundNo - 1],
-            //    temporalyPileBodyNo,
-            //    pileBodyCopy,
-            //    pileTopAltitude: PileTopAltitude,
-            //    zDataItems: zDataItems
-            //);
             // ガード: SelectedGroundNo が範囲外でも例外を起こさない
             int sgIdx = SelectedGroundNo - 1;
             if (InputModel?.GroundsInput == null || InputModel.GroundsInput.Count == 0)
                 return;
             if (sgIdx < 0) sgIdx = 0;
             if (sgIdx >= InputModel.GroundsInput.Count) sgIdx = InputModel.GroundsInput.Count - 1;
+            var ground = InputModel.GroundsInput[sgIdx];
 
+            // 節点は解析の土層-杭セットと同じ組み立て (杭区間・杭頭部・地層の境) で作る (InputModel.SoilPileNodeAltitudes)。
+            // 以前は杭区間の境だけで区切っていたので、区間の土層がその区間の下端の 1 層で決まり、支持力が解析と違った
+            pileBodyCopy.PileBodySegmentsUpdate();
+            var zDataItems = new ObservableCollection<PileZDataItem>(
+                InputModel.SoilPileNodeAltitudes(pileBodyCopy, ground.GroundLayers, PileTopAltitude)
+                    .Select(z => new PileZDataItem { Z = z, GroundInput = ground }));
+            if (zDataItems.Count == 0) return;
+
+            int temporalyPileBodyNo = 1;
             TemporarySoilPile = new SoilPile()
             {
                 GroundNo = sgIdx + 1,
-                GroundInput = InputModel.GroundsInput[sgIdx],
+                GroundInput = ground,
                 PileBodyNo = temporalyPileBodyNo,
                 PileBodyInput = pileBodyCopy,
-                Z = zDataItems[0].Z,
+                Z = PileTopAltitude,
                 ZDataItems = zDataItems
             };
 

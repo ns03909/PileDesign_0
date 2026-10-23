@@ -1609,53 +1609,8 @@ namespace PileDesign.Models.InputData
                     if (!usedCombinations.Add((groundNo, pileBodyNo, zKey)))
                         continue; // 既に処理済みの組合せ
 
-                    // Z座標リストをList<double>で構築（ObservableCollectionより高速）
-                    var zs = new List<double> { pileTopAltitude };
-                    foreach (PileBodySegment pileBodySegment in pileBodySegments)
-                        zs.Add(pileTopAltitude - pileBodySegment.SegmentDepth);
-
                     // 杭先端は杭区間境界の最小値（0.5D点追加前に確定）
-                    double pileBottomAltitude = zs.Min();
-
-                    // 場所打ち鋼管コンクリート杭の場合、杭頭から0.5Dの位置に分割点を追加
-                    // （杭頭部と杭中間部で異なるM-φ関係を適用するため）
-                    if (PileBodyAt(pileBodyNo)!.PileBodyType == PileTypeNames.InsituSteelPipeConcrete)
-                    {
-                        // 杭頭区間（鋼管コンクリート部）の杭径を取得
-                        var topSection = pileBodySegments
-                            .Select(s => s.PileSection)
-                            .FirstOrDefault(s => s?.PileSectionType == PileTypeNames.SteelPipeConcreteSection);
-                        double pileDia_m = (topSection?.PileDiameter ?? pileBodySegments[0].PileSection?.PileDiameter ?? 0) / 1000.0;
-                        if (pileDia_m > 0)
-                        {
-                            double zHalfD = pileTopAltitude - 0.5 * pileDia_m;
-                            // 杭底より上、かつ杭頭より下の場合のみ追加
-                            if (zHalfD > pileBottomAltitude + NumericalConstants.COORDINATE_TOLERANCE
-                                && zHalfD < pileTopAltitude - NumericalConstants.COORDINATE_TOLERANCE)
-                            {
-                                zs.Add(zHalfD);
-                            }
-                        }
-                    }
-
-                    // 鋼管杭 + 鉄筋定着工法 の場合、杭頭から D (杭径) の位置に分割点を追加
-                    // (杭頭部=コンクリート充填鋼管部 ≒ 杭径分の長さ、それ以下=鋼管部 として M-φ 切替)
-                    if (PileBodyAt(pileBodyNo)!.PileBodyType == PileTypeNames.SteelPipe)
-                    {
-                        var topSection = pileBodySegments
-                            .Select(s => s.PileSection)
-                            .FirstOrDefault(s => s?.PileSectionType == PileTypeNames.CftSection);
-                        double pileDia_m = (topSection?.PileDiameter ?? pileBodySegments[0].PileSection?.PileDiameter ?? 0) / 1000.0;
-                        if (pileDia_m > 0)
-                        {
-                            double zD = pileTopAltitude - pileDia_m;
-                            if (zD > pileBottomAltitude + NumericalConstants.COORDINATE_TOLERANCE
-                                && zD < pileTopAltitude - NumericalConstants.COORDINATE_TOLERANCE)
-                            {
-                                zs.Add(zD);
-                            }
-                        }
-                    }
+                    double pileBottomAltitude = SoilPileBottomAltitude(pileBodySegments, pileTopAltitude);
 
                     // 鋼管杭の座屈長 = この杭が通る液状化区間の長さ。
                     // レベル1・レベル2 で液状化する範囲が違うので、長い方 (=厳しい方) を採る。
@@ -1672,31 +1627,14 @@ namespace PileDesign.Models.InputData
                             Math.Max(bucklingLengthByPileBody.GetValueOrDefault(pileBodyNo), lk);
                     }
 
-                    int glAdded = 0;
-                    foreach (GroundLayerInput groundLayerDataItem in groundLayerDataItems)
-                    {
-                        if (pileTopAltitude > groundLayerDataItem.BottomAltitude && groundLayerDataItem.BottomAltitude > pileBottomAltitude)
-                        {
-                            zs.Add(groundLayerDataItem.BottomAltitude);
-                            glAdded++;
-                        }
-                    }
+                    // 節点の標高 (杭区間の境・杭頭部の境・地層境界)。杭体ウィンドウの仮の土層-杭セットも同じ組み立てを通す
+                    var sortedZs = SoilPileNodeAltitudes(PileBodyAt(pileBodyNo)!, groundLayerDataItems, pileTopAltitude);
                     Log.Debug(
                         "[GenerateSoilPiles] PileBody={PileBodyNo}, Ground={GroundNo}, " +
                         "top={Top:F2}, btm={Btm:F2}, " +
-                        "segments={SegCount}, groundLayers={GlCount}, " +
-                        "glBoundariesAdded={GlAdded}, totalNodes={NodeCount}",
+                        "segments={SegCount}, groundLayers={GlCount}, totalNodes={NodeCount}",
                         pileBodyNo, groundNo, pileTopAltitude, pileBottomAltitude,
-                        pileBodySegments.Count, groundLayerDataItems.Count, glAdded, zs.Count);
-
-                    // トレランス付き重複除去（杭区間境界と地層境界が微小差で重複するケースを防止）
-                    zs.Sort((a, b) => b.CompareTo(a)); // 降順ソート
-                    var sortedZs = new List<double>(zs.Count);
-                    foreach (var z in zs)
-                    {
-                        if (sortedZs.Count == 0 || Math.Abs(sortedZs[^1] - z) > NumericalConstants.COORDINATE_TOLERANCE)
-                            sortedZs.Add(z);
-                    }
+                        pileBodySegments.Count, groundLayerDataItems.Count, sortedZs.Count);
                     var pileZDataItems = new ObservableCollection<PileZDataItem>();
                     foreach (double sortedZ in sortedZs)
                     {
@@ -1786,6 +1724,97 @@ namespace PileDesign.Models.InputData
 
             // 一括通知は RegenerateSoilPilesAndNotify 側で実施
             // NotifySoilPileChangedForAll();
+        }
+
+        /// <summary>
+        /// 杭先端の標高 (杭頭と杭区間の下端のうち最も低いもの)。
+        /// </summary>
+        internal static double SoilPileBottomAltitude(IEnumerable<PileBodySegment> pileBodySegments, double pileTopAltitude)
+        {
+            double bottom = pileTopAltitude;
+            foreach (var segment in pileBodySegments) bottom = Math.Min(bottom, pileTopAltitude - segment.SegmentDepth);
+            return bottom;
+        }
+
+        /// <summary>
+        /// 土層-杭セットの節点の標高を、杭頭から下へ並べて返す (近すぎる点は 1 つにまとめる)。
+        /// 杭区間の境・杭頭部の境 (場所打ち鋼管コンクリート杭は 0.5D、鋼管杭は D)・杭の範囲にある地層の境で区切る。
+        ///
+        /// <para>解析 (<see cref="GenerateSoilPiles"/>) と杭体ウィンドウの仮の土層-杭セットが<b>同じ組み立て</b>を通るための
+        /// 唯一の実装。以前は杭体ウィンドウが写しを持っていて、地層の境で区切らなかった。区間の土層はその区間の下端の層で
+        /// 決まるので、区間が 1 つの杭体では杭全体を最下層の土として周面摩擦を数え、ウィンドウの支持力が解析と大きく
+        /// 違っていた (例題10 で Rfu 10,074 kN に対し 29,158 kN。2026-10-23)。</para>
+        /// <para>杭体の区間の深さ (SegmentDepth) は呼ぶ側で求めておくこと (<see cref="PileBodyInput.PileBodySegmentsUpdate"/>)。</para>
+        /// </summary>
+        internal static List<double> SoilPileNodeAltitudes(
+            PileBodyInput pileBody, IEnumerable<GroundLayerInput>? groundLayerDataItems, double pileTopAltitude)
+        {
+            // Z座標リストをList<double>で構築（ObservableCollectionより高速）
+            var zs = new List<double> { pileTopAltitude };
+            foreach (PileBodySegment pileBodySegment in pileBody.PileBodySegments)
+                zs.Add(pileTopAltitude - pileBodySegment.SegmentDepth);
+
+            // 杭先端は杭区間境界の最小値（0.5D点追加前に確定）
+            double pileBottomAltitude = zs.Min();
+            var pileBodySegments = pileBody.PileBodySegments;
+
+            // 場所打ち鋼管コンクリート杭の場合、杭頭から0.5Dの位置に分割点を追加
+            // （杭頭部と杭中間部で異なるM-φ関係を適用するため）
+            if (pileBody.PileBodyType == PileTypeNames.InsituSteelPipeConcrete)
+            {
+                // 杭頭区間（鋼管コンクリート部）の杭径を取得
+                var topSection = pileBodySegments
+                    .Select(s => s.PileSection)
+                    .FirstOrDefault(s => s?.PileSectionType == PileTypeNames.SteelPipeConcreteSection);
+                double pileDia_m = (topSection?.PileDiameter ?? pileBodySegments[0].PileSection?.PileDiameter ?? 0) / 1000.0;
+                if (pileDia_m > 0)
+                {
+                    double zHalfD = pileTopAltitude - 0.5 * pileDia_m;
+                    // 杭底より上、かつ杭頭より下の場合のみ追加
+                    if (zHalfD > pileBottomAltitude + NumericalConstants.COORDINATE_TOLERANCE
+                        && zHalfD < pileTopAltitude - NumericalConstants.COORDINATE_TOLERANCE)
+                    {
+                        zs.Add(zHalfD);
+                    }
+                }
+            }
+
+            // 鋼管杭 + 鉄筋定着工法 の場合、杭頭から D (杭径) の位置に分割点を追加
+            // (杭頭部=コンクリート充填鋼管部 ≒ 杭径分の長さ、それ以下=鋼管部 として M-φ 切替)
+            if (pileBody.PileBodyType == PileTypeNames.SteelPipe)
+            {
+                var topSection = pileBodySegments
+                    .Select(s => s.PileSection)
+                    .FirstOrDefault(s => s?.PileSectionType == PileTypeNames.CftSection);
+                double pileDia_m = (topSection?.PileDiameter ?? pileBodySegments[0].PileSection?.PileDiameter ?? 0) / 1000.0;
+                if (pileDia_m > 0)
+                {
+                    double zD = pileTopAltitude - pileDia_m;
+                    if (zD > pileBottomAltitude + NumericalConstants.COORDINATE_TOLERANCE
+                        && zD < pileTopAltitude - NumericalConstants.COORDINATE_TOLERANCE)
+                    {
+                        zs.Add(zD);
+                    }
+                }
+            }
+
+            foreach (GroundLayerInput groundLayerDataItem in groundLayerDataItems ?? [])
+            {
+                if (pileTopAltitude > groundLayerDataItem.BottomAltitude && groundLayerDataItem.BottomAltitude > pileBottomAltitude)
+                {
+                    zs.Add(groundLayerDataItem.BottomAltitude);
+                }
+            }
+
+            // トレランス付き重複除去（杭区間境界と地層境界が微小差で重複するケースを防止）
+            zs.Sort((a, b) => b.CompareTo(a)); // 降順ソート
+            var sortedZs = new List<double>(zs.Count);
+            foreach (var z in zs)
+            {
+                if (sortedZs.Count == 0 || Math.Abs(sortedZs[^1] - z) > NumericalConstants.COORDINATE_TOLERANCE)
+                    sortedZs.Add(z);
+            }
+            return sortedZs;
         }
 
         /// <summary>
