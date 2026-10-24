@@ -158,6 +158,50 @@ namespace TestProject1
             StringAssert.Contains(TestSource.Read("Graphics_r1", "Views", "GroundWindow.xaml"), "GroundInput.IsStressFromPileFoundationBottom");
         }
 
+        /// <summary>
+        /// 粘性土の py の深さ z は、有効応力を数える面と同じ面から測る (2026-10-24、利用者の判断)。
+        /// 以前は有効応力を基礎底や地中応力計算用Z から数えても、粘性土だけ地表から測っていたので、
+        /// 深い段の杭頭でも 9cu (深い側の式) になり、砂と粘土で「地表」の考え方が食い違った。
+        /// </summary>
+        [TestMethod]
+        public void ClayDepth_IsMeasuredFromTheSamePlaneAsTheEffectiveStress()
+        {
+            var (input, err) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
+            if (input == null) { Assert.Inconclusive("例題ファイルなし: " + err); return; }
+            input.GroundsInput[0] = input.GroundsInput[0].DeepCopy();   // 地盤ウィンドウの VM が見ていない実体にする
+            var ground = input.GroundAt(1)!;
+            const double cu = 100.0;
+            foreach (var layer in ground.GroundLayers) { layer.GranularityClass = "粘性土"; layer.Cohesive = cu; }
+            TwoPileHeadLevels(input);
+
+            HorizontalSoilReactionItem DeepHeadElement()
+            {
+                var sp = input.ElementDivision.SoilPiles.Single(s => s.Z < -3);
+                int i = sp.ZDataItems.Select(d => d.Z).ToList().FindIndex(v => Math.Abs(v - (-3.5)) < 1e-6);
+                Assert.IsTrue(i >= 0, "(前提) 深い段の杭頭 (-3.5) の節点がありません");
+                return sp.HorizontalSoilReactions[i];
+            }
+
+            // 地中応力計算用Z = 地表のとき: 地表から測る (今までどおり)
+            Assert.AreEqual(ground.GroundTopAltitude, ground.StressAltitude, 1e-9, "(前提) 例題の地中応力計算用Z は地表");
+            var off = DeepHeadElement();
+            double fromSurface = HorizontalSoilReactionItem.GetPy("粘性土", true, off.B, -3.5, 0.0, 0.0, cu, 0.0, ground.GroundTopAltitude);
+            Assert.AreEqual(fromSurface, off.PyFrontTop, 1e-9, "地中応力計算用Z が地表なら、地表から測る");
+            Assert.IsTrue(off.PyFrontTop > 2 * cu + 1, "(前提) 地表から測ると杭頭でも 2cu より大きい");
+
+            // 杭ごとの基礎底から数える: 深い段の杭頭で深さ 0 → 2cu
+            ground.IsStressFromPileFoundationBottom = true;
+            input.GenerateSoilPiles();
+            Assert.AreEqual(2 * cu, DeepHeadElement().PyFrontTop, 1e-9, "基礎底から数えるのに、粘性土の深さを地表から測っています");
+
+            // 選ばないときも、地中応力計算用Z から測る
+            ground.IsStressFromPileFoundationBottom = false;
+            ground.StressAltitude = -3.5;
+            ground.StressGLDepth = ground.StressAltitude - ground.GroundTopAltitude;
+            input.GenerateSoilPiles();
+            Assert.AreEqual(2 * cu, DeepHeadElement().PyFrontTop, 1e-9, "地中応力計算用Z から有効応力を数えるのに、粘性土の深さを地表から測っています");
+        }
+
         [TestMethod]
         public void GroundAltitudes_FollowTheirGLDepths()
         {

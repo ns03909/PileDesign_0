@@ -1204,7 +1204,7 @@ namespace PileDesign.Models.InputData
         ///
         /// <para>杭径は杭体の区間から (合わなければ最近接区間)、土質は <paramref name="matchedLayers"/> から
         /// (合わなければ入力地盤層、それも合わなければ最近接の入力地盤層)。有効応力・内部摩擦角は
-        /// 地盤入力から求め、粘性土の py の深さは地表の標高から測る。</para>
+        /// 地盤入力から求め、粘性土の py の深さは有効応力を数える面 (<see cref="GroundInput.ReactionSurfaceLevelForPile"/>) から測る。</para>
         /// </summary>
         /// <param name="matchedLayers">最初に探す土層 (解析側は杭に対応付けた土層、表示側は入力地盤層)。</param>
         /// <param name="zPileTop">杭頭の標高 [m]。杭体の区間は杭頭基準の深さで定義されている。</param>
@@ -1302,7 +1302,7 @@ namespace PileDesign.Models.InputData
             }
 
             // フォールバック: マッチしない場合は入力地盤層から直接検索
-            if (!groundFound && groundInput?.GroundLayers != null)
+            if (!groundFound && groundInput.GroundLayers != null)
             {
                 foreach (GroundLayerInput gl in groundInput.GroundLayers)
                 {
@@ -1319,7 +1319,7 @@ namespace PileDesign.Models.InputData
             }
 
             // 最終フォールバック: 要素の中点に最も近い入力地盤層を使用
-            if (!groundFound && groundInput?.GroundLayers != null && groundInput.GroundLayers.Count > 0)
+            if (!groundFound && groundInput.GroundLayers != null && groundInput.GroundLayers.Count > 0)
             {
                 double midZ = (zTop + zBtm) * 0.5;
                 GroundLayerInput? closest = null;
@@ -1347,7 +1347,8 @@ namespace PileDesign.Models.InputData
                 name, soilType, gamma, b, e0,
                 zTop, zBtm,
                 xi, rOnB, nValue, phi, cohesive, stressTop, stressBtm,
-                groundTopAltitude: groundInput?.GroundTopAltitude ?? 0.0);
+                // 粘性土の py の深さは、有効応力を数える面と同じ面から測る (地表より上にはしない)
+                groundTopAltitude: groundInput.ReactionSurfaceLevelForPile(zPileTop));
 
             // 土層ごとの kh0 手入力オーバーライドがあれば適用（自動計算値を上書き）
             double? overridden = kh0Override?.Invoke(name);

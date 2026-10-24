@@ -27,8 +27,10 @@ namespace PileDesign.Models.InputData
         public double E0 { get; set; }
 
         /// <summary>
-        /// 地表面の標高 [m]。粘性土の py は「深さ z/B」で式が切り替わるが、ZTop / ZBtm は標高なので、
-        /// 深さは (地表 − 標高) で求める。2026-09-12 まで標高の絶対値を深さとして使っていて、
+        /// 粘性土の py の深さを測り始める面の標高 [m] (名前は保存ファイルとの互換のため旧名のまま)。
+        /// 粘性土の py は「深さ z/B」で式が切り替わるが、ZTop / ZBtm は標高なので、深さは (この面 − 標高) で求める。
+        /// 杭の組み立てでは有効応力を数える面と同じ面 (<see cref="GroundInput.ReactionSurfaceLevelForPile"/>) を入れる
+        /// (2026-10-24 までは常に地表面)。2026-09-12 まで標高の絶対値を深さとして使っていて、
         /// 地表が Z=0 でない地盤 (設計例集3.1: +2.40 m) で地表付近の粘性土の py がずれていた。
         /// </summary>
         public double GroundTopAltitude { get; set; }
@@ -349,7 +351,8 @@ namespace PileDesign.Models.InputData
         /// <param name="z">評価位置の<b>標高</b> [m]。粘性土の式は深さ z/B で切り替わるので、深さは
         /// <paramref name="groundTopAltitude"/> − z で求める (地表が Z=0 でない地盤で標高を深さ扱いしていた
         /// のを 2026-09-12 に直した。SoilReactionContinuityTests)。</param>
-        /// <param name="groundTopAltitude">地表面の標高 [m]。省略時 0 (= 標高がそのまま深さの符号違い)。</param>
+        /// <param name="groundTopAltitude">深さを測り始める面の標高 [m]。杭では有効応力を数える面
+        /// (<see cref="GroundInput.ReactionSurfaceLevelForPile"/>)。省略時 0 (= 標高がそのまま深さの符号違い)。</param>
         public static double GetPy(string? soilType, bool isFront, double b, double z, double rOnB, double phi, double cu, double sigmaZPrime,
             double groundTopAltitude = 0.0)
         {
@@ -366,7 +369,7 @@ namespace PileDesign.Models.InputData
             {
                 (double mu, double lambda) = GetMuLambda(isFront, rOnB);
 
-                // 地表からの深さ。地表より上 (根入れ部など) は 0 として扱う
+                // 深さを測り始める面 (有効応力を数える面) からの深さ。それより上 (根入れ部など) は 0 として扱う
                 double depth = Math.Max(0.0, groundTopAltitude - z);
                 if (depth / b <= 2.5)
                 {

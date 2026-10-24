@@ -78,6 +78,19 @@ namespace PileDesign.Models.InputData
         internal double StressTopLevelForPile(double pileHeadZ)
             => IsStressFromPileFoundationBottom ? Math.Min(pileHeadZ, GroundTopAltitude) : StressAltitude;
 
+        /// <summary>
+        /// 杭頭が <paramref name="pileHeadZ"/> の杭で、粘性土の塑性水平地盤反力 py の深さ z を測り始める面。
+        /// 有効応力を数える面 (<see cref="StressTopLevelForPile"/>) と同じ面で、地表より上にはしない
+        /// (有効応力も地表より上の土被りは数えないので、実際に数え始める面はこの高さ)。
+        ///
+        /// <para>2026-10-24 までは常に地表から測っていた。有効応力を基礎底や地中応力計算用Z から数えても、
+        /// 粘性土だけは地表から測るので、砂と粘土で「地表」の考え方が食い違っていた。py の浅い側の式
+        /// 2(1 + μz/B)cu は、地表近くの土がくさび状に押し出されて壊れることを表すので、z は掘削した面
+        /// (土被りを数え始める面) から測るのが筋 (利用者の判断で、有効応力と揃えた)。</para>
+        /// </summary>
+        internal double ReactionSurfaceLevelForPile(double pileHeadZ)
+            => Math.Min(StressTopLevelForPile(pileHeadZ), GroundTopAltitude);
+
         // 応力Z (有限値必須)
         private double _stressAltitude;
         public double StressAltitude
