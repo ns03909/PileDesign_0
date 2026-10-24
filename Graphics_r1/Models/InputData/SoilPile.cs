@@ -1233,16 +1233,21 @@ namespace PileDesign.Models.InputData
             var segments = pileBody?.PileBodySegments;
             if (segments != null)
             {
-                foreach (PileBodySegment pileBodySegment in segments)
+                // 区間全体を含む杭区間を先に探し、無い場合だけ許容誤差で探す (土層の検索と同じ。下の説明を参照)
+                foreach (double tolerance in new[] { 0.0, epsilon })
                 {
-                    double segmentTop = -pileBodySegment.SegmentDepth + pileBodySegment.SegmentLength;
-                    double segmentBtm = -pileBodySegment.SegmentDepth;
-
-                    if (segmentBtm - epsilon <= lower && upper <= segmentTop + epsilon)
+                    foreach (PileBodySegment pileBodySegment in segments)
                     {
-                        b = pileBodySegment.PileSection?.PileDiameter / 1000.0 ?? 0;
-                        break;
+                        double segmentTop = -pileBodySegment.SegmentDepth + pileBodySegment.SegmentLength;
+                        double segmentBtm = -pileBodySegment.SegmentDepth;
+
+                        if (segmentBtm - tolerance <= lower && upper <= segmentTop + tolerance)
+                        {
+                            b = pileBodySegment.PileSection?.PileDiameter / 1000.0 ?? 0;
+                            break;
+                        }
                     }
+                    if (Math.Abs(b) >= epsilon) break;
                 }
 
                 // フォールバック: マッチしない場合は最も近い区間の杭径を使用
@@ -1287,35 +1292,33 @@ namespace PileDesign.Models.InputData
                 groundFound = true;
             }
 
-            if (matchedLayers != null)
+            bool TryTakeLayer(IEnumerable<GroundLayerInput>? layers, double tolerance, bool fromInput)
             {
-                foreach (GroundLayerInput groundLayer in matchedLayers)
+                foreach (var layer in layers ?? [])
                 {
-                    double top = groundLayer.LayerThickness + groundLayer.BottomAltitude;
-                    double bottom = groundLayer.BottomAltitude;
-                    if (bottom - epsilon <= zBtm && zTop <= top + epsilon)
-                    {
-                        Take(groundLayer);
-                        break;
-                    }
-                }
-            }
-
-            // フォールバック: マッチしない場合は入力地盤層から直接検索
-            if (!groundFound && groundInput.GroundLayers != null)
-            {
-                foreach (GroundLayerInput gl in groundInput.GroundLayers)
-                {
-                    double top = gl.LayerThickness + gl.BottomAltitude;
-                    double bottom = gl.BottomAltitude;
-                    if (bottom - epsilon <= zBtm && zTop <= top + epsilon)
-                    {
-                        Take(gl);
+                    double top = layer.LayerThickness + layer.BottomAltitude;
+                    double bottom = layer.BottomAltitude;
+                    if (!(bottom - tolerance <= zBtm && zTop <= top + tolerance)) continue;
+                    Take(layer);
+                    if (fromInput)
                         Serilog.Log.Debug(
                             $"[BuildReaction] WARNING: 要素{elementIndex}(Z={zTop:F3}~{zBtm:F3})の土層マッチなし→入力地盤層'{name}'(top={top:F3},btm={bottom:F3})を使用");
-                        break;
-                    }
+                    return true;
                 }
+                return false;
+            }
+
+            // 区間全体を含む層を先に探し (杭に対応付けた土層 → 入力地盤層)、無い場合だけ許容誤差で探す。
+            //
+            // 以前は許容誤差 (1e-5 m) 付きの判定だけで、先に見つかった層を採っていた。地層境界と杭区間の境が
+            // 許容誤差より小さくずれると (例: 0.000005 m)、境界のすぐ下にできる微小な区間が上の層にも
+            // 「許容誤差の内で含まれる」ので、並び順で先に来る上の層の地盤定数を当てていた (2026-10-24 の
+            // 外部レビュー。HorizontalLayerBoundaryTests)。許容誤差は丸めで区間がわずかにはみ出す場合の救済に限る。
+            foreach (double tolerance in new[] { 0.0, epsilon })
+            {
+                if (TryTakeLayer(matchedLayers, tolerance, fromInput: false)
+                    || TryTakeLayer(groundInput.GroundLayers, tolerance, fromInput: true))
+                    break;
             }
 
             // 最終フォールバック: 要素の中点に最も近い入力地盤層を使用
