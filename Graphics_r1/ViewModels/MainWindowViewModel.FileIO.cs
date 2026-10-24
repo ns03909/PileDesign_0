@@ -469,21 +469,81 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
+        /// 読み込んだ入力の土層-杭セットの派生値 (先端支持力度・周面摩擦力・水平地盤反力) を、要素分割と手入力
+        /// (kh0・荷重面等価径) を保ったまま今の計算で導き直し、保存されていた値と違ったものを「No.n: 項目 前 → 後」の形で返す。
+        ///
+        /// <para>支持力度 (Qpu) などは保存される値で、読込では導き直していなかった。前の版の誤った計算 (例: 平均 N 値の
+        /// 範囲端の誤差で 4200 kN/m²、正しくは 3000) を保存したファイルは、平均 N 値の表示だけが直り、支持力・検定は
+        /// 古い値のまま残った (2026-10-24 のレビュー)。解析したときの入力の控えは、その結果を解いたときのまま残す。</para>
+        /// </summary>
+        internal static List<string> RefreshSoilPileDerivedValuesOnLoad(InputModel? model)
+        {
+            var changes = new List<string>();
+            var sets = model?.ElementDivision?.SoilPiles;
+            if (model == null || sets == null || sets.Count == 0) return changes;
+
+            static bool Differs(double a, double b) => !(Math.Abs(a - b) <= 1e-9 * Math.Max(1.0, Math.Max(Math.Abs(a), Math.Abs(b))));
+            static double[] Springs(SoilPile sp) => (sp.HorizontalSoilReactions ?? [])
+                .SelectMany(r => new[] { r.Kh0, r.PyFrontTop, r.PyFrontBtm, r.PyRearTop, r.PyRearBtm }).ToArray();
+
+            model.SuppressNotifications();
+            try
+            {
+                for (int i = 0; i < sets.Count; i++)
+                {
+                    var sp = sets[i];
+                    if (sp?.GroundInput == null || sp.PileBodyInput == null || sp.ZDataItems == null || sp.ZDataItems.Count < 2) continue;
+                    double qpu = sp.Qpu, rfu = sp.Rfu;
+                    var springs = Springs(sp);
+                    try { sp.UpdateProperties(); }
+                    catch (Exception ex)
+                    {
+                        Serilog.Log.Warning(ex, "[読込] 土層-杭セット No.{No} の派生値を求め直せませんでした", i + 1);
+                        continue;
+                    }
+                    var parts = new List<string>();
+                    if (Differs(qpu, sp.Qpu)) parts.Add($"先端支持力度 {qpu:N0} → {sp.Qpu:N0} kN/m²");
+                    if (Differs(rfu, sp.Rfu)) parts.Add($"周面摩擦力 {rfu:N0} → {sp.Rfu:N0} kN");
+                    var after = Springs(sp);
+                    if (springs.Length != after.Length || springs.Zip(after).Any(p => Differs(p.First, p.Second))) parts.Add("水平地盤反力");
+                    if (parts.Count > 0) changes.Add($"No.{i + 1}: {string.Join("・", parts)}");
+                }
+            }
+            finally
+            {
+                model.ResumeNotificationsQuiet();
+            }
+            return changes;
+        }
+
+        /// <summary>
         /// 土層-杭セットの今の節点 (保存していた要素分割) に、解析の組み立てが要る節点 (直した地層の境・杭頭部の境) を足して
         /// 並べ直す。地層の境が動いても要素が境をまたがないようにし、利用者が足した分割点は残す。
         /// </summary>
         internal static System.Collections.ObjectModel.ObservableCollection<PileZDataItem> KeepDivisionAndAddLayerBoundaries(SoilPile soilPile, GroundInput ground)
         {
-            const double tol = PileDesign.Constants.NumericalConstants.COORDINATE_TOLERANCE;
             soilPile.PileBodyInput.PileBodySegmentsUpdate();
             var required = InputModel.SoilPileNodeAltitudes(soilPile.PileBodyInput, ground.GroundLayers, soilPile.Z);
-            var zs = soilPile.ZDataItems.Where(z => z != null).Select(z => z.Z).Concat(required)
-                .OrderByDescending(z => z).ToList();
-            var merged = new System.Collections.ObjectModel.ObservableCollection<PileZDataItem>();
-            foreach (var z in zs)
+
+            // 今の節点は属性ごと残す (利用者が足した分割点は「削除できる」(IsChangeable) のまま)。
+            // 以前は Z だけを取り出して作り直したので、足した分割点がすべて削除できない固定点になった (2026-10-24 のレビュー)。
+            // 解析の組み立てが要る節点 (地層・杭区間・杭頭部の境) は固定点にする。今の節点に無ければ固定点として足す
+            var nodes = soilPile.ZDataItems.Where(z => z != null).Select(z =>
             {
-                if (merged.Count > 0 && Math.Abs(merged[^1].Z - z) <= tol) continue;
-                merged.Add(new PileZDataItem { Z = z, GroundInput = ground });
+                var copy = z.DeepCopy();
+                copy.GroundInput = ground;
+                if (required.Any(r => InputModel.SameLevel(r, copy.Z))) copy.IsChangeable = false;
+                return copy;
+            }).ToList();
+            foreach (double z in required)
+                if (!nodes.Any(n => InputModel.SameLevel(n.Z, z)))
+                    nodes.Add(new PileZDataItem { Z = z, GroundInput = ground, IsChangeable = false });
+
+            var merged = new System.Collections.ObjectModel.ObservableCollection<PileZDataItem>();
+            foreach (var node in nodes.OrderByDescending(n => n.Z))
+            {
+                if (merged.Count > 0 && InputModel.SameLevel(merged[^1].Z, node.Z)) continue;
+                merged.Add(node);
             }
             return merged;
         }
@@ -558,6 +618,17 @@ namespace PileDesign.ViewModels
                     "地盤の標高が GL からの深さと食い違っていたので、GL からの深さに合わせました (" + string.Join(" / ", groundAltitudeFixes)
                     + ")。杭の地盤ばねと支持力が変わります。解析結果がある場合は、解析をやり直してください。");
                 Serilog.Log.Warning("[読込] 地盤の標高を GL からの深さに合わせました: {Fixes}", string.Join(" / ", groundAltitudeFixes));
+            }
+
+            // 土層-杭セットの派生値 (支持力度・周面摩擦力・水平地盤反力) を今の計算で導き直す。保存した値が今の計算と違えば知らせる
+            var soilPileValueChanges = RefreshSoilPileDerivedValuesOnLoad(CurrentInputModel);
+            if (soilPileValueChanges.Count > 0)
+            {
+                compat.Add(PileDesign.Services.CompatibilityKind.Converted,
+                    "土層-杭セットの支持力・地盤ばねを、今の計算で求め直しました (" + string.Join(" / ", soilPileValueChanges.Take(5))
+                    + (soilPileValueChanges.Count > 5 ? $" ほか {soilPileValueChanges.Count - 5} 件" : "")
+                    + ")。保存されていた値は前の版の計算です。解析結果がある場合は、解析をやり直してください。");
+                Serilog.Log.Warning("[読込] 土層-杭セットの派生値を求め直しました: {Changes}", string.Join(" / ", soilPileValueChanges));
             }
 
             // 単杭沈下の荷重-沈下曲線を土層-杭セットへ戻す。
@@ -706,7 +777,7 @@ namespace PileDesign.ViewModels
             if (renumbered.Count > 0 && CurrentModel != null)
                 changedSinceAnalysisOnLoad = true;
             // 地盤の標高を直したら、読み込んだ結果は直す前の地盤で解いている。再解析を促す
-            if (groundAltitudeFixes.Count > 0)
+            if (groundAltitudeFixes.Count > 0 || soilPileValueChanges.Count > 0)
             {
                 if (CurrentModel != null) changedSinceAnalysisOnLoad = true;
                 foreach (var kind in EachSettlementAnalysis)
