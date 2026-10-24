@@ -200,7 +200,7 @@ namespace PileDesign.Output
 
                 body.Append(table);
                 if (ground.IsStressFromPileFoundationBottom)
-                    AddTableNote(body, "杭の有効応力と粘性土の塑性水平地盤反力の深さは、杭ごとの基礎底（杭頭の高さ）から数える。上の地中応力検討用レベルは地盤の計算に使う。");
+                    AddTableNote(body, "杭の有効応力と粘性土の塑性水平地盤反力の深さは、杭ごとの杭頭の高さから数える（上の地中応力検討用レベルは使わない）。");
                 else if (ground.StressAltitude < ground.GroundTopAltitude - PileDesign.Constants.NumericalConstants.COORDINATE_TOLERANCE)
                     AddTableNote(body, "杭の有効応力と粘性土の塑性水平地盤反力の深さは、地中応力検討用レベルから数える。");
 

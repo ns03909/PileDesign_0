@@ -202,6 +202,53 @@ namespace TestProject1
             Assert.AreEqual(2 * cu, DeepHeadElement().PyFrontTop, 1e-9, "地中応力計算用Z から有効応力を数えるのに、粘性土の深さを地表から測っています");
         }
 
+        /// <summary>
+        /// 地盤ウィンドウ: 「地中応力計算用深さを各杭頭からとする」を選ぶと、使わなくなる地中応力計算用標高・深度は入力できない。
+        /// チェックボックスは深度の行の下にあり、標高の欄と深度の欄は右端がそろう (2026-10-24 の利用者の指摘)。
+        /// </summary>
+        [TestMethod]
+        public void GroundWindow_StressPlaneInputsAreLockedWhileCountingFromEachPileHead()
+        {
+            var (model, error) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
+            if (model == null) { Assert.Inconclusive(error); return; }
+            OnSta(() =>
+            {
+                var main = new MainWindowViewModel { CurrentInputModel = model };
+                var vm = new GroundLayerViewModel(main);
+                var w = new PileDesign.Views.GroundWindow
+                {
+                    DataContext = vm, ShowActivated = false, WindowState = System.Windows.WindowState.Normal, Width = 1600, Height = 1000,
+                    WindowStartupLocation = System.Windows.WindowStartupLocation.Manual, Left = -20000, Top = -20000,
+                };
+                w.Show();
+                try
+                {
+                    w.UpdateLayout();
+                    var ground = vm.GroundInput!;
+                    Assert.IsFalse(ground.IsStressFromPileFoundationBottom, "(前提) 既定は選ばない");
+                    Assert.IsTrue(w.TextBoxGroundStressAltitude.IsEnabled && w.TextBoxStressGLDepth.IsEnabled, "選ばないときは入力できる");
+                    StringAssert.Contains(w.CheckBoxStressFromPileHead.Content as string, "地中応力計算用深さを各杭頭からとする");
+
+                    System.Windows.Point At(System.Windows.FrameworkElement e) => e.TranslatePoint(new System.Windows.Point(e.ActualWidth, 0), w);
+                    Assert.IsTrue(At(w.CheckBoxStressFromPileHead).Y > At(w.TextBoxStressGLDepth).Y, "チェックボックスが深度の行より上にあります");
+                    Assert.AreEqual(At(w.TextBoxStressGLDepth).X, At(w.TextBoxGroundStressAltitude).X, 0.5, "地中応力計算用の標高と深度の欄の右端がそろっていません");
+                    Assert.AreEqual(At(w.TextBoxGroundWaterGLDepth).X, At(w.TextBoxGroundWaterTableAltitude).X, 0.5, "地下水位の標高と深度の欄の右端がそろっていません");
+                    Assert.AreEqual(At(w.TextBoxGroundGLDepth).X, At(w.TextBoxGroundTopAltitude).X, 0.5, "孔口の標高と深度の欄の右端がそろっていません");
+
+                    ground.IsStressFromPileFoundationBottom = true;
+                    w.UpdateLayout();
+                    Assert.IsFalse(w.TextBoxGroundStressAltitude.IsEnabled, "各杭頭から数えるのに、地中応力計算用標高を入力できます");
+                    Assert.IsFalse(w.TextBoxStressGLDepth.IsEnabled, "各杭頭から数えるのに、地中応力計算用深度を入力できます");
+                    Assert.IsTrue(w.TextBoxGroundWaterTableAltitude.IsEnabled, "地下水位まで入力できなくなっています");
+
+                    ground.IsStressFromPileFoundationBottom = false;
+                    w.UpdateLayout();
+                    Assert.IsTrue(w.TextBoxGroundStressAltitude.IsEnabled && w.TextBoxStressGLDepth.IsEnabled, "選択を外しても入力できるように戻りません");
+                }
+                finally { w.Close(); }
+            });
+        }
+
         [TestMethod]
         public void GroundAltitudes_FollowTheirGLDepths()
         {
