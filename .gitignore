@@ -485,3 +485,9 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 *.bak
+
+# Claude Code が補助の作業者用に作る作業コピー
+.claude/worktrees/
+
+# .NET の分離ストレージ (テストの実行で作業フォルダー直下にできる)
+IsolatedStorage/
