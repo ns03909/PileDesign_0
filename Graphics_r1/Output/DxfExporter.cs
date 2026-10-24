@@ -46,9 +46,10 @@ namespace PileDesign.Output
             AddEmbedment(doc, embedLayer);
             AddBeams(doc, beamLayer);
 
-            // 通り心・寸法を杭頭最高レベルのXY平面に追加
-            double topZ = GetMaxPileTopZ();
-            GridDimHelper.AddGridAndDimensions(doc, _inputModel, gridLayer, gridSymbolLayer, dimLayer, topZ);
+            // 通り心・寸法を杭頭レベルごとの XY 平面に追加 (2026-10-24)。以前は杭頭の最も高いレベルだけに描いたので、
+            // 杭頭レベルが複数あると、低い段の杭から通り心が浮いていた (8 m 上など)
+            foreach (double z in PileHeadLevels())
+                GridDimHelper.AddGridAndDimensions(doc, _inputModel, gridLayer, gridSymbolLayer, dimLayer, z);
 
             // 一時ファイルに書き切ってから差し替える (失敗しても前に出力した DXF を壊さない)
             PileDesign.Services.FileOperationService.ReplaceAtomically(filePath, tempPath =>
@@ -58,11 +59,13 @@ namespace PileDesign.Output
             });
         }
 
-        private double GetMaxPileTopZ()
+        /// <summary>
+        /// 杭頭レベル (許容差の内はまとめる。高い順)。v2 セマンティクス: pile.Z は接合節点 Z なので PileHeadZ を使う。杭が無ければ 0 の 1 つ。
+        /// </summary>
+        private List<double> PileHeadLevels()
         {
-            // v2 セマンティクス: pile.Z は接合節点 Z なので、杭頭最大値は PileHeadZ を使う
-            if (_inputModel.PileLayoutItems == null || _inputModel.PileLayoutItems.Count == 0) return 0;
-            return _inputModel.PileLayoutItems.Max(p => p.PileHeadZ);
+            var levels = InputModel.DistinctLevels(_inputModel.PileLayoutItems?.Select(p => p.PileHeadZ) ?? []);
+            return levels.Count > 0 ? levels : [0.0];
         }
 
         private static Layer CreateLayer(CadDocument doc, string name, Color color)

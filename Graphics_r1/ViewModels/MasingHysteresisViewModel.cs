@@ -27,12 +27,16 @@ namespace PileDesign.ViewModels
         private readonly VerticalLoadTransferMethod _vtm;
 
         public MasingHysteresisViewModel(VerticalLoadTransferMethod vtm,
-            double initialConstantLoad = 0, double initialVariableLoad = 0)
+            double initialConstantLoad = 0, double initialVariableLoad = 0, string? constantLoadNote = null)
         {
             _vtm = vtm ?? throw new ArgumentNullException(nameof(vtm));
             _constantLoad = initialConstantLoad;
             _variableLoad = initialVariableLoad;
+            ConstantLoadNote = constantLoadNote ?? string.Empty;
         }
+
+        /// <summary>常時荷重の初期値をどの杭から取ったか (同じ土層-杭セットでも杭ごとに軸力が違うため示す)。</summary>
+        public string ConstantLoadNote { get; }
 
         public event EventHandler RequestClose;
 

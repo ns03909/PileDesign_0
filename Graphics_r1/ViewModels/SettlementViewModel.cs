@@ -569,21 +569,25 @@ namespace PileDesign.ViewModels
                 return;
             }
 
-            // 初期値は現在選択中の SoilPile の代表軸力 (VL) を常時荷重に設定
+            // 初期値は現在選択中の SoilPile を使う杭のうち、常時軸力 (VL) が最も大きい杭の値。どの杭の値かも示す
+            // (同じ土層-杭セットでも杭ごとに軸力が違う。以前は最初の杭の値を黙って使っていた。2026-10-24)
             double initialConst = 0;
+            string? note = null;
             try
             {
-                if (InputModel?.PileLayoutItems != null)
+                var piles = InputModel?.PileLayoutItems?.Where(p => p != null && p.SoilPileAltNo == SoilPileNo).ToList() ?? [];
+                if (piles.Count > 0)
                 {
-                    var firstMatch = InputModel.PileLayoutItems
-                        .FirstOrDefault(p => p.SoilPileAltNo == SoilPileNo);
-                    if (firstMatch != null)
-                        initialConst = firstMatch.AxialForceVL0 + firstMatch.AxialForceVLAdditional;
+                    var pick = piles.OrderByDescending(p => p.AxialForceVL0 + p.AxialForceVLAdditional).First();
+                    initialConst = pick.AxialForceVL0 + pick.AxialForceVLAdditional;
+                    note = piles.Count == 1
+                        ? $"初期値: 杭No.{pick.PileNo} の VL"
+                        : $"初期値: 杭No.{pick.PileNo} の VL（この土層-杭セットを使う {piles.Count} 本のうち最大）";
                 }
             }
             catch { /* 取得できなければ 0 のまま */ }
 
-            var vm = new MasingHysteresisViewModel(VerticalLoadTransferMethod, initialConst, 0);
+            var vm = new MasingHysteresisViewModel(VerticalLoadTransferMethod, initialConst, 0, note);
             var win = new MasingHysteresisWindow(vm)
             {
                 Owner = SettlementWindowInstance

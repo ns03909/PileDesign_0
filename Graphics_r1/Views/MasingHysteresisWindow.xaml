@@ -27,7 +27,8 @@
                 <TextBox Width="100" Margin="6,0,0,0" VerticalAlignment="Center"
                          Text="{Binding ConstantLoad, StringFormat=N1, UpdateSourceTrigger=PropertyChanged}"
                          TextAlignment="Right"/>
-                <TextBlock Text="kN" Margin="4,0,16,0" VerticalAlignment="Center"/>
+                <TextBlock Text="kN" Margin="4,0,8,0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding ConstantLoadNote}" Foreground="#666" FontSize="11" Margin="0,0,16,0" VerticalAlignment="Center"/>
 
                 <TextBlock Text="変動荷重 (±)" VerticalAlignment="Center"/>
                 <TextBox Width="100" Margin="6,0,0,0" VerticalAlignment="Center"

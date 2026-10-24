@@ -1390,10 +1390,7 @@ namespace PileDesign.Output
 
         /// <summary>土層-杭セットの杭頭Z が 2 つ以上あるか。</summary>
         internal static bool HasSeveralPileHeadLevels(IEnumerable<PileDesign.Models.InputData.SoilPile>? allSoilPiles)
-            => (allSoilPiles ?? [])
-                .Where(s => s != null)
-                .Select(s => Math.Round(s.Z / PileDesign.Constants.NumericalConstants.COORDINATE_TOLERANCE))
-                .Distinct().Count() > 1;
+            => PileDesign.Models.InputData.InputModel.CountDistinctLevels((allSoilPiles ?? []).Where(s => s != null).Select(s => s.Z)) > 1;
 
         /// <summary>表の杭体番号の欄。杭頭レベルが複数あれば 2 行目に杭頭Z を添える。</summary>
         private static List<object> PileBodyCellLines(IEnumerable<PileDesign.Models.InputData.SoilPile>? allSoilPiles, PileDesign.Models.InputData.SoilPile soilPile)

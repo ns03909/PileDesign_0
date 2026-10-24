@@ -147,9 +147,15 @@ namespace PileDesign.ViewModels
         {
             int originalNo = PileBodies != null && PileBodies.Count > 0 ? CurrentBody?.NoAtEditStart ?? 0 : 0;
             var piles = originalNo > 0 ? InputModel?.PileLayoutItems?.Where(p => p != null && p.PileBodyNo == originalNo) : null;
-            var choices = (piles ?? [])
-                .GroupBy(p => (p.GroundNo, Key: (long)Math.Round(p.PileHeadZ / NumericalConstants.COORDINATE_TOLERANCE)))
-                .Select(g => new PileHeadChoice(g.Key.GroundNo, g.First().PileHeadZ, g.Count()))
+            // 杭頭Z は許容差で比べる (土層-杭セットと同じ規則。InputModel.SameLevel)
+            var groups = new List<(int GroundNo, double Z, int Count)>();
+            foreach (var p in piles ?? [])
+            {
+                int at = groups.FindIndex(g => g.GroundNo == p.GroundNo && InputModel.SameLevel(g.Z, p.PileHeadZ));
+                if (at >= 0) groups[at] = (groups[at].GroundNo, groups[at].Z, groups[at].Count + 1);
+                else groups.Add((p.GroundNo, p.PileHeadZ, 1));
+            }
+            var choices = groups.Select(g => new PileHeadChoice(g.GroundNo, g.Z, g.Count))
                 .OrderBy(c => c.GroundNo).ThenByDescending(c => c.PileHeadZ)
                 .ToList();
             PileHeadChoices = new ObservableCollection<PileHeadChoice>(choices);

@@ -219,7 +219,7 @@ namespace PileDesign.Models.InputData
         // 値は多くの場合たまたま一致するので、気づきにくい。
         // 下の _soilPileCacheLock もインスタンスごとで、共有辞書は守れていなかった。
         [System.Text.Json.Serialization.JsonIgnore]
-        private readonly Dictionary<(int groundNo, int pileBodyNo, double z), SoilPile> _soilPileCache = [];
+        private readonly Dictionary<(int groundNo, int pileBodyNo), List<SoilPile>> _soilPileCache = [];
         [System.Text.Json.Serialization.JsonIgnore]
         private bool _soilPileCacheValid = false;
         // キャッシュを作ったときの SoilPiles の入れ物と件数。
@@ -311,11 +311,10 @@ namespace PileDesign.Models.InputData
             foreach (var sp in snapshot)
             {
                 if (sp == null) continue;
-                // 許容差を考慮したキー生成
-                double zKey = Math.Round(sp.Z / NumericalConstants.COORDINATE_TOLERANCE)
-                              * NumericalConstants.COORDINATE_TOLERANCE;
-                var key = (sp.GroundNo, sp.PileBodyNo, zKey);
-                _soilPileCache[key] = sp;
+                // 杭頭Z は許容差で比べる (SameLevel)。地盤・杭体ごとの一覧にしておき、引くときに探す
+                var key = (sp.GroundNo, sp.PileBodyNo);
+                if (!_soilPileCache.TryGetValue(key, out var list)) _soilPileCache[key] = list = [];
+                list.Add(sp);
             }
 
             _soilPileCacheValid = true;
@@ -327,15 +326,49 @@ namespace PileDesign.Models.InputData
         /// </summary>
         public SoilPile? LookupSoilPile(int groundNo, int pileBodyNo, double z)
         {
-            double zKey = Math.Round(z / NumericalConstants.COORDINATE_TOLERANCE)
-                          * NumericalConstants.COORDINATE_TOLERANCE;
-            var key = (groundNo, pileBodyNo, zKey);
-
             lock (_soilPileCacheLock)
             {
                 RebuildSoilPileCacheIfNeeded_NoLock();
-                return _soilPileCache.TryGetValue(key, out var result) ? result : null;
+                return _soilPileCache.TryGetValue((groundNo, pileBodyNo), out var list)
+                    ? list.FirstOrDefault(sp => SameLevel(sp.Z, z))
+                    : null;
             }
+        }
+
+        /// <summary>
+        /// 2 つの杭頭Z を同じ高さとみなすか (座標の許容差 <see cref="NumericalConstants.COORDINATE_TOLERANCE"/> の内)。
+        ///
+        /// <para>土層-杭セットの作成・杭への対応付け・検索・単杭沈下の結果の結び付け・杭体ウィンドウの組・計算書の見出しが
+        /// 共有する唯一の規則 (2026-10-24)。以前は <c>Math.Round(z / 許容差)</c> でキーにしていたので、許容差より近い 2 つの
+        /// 値でも丸めの境目をまたぐと別のキーになり、中身の同じ土層-杭セットが 2 つできることがあった。</para>
+        /// </summary>
+        internal static bool SameLevel(double a, double b) => Math.Abs(a - b) <= NumericalConstants.COORDINATE_TOLERANCE;
+
+        /// <summary>一覧から (地盤No, 杭体No, 杭頭Z) が同じ土層-杭セットの位置 (0 から)。無ければ -1。</summary>
+        internal static int IndexOfSoilPile(IList<SoilPile>? soilPiles, int groundNo, int pileBodyNo, double z)
+        {
+            if (soilPiles == null) return -1;
+            for (int i = 0; i < soilPiles.Count; i++)
+            {
+                var sp = soilPiles[i];
+                if (sp != null && sp.GroundNo == groundNo && sp.PileBodyNo == pileBodyNo && SameLevel(sp.Z, z)) return i;
+            }
+            return -1;
+        }
+
+        /// <summary>高さの一覧を、許容差の内のものを 1 つにまとめた数 (<see cref="SameLevel"/>)。</summary>
+        internal static int CountDistinctLevels(IEnumerable<double> levels) => DistinctLevels(levels).Count;
+
+        /// <summary>高さの一覧を、許容差の内のものを 1 つにまとめて高い順に並べる (各組の代表は組の最も高い値)。</summary>
+        internal static List<double> DistinctLevels(IEnumerable<double> levels)
+        {
+            var result = new List<double>();
+            foreach (var z in levels.Where(double.IsFinite).OrderByDescending(v => v))
+            {
+                if (result.Count > 0 && SameLevel(result[^1], z)) continue;   // まとめた組の最初の値と比べる
+                result.Add(z);
+            }
+            return result;
         }
 
         /// <summary>
@@ -1570,28 +1603,8 @@ namespace PileDesign.Models.InputData
                 // (groundNo, pileBodyNo, zKey) → 値 のルックアップを保存しておく。
                 // GenerateSoilPiles は元々 SoilPile を新規構築するためデフォルト 0 になり、
                 // 個別十字荷重 編集が消える問題を回避する。
-                var preservedGroupPileLoadDia = new Dictionary<(int groundNo, int pileBodyNo, long zKey), double>();
-                // ユーザーが手入力した kh0 の土層ごとオーバーライドも再生成後に維持する。
-                var preservedKh0Overrides = new Dictionary<(int groundNo, int pileBodyNo, long zKey), List<Kh0LayerOverride>>();
-                if (ElementDivision?.SoilPiles != null)
-                {
-                    foreach (var oldSp in ElementDivision.SoilPiles)
-                    {
-                        long zk = (long)Math.Round(oldSp.Z / NumericalConstants.COORDINATE_TOLERANCE);
-                        if (oldSp.GroupPileLoadDia > 0.0)
-                        {
-                            preservedGroupPileLoadDia[(oldSp.GroundNo, oldSp.PileBodyNo, zk)] = oldSp.GroupPileLoadDia;
-                        }
-                        if (oldSp.Kh0LayerOverrides != null && oldSp.Kh0LayerOverrides.Count > 0)
-                        {
-                            preservedKh0Overrides[(oldSp.GroundNo, oldSp.PileBodyNo, zk)] =
-                                oldSp.Kh0LayerOverrides.Select(o => o.DeepCopy()).ToList();
-                        }
-                    }
-                }
-
-                // O(1) 重複チェック用HashSet（座標は離散化してキー化）
-                var usedCombinations = new HashSet<(int groundNo, int pileBodyNo, long zKey)>();
+                // 前のセット (杭頭Z は許容差で比べる。SameLevel)
+                var previousSets = ElementDivision?.SoilPiles?.Where(sp => sp != null).ToList() ?? [];
                 var newPiles = new List<SoilPile>();
 
                 // 杭体ごとの座屈長 (m)。鋼管杭の柱座屈の検討範囲で、液状化区間の長さ
@@ -1615,9 +1628,8 @@ namespace PileDesign.Models.InputData
                     var pileBodySegments = PileBodyAt(pileBodyNo)!.PileBodySegments;
                     var groundLayerDataItems = GroundAt(groundNo)!.GroundLayers;
 
-                    // O(1) 重複チェック（座標を離散化してHashSetで判定）
-                    long zKey = (long)Math.Round(pileTopAltitude / NumericalConstants.COORDINATE_TOLERANCE);
-                    if (!usedCombinations.Add((groundNo, pileBodyNo, zKey)))
+                    // 同じ (地盤, 杭体, 杭頭Z) のセットは 1 つ (杭頭Z は許容差で比べる。SameLevel)
+                    if (IndexOfSoilPile(newPiles, groundNo, pileBodyNo, pileTopAltitude) >= 0)
                         continue; // 既に処理済みの組合せ
 
                     // 杭先端は杭区間境界の最小値（0.5D点追加前に確定）
@@ -1669,17 +1681,15 @@ namespace PileDesign.Models.InputData
                         ZDataItems = pileZDataItems
                     };
 
-                    // 旧 SoilPile に保存されていた GroupPileLoadDia (荷重面等価径) を復元
-                    long restoreKey = (long)Math.Round(pileTopAltitude / NumericalConstants.COORDINATE_TOLERANCE);
-                    if (preservedGroupPileLoadDia.TryGetValue((groundNo, pileBodyNo, restoreKey), out double dia))
+                    // 旧 SoilPile に保存されていた GroupPileLoadDia (荷重面等価径) と kh0 の土層ごとオーバーライドを復元
+                    // (kh0 は UpdateProperties→SetHorizontalSoilReaction より前に設定)
+                    int previous = IndexOfSoilPile(previousSets, groundNo, pileBodyNo, pileTopAltitude);
+                    if (previous >= 0)
                     {
-                        sp.GroupPileLoadDia = dia;
-                    }
-
-                    // kh0 の土層ごとオーバーライドを復元（UpdateProperties→SetHorizontalSoilReaction より前に設定）
-                    if (preservedKh0Overrides.TryGetValue((groundNo, pileBodyNo, restoreKey), out var kh0Ovs))
-                    {
-                        sp.Kh0LayerOverrides = new ObservableCollection<Kh0LayerOverride>(kh0Ovs);
+                        var oldSp = previousSets[previous];
+                        if (oldSp.GroupPileLoadDia > 0.0) sp.GroupPileLoadDia = oldSp.GroupPileLoadDia;
+                        if (oldSp.Kh0LayerOverrides != null && oldSp.Kh0LayerOverrides.Count > 0)
+                            sp.Kh0LayerOverrides = new ObservableCollection<Kh0LayerOverride>(oldSp.Kh0LayerOverrides.Select(o => o.DeepCopy()));
                     }
 
                     // 追加: R_* 等の特性を再計算
@@ -1697,23 +1707,14 @@ namespace PileDesign.Models.InputData
 
                 ElementDivision.UpdateSoilPileNumberOption();
 
-                // SoilPileAltNo を付与（SoilPilesのルックアップ用Dictionary）
-                var soilPileLookup = new Dictionary<(int groundNo, int pileBodyNo, long zKey), int>();
-                for (int i = 0; i < ElementDivision.SoilPiles.Count; i++)
-                {
-                    var sp = ElementDivision.SoilPiles[i];
-                    long spZKey = (long)Math.Round(sp.Z / NumericalConstants.COORDINATE_TOLERANCE);
-                    soilPileLookup.TryAdd((sp.GroundNo, sp.PileBodyNo, spZKey), i + 1);
-                }
+                // SoilPileAltNo を付与
                 foreach (PileLayoutDataItem pileLayoutDataItem in PileLayoutItems)
                 {
-                    // SoilPile.Z は杭頭基準なので、ルックアップキーも PileHeadZ で揃える (v2 セマンティクス)。
+                    // SoilPile.Z は杭頭基準なので、PileHeadZ で探す (v2 セマンティクス。許容差で比べる)。
                     // 見つからない杭 (地盤番号・杭体番号が一時的に無効など) は 0 (未対応) にする。以前は前の番号を
                     // 残していたので、作り直して並びが変わった一覧の<b>別の組</b>を指し得た
-                    long pZKey = (long)Math.Round(pileLayoutDataItem.PileHeadZ / NumericalConstants.COORDINATE_TOLERANCE);
-                    pileLayoutDataItem.SoilPileAltNo =
-                        soilPileLookup.TryGetValue((pileLayoutDataItem.GroundNo, pileLayoutDataItem.PileBodyNo, pZKey), out int altNo)
-                            ? altNo : 0;
+                    pileLayoutDataItem.SoilPileAltNo = IndexOfSoilPile(ElementDivision.SoilPiles,
+                        pileLayoutDataItem.GroundNo, pileLayoutDataItem.PileBodyNo, pileLayoutDataItem.PileHeadZ) + 1;
                 }
 
                 ApplyBucklingLengthToSections(bucklingLengthByPileBody);

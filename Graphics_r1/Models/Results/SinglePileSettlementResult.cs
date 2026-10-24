@@ -101,15 +101,11 @@ namespace PileDesign.Models.Results
             var soilPiles = input?.ElementDivision?.SoilPiles;
             if (soilPiles == null || soilPiles.Count == 0) return;
 
-            var byKey = new Dictionary<(int, int, double), SoilPile>();
-            foreach (var sp in soilPiles)
-            {
-                if (sp != null) byKey[KeyOf(sp.GroundNo, sp.PileBodyNo, sp.Z)] = sp;
-            }
-
             foreach (var e in Entries)
             {
-                if (!byKey.TryGetValue(KeyOf(e.GroundNo, e.PileBodyNo, e.Z), out var sp)) continue;
+                int at = InputModel.IndexOfSoilPile(soilPiles, e.GroundNo, e.PileBodyNo, e.Z);
+                if (at < 0) continue;
+                var sp = soilPiles[at];
                 sp.LoadDisplacements = [.. e.LoadDisplacements];
                 sp.LoadDisplacementsLimit = [.. e.LoadDisplacementsLimit];
 
@@ -151,20 +147,16 @@ namespace PileDesign.Models.Results
             var fromSets = from?.ElementDivision?.SoilPiles;
             var toSets = to?.ElementDivision?.SoilPiles;
             if (fromSets == null || toSets == null) return;
-            var byKey = new Dictionary<(int, int, double), SoilPile>();
-            foreach (var sp in toSets)
-                if (sp != null) byKey[KeyOf(sp.GroundNo, sp.PileBodyNo, sp.Z)] = sp;
             foreach (var sp in fromSets)
             {
                 if (sp?.NodeDisplacements == null && sp?.NodeReactions == null) continue;
-                if (!byKey.TryGetValue(KeyOf(sp!.GroundNo, sp.PileBodyNo, sp.Z), out var target)) continue;
+                int at = InputModel.IndexOfSoilPile(toSets, sp!.GroundNo, sp.PileBodyNo, sp.Z);
+                if (at < 0) continue;
+                var target = toSets[at];
                 target.NodeDisplacements = sp.NodeDisplacements;
                 target.NodeReactions = sp.NodeReactions;
             }
         }
 
-        private static (int, int, double) KeyOf(int groundNo, int pileBodyNo, double z)
-            => (groundNo, pileBodyNo,
-                Math.Round(z / NumericalConstants.COORDINATE_TOLERANCE) * NumericalConstants.COORDINATE_TOLERANCE);
     }
 }
