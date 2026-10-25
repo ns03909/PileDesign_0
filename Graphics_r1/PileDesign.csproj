@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
 	<!-- 発行 (Properties/PublishProfiles/FolderProfile.pubxml) の RuntimeIdentifier win-x64 を、どの復元でも
 	     project.assets.json に入れておく (複数形の RuntimeIdentifiers は復元だけに効き、普段のビルドの出力は変わらない)。
 	     入れていないと、RID なしの復元 (dotnet build・テスト) のあとの Visual Studio の発行が、win-x64 の対象が無くて
@@ -2137,12 +2137,10 @@
     <PackageReference Include="SkiaSharp" Version="4.153.1" />
     <PackageReference Include="Svg.Skia" Version="5.2.3" />
     <PackageReference Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
-    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
     <PackageReference Include="Serilog" Version="4.4.0" />
     <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <!-- WebView2: ランタイム同梱(Runtime.X64)からSDKのみに変更（-509MB）
          Windows 10/11にはWebView2 Evergreen Runtimeが標準搭載 -->
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4258.31" />

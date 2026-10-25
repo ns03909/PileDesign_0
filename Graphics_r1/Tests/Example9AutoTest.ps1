@@ -7,7 +7,7 @@ Write-Host ""
 
 # Configuration
 $projectRoot = "c:\Users\keisu\source\repos\PileDesign_0"
-$exePath = "$projectRoot\Graphics_r1\bin\Debug\net8.0-windows7.0\PileDesign.exe"
+$exePath = "$projectRoot\Graphics_r1\bin\Debug\net10.0-windows10.0.19041.0\PileDesign.exe"
 $timeout = 300 # 5 minutes timeout
 
 # Check if executable exists

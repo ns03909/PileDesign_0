@@ -26,7 +26,7 @@ namespace TestProject1.Tools
         [Ignore("One-shot tool: comment this out and run with --filter to regenerate Icons/*.png from Icons/*.svg")]
         public void RegenerateAllIcons()
         {
-            // TestProject1/bin/Debug/net8.0-windows7.0/ から repo ルートを辿って Graphics_r1/Icons へ
+            // TestProject1/bin/Debug/net10.0-windows10.0.19041.0/ から repo ルートを辿って Graphics_r1/Icons へ
             var iconsDir = ResolveIconsDirectory();
             Assert.IsTrue(Directory.Exists(iconsDir), $"Icons folder not found: {iconsDir}");
 
@@ -66,7 +66,7 @@ namespace TestProject1.Tools
 
         private static string ResolveIconsDirectory()
         {
-            // bin/Debug/net8.0-windows7.0 → 4 階層上が repo ルート
+            // bin/Debug/net10.0-windows10.0.19041.0 → 4 階層上が repo ルート
             var dir = new DirectoryInfo(AppContext.BaseDirectory);
             for (int i = 0; i < 4 && dir.Parent != null; i++)
                 dir = dir.Parent;
