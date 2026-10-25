@@ -74,9 +74,11 @@ publish のときだけ検査されます。`TreatWarningsAsErrors` が有効な
 dotnet publish Graphics_r1/PileDesign.csproj -p:PublishProfile=FolderProfile
 ```
 
-なお **AvalonDock は net8.0 向けアセットを持たず**、.NET Framework 4.8 向けが
-互換フォールバックで使われています（`NU1701`。許容設定に入れてあります）。
-更新したらドッキング操作を実機で確認してください。
+なお **AvalonDock 5.0.1 は net8.0 向けの部品を持たず**、.NET 8 の間は .NET Framework 4.8 向けが
+互換フォールバックで使われていました（`NU1701`）。.NET 10 では net10.0 向けの正式な部品が使われます。
+フォールバックに戻ると `AvalonDockDragDropTests` が落とします。ドラッグで手を離したときの着地処理も
+同じテストが非公開クラスをリフレクションで呼んで見ているので、**AvalonDock を更新してそこが落ちたら、
+実機でドラッグを確かめてからテストを合わせてください。**
 
 ## 触ったら足すテスト
 
