@@ -785,7 +785,7 @@ namespace PileDesign.ViewModels
 
                 if (pileLayoutItem.SoilPileAltNo == SoilPileNo)
                 {
-                    var points = PileDesign.Services.SingleSettlementSession.WriteSinglePileSettlements(pileLayoutItem, VerticalLoadTransferMethod);
+                    var points = PileDesign.Services.SingleSettlementSession.WriteSinglePileSettlements(InputModel, pileLayoutItem, VerticalLoadTransferMethod);
                     foreach (var (force, s) in points.VL) { forcesVL.Add(force); settlementsVL.Add(s * 1000); }
                     foreach (var (force, s) in points.Level1) { forcesLevel1.Add(force); settlementsLevel1.Add(s * 1000); }
                     foreach (var (force, s) in points.Level2) { forcesLevel2.Add(force); settlementsLevel2.Add(s * 1000); }

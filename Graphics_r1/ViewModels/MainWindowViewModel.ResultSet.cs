@@ -703,6 +703,8 @@ namespace PileDesign.ViewModels
                 pile.SinglePileSettlementLevel2s = new System.Collections.ObjectModel.ObservableCollection<double>(src.SinglePileSettlementLevel2s ?? []);
                 pile.SinglePileSettlementLevel1sBeyondCurve = new System.Collections.ObjectModel.ObservableCollection<bool>(src.SinglePileSettlementLevel1sBeyondCurve ?? []);
                 pile.SinglePileSettlementLevel2sBeyondCurve = new System.Collections.ObjectModel.ObservableCollection<bool>(src.SinglePileSettlementLevel2sBeyondCurve ?? []);
+                pile.SinglePileSettlementsSeparated = new System.Collections.ObjectModel.ObservableCollection<Models.InputData.SeparatedSettlementResult>(
+                    (src.SinglePileSettlementsSeparated ?? []).Select(r => r.Clone()));
             }
         }
 

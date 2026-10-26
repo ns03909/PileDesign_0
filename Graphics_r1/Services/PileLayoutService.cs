@@ -66,6 +66,7 @@ namespace PileDesign.Services
             copy.SinglePileSettlementVLBeyondCurve = false;
             copy.SinglePileSettlementLevel1sBeyondCurve = [];
             copy.SinglePileSettlementLevel2sBeyondCurve = [];
+            copy.SinglePileSettlementsSeparated = [];
             copy.Rf = 0;
             copy.Rp = 0;
             copy.Ru = 0;

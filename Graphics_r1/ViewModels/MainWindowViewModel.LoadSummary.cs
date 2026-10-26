@@ -111,6 +111,44 @@ namespace PileDesign.ViewModels
         public double OverturningMoment2_3Y => GetOverturningMoment(level: 2, dir: 3, axis: 'Y');
         public double OverturningMoment2_4Y => GetOverturningMoment(level: 2, dir: 4, axis: 'Y');
 
+        // ── 地震時軸力の分離入力の集計 (8 ケース: L1-1〜L1-4, L2-1〜L2-4 の順) ──
+        // ΔL(U)・ΔL(L) それぞれの合計と、VL+VLadd 重心まわりの転倒モーメント (上の OTM と同じ式)。分離入力のときだけ画面に出す。
+
+        /// <summary>ΣΔL(U) [kN]。</summary>
+        public double[] SeparatedSumUpper => SeparatedSummary(upper: true, axis: null);
+        /// <summary>ΣΔL(L) [kN]。</summary>
+        public double[] SeparatedSumFoundation => SeparatedSummary(upper: false, axis: null);
+        /// <summary>ΔL(U) による OTM X。</summary>
+        public double[] SeparatedOtmXUpper => SeparatedSummary(upper: true, axis: 'X');
+        /// <summary>ΔL(U) による OTM Y。</summary>
+        public double[] SeparatedOtmYUpper => SeparatedSummary(upper: true, axis: 'Y');
+        /// <summary>ΔL(L) による OTM X。</summary>
+        public double[] SeparatedOtmXFoundation => SeparatedSummary(upper: false, axis: 'X');
+        /// <summary>ΔL(L) による OTM Y。</summary>
+        public double[] SeparatedOtmYFoundation => SeparatedSummary(upper: false, axis: 'Y');
+
+        private double[] SeparatedSummary(bool upper, char? axis)
+        {
+            var result = new double[8];
+            var items = CurrentInputModel?.PileLayoutItems;
+            if (items == null || items.Count == 0) return result;
+            var pivot = GravityCenterVLPlusVLadd;
+            for (int level = 1; level <= 2; level++)
+                for (int dir = 0; dir < 4; dir++)
+                {
+                    double sum = 0.0;
+                    foreach (var item in items)
+                    {
+                        var values = upper ? item.AxialForceUpperOf(level) : item.AxialForceFoundationOf(level);
+                        if (values == null || dir >= values.Count) continue;
+                        double f = values[dir];
+                        sum += axis == null ? f : axis == 'X' ? f * (item.Y - pivot.Y) : f * (item.X - pivot.X);
+                    }
+                    result[(level - 1) * 4 + dir] = sum;
+                }
+            return result;
+        }
+
         // OTM計算ヘルパー（回転中心はVL+VLadd重心を採用）
         private double GetOverturningMoment(int level, int dir, char axis)
         {

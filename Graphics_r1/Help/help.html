@@ -1390,6 +1390,28 @@
                 <li>各杭の軸力を入力します。Excel Worksheet上のデータからCtrl+C、Ctrl+Vで入力することができます。</li>
             </ol>
 
+            <h4 id="h-地震時軸力の分離入力">地震時軸力の分離入力</h4>
+            <p class="indent-level-3">
+                既定では、地震時軸力は荷重ケースごとに 1 つで、荷重組合せ（&alpha;<sub>L</sub>・&beta;<sub>U</sub>・&beta;<sub>L</sub>）によらず同じ値を使います。
+                軸力タブの「軸力モード」の隣の<strong>「分離入力」</strong>にチェックを入れると、地震時軸力を
+                上部構造慣性力による変動軸力 &Delta;L(U) と、基礎部慣性力による変動軸力 &Delta;L(L) に分けて入力し、
+                荷重組合せごとに次の式で求めます。
+            </p>
+            <p class="indent-level-3" style="text-align:center;">
+                $N = VL_0 + VL_\text{add} + \beta_L \cdot \Delta L(L) + \beta_U \cdot \Delta L(U)$
+            </p>
+            <ul class="indent-level-3">
+                <li>&beta;<sub>U</sub>・&beta;<sub>L</sub> は荷重組合せの上部構造慣性力・基礎部慣性力の係数です。&beta; が負の組合せでは、その分だけ軸力が減ります。</li>
+                <li>入力は変動の値だけなので、軸力モードは「変動」に固定されます。表は ΔL1-1(U)・ΔL1-1(L) … ΔL2-4(L) の欄になります。</li>
+                <li>分けない入力（L1-1 など）と分離入力の値は別に保存され、チェックを切り替えてもどちらも残ります。切り替えると解析結果は消えます（確認が出ます）。</li>
+                <li>水平解析・検定・グラフ・計算書は、組合せごとの軸力で求めます。</li>
+                <li>支持力の検定は、組合せのうち最大の軸力で押込みを、最小の軸力（引張）で引抜きを判定し、項目に決めた組合せを添えます。</li>
+                <li>単杭沈下・基礎梁考慮の沈下は、組合せごと（&beta;<sub>U</sub>・&beta;<sub>L</sub> が同じ組合せは 1 つ）に求めます。沈下の図はリボンで選んでいる組合せの値を描き、結果の表は組合せごとの行を並べます。</li>
+                <li>「転倒モーメント簡易入力」では、建物重量・有効高さ・層せん断力係数を上部構造分（&Delta;L(U)）に使い、基礎部の重量・作用高さ・水平震度から基礎部分（&Delta;L(L)）を求めて書き込みます。</li>
+                <li>MGT 出力は荷重ケースごとに軸力を 1 つしか書けないため、組合せのうち最大（圧縮側）の値を書き、ファイルの先頭に注記します。</li>
+                <li>分離入力のあいだは、杭配置の編集ウィンドウでのレベル1・レベル2 の軸力の一括編集は使えません（軸力タブの欄に入力してください）。</li>
+            </ul>
+
             <h3 id="h-Step-7-杭要素分割"><img class="heading-icon" src="icons/ElementDivisionWindow.svg" alt="">Step 7: 杭要素分割</h3>
             <p class="indent-level-3" style="color:#555; font-size:0.9em;">
                 <em>なぜ必要？</em> 有限要素法（FEM）による解析を行うため、杭を細かい要素に分割する必要があります。分割が細かいほど精度が上がりますが、計算時間も増えます。
@@ -7233,6 +7255,8 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     <tr><td>1-1, 1-2, 1-3, 1-4</td><td>レベル 1 地震時軸力（絶対モード時）</td><td>kN</td></tr>
                     <tr><td>2-1, 2-2, 2-3, 2-4</td><td>レベル 2 地震時軸力（絶対モード時）</td><td>kN</td></tr>
                     <tr><td>$\Delta N$</td><td>変動軸力（変動モード時）<br>$\Delta N = (\text{絶対値}) - VL$</td><td>kN</td></tr>
+                    <tr><td>$\Delta L(U)$</td><td>上部構造慣性力による変動軸力（分離入力時）</td><td>kN</td></tr>
+                    <tr><td>$\Delta L(L)$</td><td>基礎部慣性力による変動軸力（分離入力時）<br>地震時軸力 $= VL + \beta_L \Delta L(L) + \beta_U \Delta L(U)$</td><td>kN</td></tr>
                     <tr><td>OTM ($M_\text{OTM}$)</td><td>転倒モーメント (Overturning Moment)</td><td>MN·m</td></tr>
                     <tr><td>$\Sigma$</td><td>全杭の合計値（軸力等の集計）</td><td>kN</td></tr>
                 </tbody>

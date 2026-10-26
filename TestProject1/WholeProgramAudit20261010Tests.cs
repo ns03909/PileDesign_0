@@ -191,7 +191,7 @@ namespace TestProject1
             {
                 lc.IsPileNonLinear = nonlinear;
                 input.FundamentalInput.ConsiderPileHeadRotation = consider;
-                vm.SetupNonlinearMThetaForLoadCase(model, lc);
+                vm.SetupNonlinearMThetaForLoadCase(model, lc, null);
                 int n = 0;
                 foreach (var spring in model.RotationalSprings)
                 {

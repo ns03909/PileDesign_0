@@ -202,7 +202,7 @@ namespace TestProject1
                 new LoadCase { Level = 1, No = 4, IsApplicable = true },                             // 欄が無い → 常時 (例外で止めない)
                 new LoadCase { Level = 2, No = 1, IsApplicable = false },                            // 適用しない
             };
-            var got = WordDocument.ReportedSeismicAxialForces(pile, cases).ToList();
+            var got = WordDocument.ReportedSeismicAxialForces(null, pile, cases).ToList();
             CollectionAssert.AreEqual(new[] { (1, 100.0), (1, 50.0), (1, 50.0) }, got,
                 "載せないケースの軸力・未入力の 0 が N_Max / N_Min に入っています");
         }

@@ -188,7 +188,9 @@ namespace PileDesign.Views
                 {
                     if (PileDesign.Models.InputData.LoadCase.IsSameCase(selectedLoadCase, viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel1[index]))
                     {
-                        return -pileLocation.AxialForceLevel1s[index];
+                        // 単杭沈下を求めた軸力 (分離入力ではリボンで選んでいる組合せの軸力)
+                        return -(PileDesign.Models.InputData.SeismicAxialForces.ForSettlementDisplay(viewModel.ResultInputModel, pileLocation, index + 1, 1,
+                            viewModel.SelectedLoadCombinationIn(viewModel.ResultInputModel)) ?? 0);
                     }
                 }
 
@@ -199,7 +201,8 @@ namespace PileDesign.Views
                 {
                     if (PileDesign.Models.InputData.LoadCase.IsSameCase(selectedLoadCase, viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel2[index]))
                     {
-                        return -pileLocation.AxialForceLevel2s[index];
+                        return -(PileDesign.Models.InputData.SeismicAxialForces.ForSettlementDisplay(viewModel.ResultInputModel, pileLocation, index + 1, 2,
+                            viewModel.SelectedLoadCombinationIn(viewModel.ResultInputModel)) ?? 0);
                     }
                 }
             }

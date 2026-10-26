@@ -697,7 +697,7 @@ namespace PileDesign.ViewModels
                 foreach (var pile in CurrentInputModel.PileLayoutItems)
                     pile.RebuildVariationFromAbsolute();
             }
-            OnPropertyChanged(nameof(IsAxialForceVariationMode));
+            RaiseAxialForceModeChanged();   // 分離入力の欄の出し分けも含む
 
             // 解析結果の復元（projectData=null の場合はフラグのみリセット）
             RestoreAnalysisState(projectData);

@@ -369,7 +369,7 @@ namespace PileDesign.ViewModels
             //    解放する。「軸剛性 0、曲げ剛性 0」(Mu=0 と併用) でピン接合的挙動を実現する。
             //    判定は入力軸力ベース (UseAnalysisAxialForce=true でも初期推定値で固定)。
             //    詳細は help.html「引張軸力時の杭頭軸剛性解放」を参照。
-            var axialReleasePileNos = GetPileNosForAxialReleaseInCase(loadCase);
+            var axialReleasePileNos = GetPileNosForAxialReleaseInCase(loadCase, loadCombination);
             if (axialReleasePileNos.Count > 0)
             {
                 try
@@ -481,10 +481,10 @@ namespace PileDesign.ViewModels
                 // 杭非線形ONのときだけ M–φ/M–θ をセット
                 if (loadCase.IsPileNonLinear)
                 {
-                    SetupMPhiFromPileSectionForLoadCase(caseModel, loadCase);
+                    SetupMPhiFromPileSectionForLoadCase(caseModel, loadCase, loadCombination);
                 }
                 // M–θ は常にセット（非線形OFFは剛 KThetaXY=KRigid）
-                SetupNonlinearMThetaForLoadCase(caseModel, loadCase);
+                SetupNonlinearMThetaForLoadCase(caseModel, loadCase, loadCombination);
                 // Y 案: caseModel のばね構成を targetModel のばねへスナップショット書き戻し。
                 // GraphViewModel / AnalysisResultTableService がケース別構成を可視化できるようにする。
                 SnapshotMThetaToOriginalSprings(caseModel, targetModel, loadCase, loadCombination, isLiquefaction);
@@ -652,13 +652,13 @@ namespace PileDesign.ViewModels
                 if (loadCase.IsPileNonLinear)
                 {
                     SetupMPhiByCurrentAxialForMiddleBeam(caseModel);
-                    UpdateMThetaByCurrentAxialForLoadCase(caseModel, loadCase);
+                    UpdateMThetaByCurrentAxialForLoadCase(caseModel, loadCase, loadCombination);
                 }
                 else if (UsesSelectablePileHeadRotation())
                 {
                     // 杭体は線形でも、基本設定で杭頭回転角を考慮する杭 (鉄筋定着工法の場所打ちRC杭・鋼管杭) の
                     // M-θ は軸力で変わるので、杭の非線形 ON と同じく現ステップの軸力で作り直す
-                    UpdateMThetaByCurrentAxialForLoadCase(caseModel, loadCase);
+                    UpdateMThetaByCurrentAxialForLoadCase(caseModel, loadCase, loadCombination);
                 }
 
                 caseModel.SetR();

@@ -56,7 +56,7 @@ namespace TestProject1
             var (vm, model, input, lc) = built.Value;
 
             // ケース開始時のセットアップ: 入力地震時軸力で構築される
-            vm.SetupNonlinearMThetaForLoadCase(model, lc);
+            vm.SetupNonlinearMThetaForLoadCase(model, lc, null);
 
             var spring = model.RotationalSprings.FirstOrDefault(
                 s => s.McrXY.HasValue && PileOf(input, s) != null);
@@ -79,7 +79,7 @@ namespace TestProject1
             Assert.IsTrue(spring.HasCrackedXY);
             model.SetAxialForce(pile, vl);
 
-            vm.UpdateMThetaByCurrentAxialForLoadCase(model, lc);
+            vm.UpdateMThetaByCurrentAxialForLoadCase(model, lc, null);
 
             // (1) 現ステップの軸力で作り直されている
             double expectedMcrAtVl = pileBody.GetMThetaRelationship(Math.Round(vl)).McrXY ?? double.NaN;
@@ -101,7 +101,7 @@ namespace TestProject1
             if (built == null) { Assert.Inconclusive("例題ファイルなし"); return; }
             var (vm, model, input, lc) = built.Value;
 
-            vm.SetupNonlinearMThetaForLoadCase(model, lc);
+            vm.SetupNonlinearMThetaForLoadCase(model, lc, null);
             var spring = model.RotationalSprings.FirstOrDefault(s => s.McrXY.HasValue);
             if (spring == null) { Assert.Inconclusive("Mcr を持つ杭頭ばねが無い例題"); return; }
 
@@ -109,7 +109,7 @@ namespace TestProject1
             Assert.IsTrue(spring.HasCrackedXY);
 
             // ケース開始時のセットアップはケース間独立のため履歴をリセットする
-            vm.SetupNonlinearMThetaForLoadCase(model, lc);
+            vm.SetupNonlinearMThetaForLoadCase(model, lc, null);
             Assert.IsFalse(spring.HasCrackedXY, "ケース開始時にクラック履歴がリセットされていない");
         }
     }

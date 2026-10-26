@@ -61,3 +61,8 @@
 #*.PDF   diff=astextplain
 #*.rtf   diff=astextplain
 #*.RTF   diff=astextplain
+
+###############################################################################
+# 壊れたファイルの fixture (BrokenFileTests)。保存は gzip 圧縮なのでバイナリとして扱い、改行を変換しない
+###############################################################################
+TestProject1/TestData/BrokenFiles/*.pdjson -text

@@ -28,7 +28,7 @@ namespace PileDesign.ViewModels
         // 荷重ケースの代表軸力Nで PileSection.GetMPhi/MPhiRelationship を呼び、各梁にセット
         // こちらも安全なヘルパに統一（例外発生源を除去）
         // v6: InputModel.PileBodies ではなく SoilPile.PileBodySegments を使用
-        private void SetupMPhiFromPileSectionForLoadCase(AnaModel model, LoadCase loadCase)
+        private void SetupMPhiFromPileSectionForLoadCase(AnaModel model, LoadCase loadCase, LoadCombination? loadCombination)
         {
 
             if (model == null)
@@ -133,11 +133,12 @@ namespace PileDesign.ViewModels
                 {
                     try
                     {
-                        double nSeis = pile.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                        // 分離入力ではこの組合せの軸力 (SeismicAxialForces。分離入力でなければ従来の GetSeismicAxialForce と同じ)
+                        double nSeis = Models.InputData.SeismicAxialForces.Input(InputModel, pile, loadCase.No, loadCase.Level, loadCombination);
                         if (double.IsFinite(nSeis) && nSeis != 0.0)
                             axialN_kN = nSeis;
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) when (ex is not InvalidOperationException) // 分離入力で組合せを渡し忘れたら止める
                     {
                         Log.Warning(ex, "[SetupMPhi] GetSeismicAxialForce(loadCaseNo={No}, level={Lv}) failed, fallback to gravity baseline.",
                             loadCase.No, loadCase.Level);
@@ -174,8 +175,8 @@ namespace PileDesign.ViewModels
         ///  <see cref="UpdateMThetaByCurrentAxialForLoadCase"/> がステップ毎に作り直す）。
         /// </summary>
         // internal はテスト用 (MThetaAxialForceTests)
-        internal void SetupNonlinearMThetaForLoadCase(AnaModel model, LoadCase loadCase)
-            => ApplyMThetaForLoadCase(model, loadCase, resetCrackState: true, useSeismicAxialForce: true);
+        internal void SetupNonlinearMThetaForLoadCase(AnaModel model, LoadCase loadCase, LoadCombination? loadCombination)
+            => ApplyMThetaForLoadCase(model, loadCase, loadCombination, resetCrackState: true, useSeismicAxialForce: true);
 
         /// <summary>
         /// 現ステップの軸力で杭頭 M-θ を作り直す（ステップ毎、M-φ の再解決と対）。
@@ -191,11 +192,11 @@ namespace PileDesign.ViewModels
         /// ここでリセットすると毎ステップ未クラックに戻り、ヒステリシスが成立しない。
         /// </summary>
         // internal はテスト用 (MThetaAxialForceTests)
-        internal void UpdateMThetaByCurrentAxialForLoadCase(AnaModel model, LoadCase loadCase)
-            => ApplyMThetaForLoadCase(model, loadCase, resetCrackState: false, useSeismicAxialForce: false);
+        internal void UpdateMThetaByCurrentAxialForLoadCase(AnaModel model, LoadCase loadCase, LoadCombination? loadCombination)
+            => ApplyMThetaForLoadCase(model, loadCase, loadCombination, resetCrackState: false, useSeismicAxialForce: false);
 
         private void ApplyMThetaForLoadCase(
-            AnaModel model, LoadCase loadCase, bool resetCrackState, bool useSeismicAxialForce)
+            AnaModel model, LoadCase loadCase, LoadCombination? loadCombination, bool resetCrackState, bool useSeismicAxialForce)
         {
             if (model?.RotationalSprings == null || model.RotationalSprings.Count == 0) return;
 
@@ -230,11 +231,12 @@ namespace PileDesign.ViewModels
                             {
                                 try
                                 {
-                                    double nSeis = pile.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                                    // 分離入力ではこの組合せの軸力 (SeismicAxialForces。分離入力でなければ従来の GetSeismicAxialForce と同じ)
+                                    double nSeis = Models.InputData.SeismicAxialForces.Input(InputModel, pile, loadCase.No, loadCase.Level, loadCombination);
                                     if (double.IsFinite(nSeis) && nSeis != 0.0)
                                         axialN = nSeis;
                                 }
-                                catch (Exception ex)
+                                catch (Exception ex) when (ex is not InvalidOperationException) // 分離入力で組合せを渡し忘れたら止める
                                 {
                                     Log.Warning(ex, "[SetupMTheta] GetSeismicAxialForce(loadCaseNo={No}, level={Lv}) failed, fallback to gravity baseline.",
                                         loadCase.No, loadCase.Level);

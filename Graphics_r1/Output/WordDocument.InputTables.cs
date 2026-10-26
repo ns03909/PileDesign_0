@@ -709,8 +709,13 @@ namespace PileDesign.Output
         }
 
         // 杭軸力の表を追加するメソッド
-        public static void AddPileAxialLoadTables(Body body, ObservableCollection<PileLayoutDataItem> pileLayoutItems)
+        public static void AddPileAxialLoadTables(Body body, ObservableCollection<PileLayoutDataItem> pileLayoutItems, bool separated)
         {
+            if (separated)
+            {
+                AddSeparatedPileAxialLoadTables(body, pileLayoutItems);
+                return;
+            }
             AddIntroText(body,
                 "本表は各杭の杭頭に作用する鉛直軸力の入力値を示す（圧縮を正、単位 kN）。" +
                 "VL は長期（常時）軸力、VL_add は追加軸力で、長期の検討には VL + VL_add を用いる。" +
@@ -763,6 +768,56 @@ namespace PileDesign.Output
                 table.Append(dataRow);
             }
             body.Append(table);
+        }
+
+        /// <summary>
+        /// 地震時軸力の分離入力のときの杭軸力の表。レベルごとに、VL・VLadd と ΔL(U)・ΔL(L) を荷重ケースの順に並べる。
+        /// 地震時の軸力は荷重組合せごとに VL + βL·ΔL(L) + βU·ΔL(U) で求める。
+        /// </summary>
+        private static void AddSeparatedPileAxialLoadTables(Body body, ObservableCollection<PileLayoutDataItem> pileLayoutItems)
+        {
+            AddIntroText(body,
+                "本表は各杭の杭頭に作用する鉛直軸力の入力値を示す（圧縮を正、単位 kN）。" +
+                "VL は長期（常時）軸力、VL_add は追加軸力で、長期の検討には VL + VL_add を用いる。" +
+                "地震時の軸力は、上部構造慣性力による変動軸力 ΔL(U) と基礎部慣性力による変動軸力 ΔL(L) に分けて入力し、" +
+                "荷重組合せごとに VL + VL_add + βL·ΔL(L) + βU·ΔL(U) とする（βU・βL は荷重組合せの上部構造慣性力・基礎部慣性力の係数）。" +
+                "L1-1〜L1-4 はレベル1地震時、L2-1〜L2-4 はレベル2地震時の各加力方向（方向1〜4）である。");
+
+            double fontSize = 8;
+            static string AF(IList<double> list, int idx) => (list != null && idx >= 0 && idx < list.Count) ? $"{list[idx]:N0}" : string.Empty;
+            foreach (int level in new[] { 1, 2 })
+            {
+                Table table = CreateTableWithBorders();
+                var cells = new List<TableCell>
+                {
+                    CreateTableCell(["No"], fontSize, "center"),
+                    CreateTableCell(["VL", "[kN]"], fontSize, "center"),
+                    CreateTableCell(["VL<_add>", "[kN]"], fontSize, "center"),
+                };
+                for (int c = 1; c <= 4; c++)
+                {
+                    cells.Add(CreateTableCell([$"ΔL{level}-{c}(U)", "[kN]"], fontSize, "center"));
+                    cells.Add(CreateTableCell([$"ΔL{level}-{c}(L)", "[kN]"], fontSize, "center"));
+                }
+                table.Append(CreateHeaderRow(cells.ToArray()));
+
+                int i = 0;
+                foreach (PileLayoutDataItem pile in pileLayoutItems)
+                {
+                    i += 1;
+                    TableRow dataRow = new();
+                    dataRow.Append(CreateTableCell([$"{i}"], fontSize, "right"));
+                    dataRow.Append(CreateTableCell([$"{pile.AxialForceVL0:N0}"], fontSize, "right"));
+                    dataRow.Append(CreateTableCell([$"{pile.AxialForceVLAdditional:N0}"], fontSize, "right"));
+                    for (int c = 0; c < 4; c++)
+                    {
+                        dataRow.Append(CreateTableCell([AF(pile.AxialForceUpperOf(level), c)], fontSize, "right"));
+                        dataRow.Append(CreateTableCell([AF(pile.AxialForceFoundationOf(level), c)], fontSize, "right"));
+                    }
+                    table.Append(dataRow);
+                }
+                body.Append(table);
+            }
         }
 
         // 前後方杭の表を追加するメソッド

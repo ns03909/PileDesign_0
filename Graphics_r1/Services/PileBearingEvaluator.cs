@@ -63,7 +63,7 @@ namespace PileDesign.Services
                     continue;
                 }
 
-                AddPileItems(items, pile, soilPile, level1Cases, level2Cases, level2UsesDamageLimit);
+                AddPileItems(items, pile, soilPile, level1Cases, level2Cases, level2UsesDamageLimit, inputModel);
             }
 
             return items;
@@ -77,7 +77,7 @@ namespace PileDesign.Services
             PileLayoutDataItem pile, SoilPile soilPile,
             IReadOnlyList<(string Name, int No)> level1Cases,
             IReadOnlyList<(string Name, int No)> level2Cases,
-            bool level2UsesDamageLimit)
+            bool level2UsesDamageLimit, InputModel? inputModel)
         {
             // 長期 (使用限界)
             AddIfAvailable(items, pile,
@@ -88,23 +88,45 @@ namespace PileDesign.Services
             // レベル1 (損傷限界)
             foreach (var (name, no) in level1Cases)
             {
-                AddIfAvailable(items, pile,
+                AddSeismicItems(items, pile, inputModel, no,
                     level: 1, limitName: "損傷限界", loadCaseName: name,
-                    axialForce: pile.GetDesignAxialForce(no, 1),
                     compressionLimit: soilPile.R_DLS, upliftLimit: soilPile.Rt_DLS);
             }
 
             // レベル2 (終局限界。耐震グレード S では損傷限界)
             foreach (var (name, no) in level2Cases)
             {
-                AddIfAvailable(items, pile,
+                AddSeismicItems(items, pile, inputModel, no,
                     level: 2,
                     limitName: level2UsesDamageLimit ? "損傷限界" : "終局限界",
                     loadCaseName: name,
-                    axialForce: pile.GetDesignAxialForce(no, 2),
                     compressionLimit: level2UsesDamageLimit ? soilPile.R_DLS : soilPile.R_ULS,
                     upliftLimit: level2UsesDamageLimit ? soilPile.Rt_DLS : soilPile.Rt_ULS);
             }
+        }
+
+        /// <summary>
+        /// 地震時の荷重ケース 1 つぶんの項目。
+        /// 分離入力でなければ従来どおり、ケースの設計軸力 1 つで押込みか引抜きのどちらか一方。
+        /// 地震時軸力の分離入力では組合せごとに軸力が違うので、組合せのうち最大の軸力が圧縮なら押込みを、
+        /// 最小の軸力が引張なら引抜きを判定する (両方出ることもある)。項目のケース名に、決めた組合せを添える。
+        /// </summary>
+        private static void AddSeismicItems(List<EvaluationItem> items, PileLayoutDataItem pile, InputModel? inputModel, int no,
+            int level, string limitName, string loadCaseName, double compressionLimit, double upliftLimit)
+        {
+            var e = SeismicAxialForces.Envelope(inputModel, pile, no, level);
+            if (!SeismicAxialForces.IsSeparated(inputModel))
+            {
+                AddIfAvailable(items, pile, level, limitName, loadCaseName, e.Max, compressionLimit, upliftLimit);
+                return;
+            }
+            // 数でない軸力は押込み側の項目で「検定不能」として出す (どちらの枝にも入らず消えないように)
+            if (!(e.Max < 0))
+                AddIfAvailable(items, pile, level, limitName, loadCaseName + SeismicAxialForces.CombinationSuffix(e.MaxCombination),
+                    e.Max, compressionLimit, upliftLimit);
+            if (e.Min < 0)
+                AddIfAvailable(items, pile, level, limitName, loadCaseName + SeismicAxialForces.CombinationSuffix(e.MinCombination),
+                    e.Min, compressionLimit, upliftLimit);
         }
 
         /// <summary>

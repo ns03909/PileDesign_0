@@ -557,7 +557,7 @@ namespace PileDesign.Output
                 Time("PileAxialLoad", () => {
                     AddHeader1(body, "杭軸力", 1);
                     AddTableCaption(body, "杭軸力");
-                    AddPileAxialLoadTables(body, inputModel.PileLayoutItems);
+                    AddPileAxialLoadTables(body, inputModel.PileLayoutItems, inputModel.IsAxialForceSeparated);
                     AddLineBreak(body);
                 });
             }

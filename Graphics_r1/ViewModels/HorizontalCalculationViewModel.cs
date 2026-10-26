@@ -2584,7 +2584,7 @@ namespace PileDesign.ViewModels
         /// (常時 + L1/L2 地震時) のみを根拠とする。軸力モードに応じた解析中ステップ別動的解放は
         /// 方程式番号の再構築が必要で実装コストが高いため v1 では非対応。
         /// </summary>
-        private List<int> GetPileNosForAxialReleaseInCase(LoadCase loadCase)
+        private List<int> GetPileNosForAxialReleaseInCase(LoadCase loadCase, LoadCombination loadCombination)
         {
             var result = new List<int>();
             if (InputModel?.PileLayoutItems == null || InputModel.PileBodies == null)
@@ -2602,9 +2602,10 @@ namespace PileDesign.ViewModels
                 double n_kN;
                 try
                 {
-                    n_kN = pile.GetSeismicAxialForce(loadCase.No, loadCase.Level);
+                    // 分離入力ではこの組合せの軸力 (組合せで引張になるかが変わる)
+                    n_kN = SeismicAxialForces.Input(InputModel, pile, loadCase.No, loadCase.Level, loadCombination);
                 }
-                catch
+                catch (ArgumentOutOfRangeException)
                 {
                     n_kN = pile.AxialForceVL;
                 }

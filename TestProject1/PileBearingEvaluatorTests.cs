@@ -51,7 +51,7 @@ namespace TestProject1
         {
             var items = new List<EvaluationItem>();
             PileBearingEvaluator.AddPileItems(items, Pile(axialForceVL), ground ?? Ground(),
-                Level1, Level2, level2UsesDamageLimit: gradeS);
+                Level1, Level2, level2UsesDamageLimit: gradeS, inputModel: null);
             return items;
         }
 

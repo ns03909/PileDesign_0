@@ -175,6 +175,7 @@ namespace TestProject1
         {
             static bool IsModelOrSolver(string rel) =>
                 rel == "Models/InputData/PileLayoutDataItem.cs"
+                || rel == "Models/InputData/SeismicAxialForces.cs"   // 地震時軸力の窓口 (分離入力の組合せごとの軸力もここ)
                 || rel.StartsWith("FEM/", StringComparison.Ordinal)
                 || Regex.IsMatch(rel, @"^ViewModels/HorizontalCalculationViewModel(\.\w+)?\.cs$");
 
@@ -211,7 +212,7 @@ namespace TestProject1
             TestSource.AssertScanned(allowedSeismic, 3, "地震時軸力を引く正規の箇所 (モデル・解析・検定の規則)");
             Assert.AreEqual(0, violations.Count,
                 "図・計算書・表の軸力は EvaluationService.ResolveCheckAxialForce (検定と同じ) か "
-                + "PileLayoutDataItem.ResolveDesignAxialForce を通してください:\n" + string.Join("\n", violations));
+                + "SeismicAxialForces.Design を通してください:\n" + string.Join("\n", violations));
         }
 
         // ── 振る舞い: 画面・計算書が検定と同じ曲線を選ぶ ─────────────────────────────

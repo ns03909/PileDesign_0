@@ -153,7 +153,7 @@ namespace PileDesign.ViewModels
                                     // 軸方向で逆対称 (Fxj = -Fxi) なので恒等的に 0 になり、常に N=0 の
                                     // 耐力で限界線を描いていた。その後は入力の軸力だけを使っており、
                                     // 「入力値＋応力解析結果」で検定と食い違っていた。
-                                    double axialForceN = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayoutDataItem, loadCase.No, loadCase.Level,
+                                    double axialForceN = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayoutDataItem, loadCase.No, loadCase.Level, loadCombination,
                                         EvaluationService.PileHeadBeam(pileLayoutDataItem)?.GetBeamResult(AnaModel, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi).N;
 
                                     // 杭断面を取得（SoilPile.PileBodySegmentsを使用）

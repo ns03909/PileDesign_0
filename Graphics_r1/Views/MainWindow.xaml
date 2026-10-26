@@ -3258,14 +3258,20 @@
                                                                                FontWeight="Bold" Margin="0,0,8,0"/>
                                                                     <RadioButton Content="絶対" Padding="4,2" Margin="0,0,10,0" VerticalAlignment="Center"
                                                                                  GroupName="AxialModeTab"
+                                                                                 IsEnabled="{Binding IsAxialForceSeparated, Converter={StaticResource BooleanNegationConverter}}"
+                                                                                 ToolTipService.ShowOnDisabled="True"
                                                                                  IsChecked="{Binding IsAxialForceVariationMode, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
-                                                                                 ToolTip="絶対モード: L1/L2 列に絶対軸力 (VL+地震時) を表示・編集"/>
+                                                                                 ToolTip="絶対モード: L1/L2 列に絶対軸力 (VL+地震時) を表示・編集 (分離入力のあいだは使えません。分離入力の欄は変動の値だけです)"/>
                                                                     <RadioButton Content="変動" Padding="4,2" VerticalAlignment="Center"
                                                                                  GroupName="AxialModeTab"
                                                                                  IsChecked="{Binding IsAxialForceVariationMode, Mode=TwoWay}"
                                                                                  ToolTip="変動モード: L1/L2 列に変動軸力 (= 絶対 − VL) を表示・編集 (VL 変更時は絶対が連動)"/>
                                                                 </StackPanel>
                                                             </Border>
+                                                            <CheckBox Content="分離入力" Margin="8,2,0,2" VerticalAlignment="Center"
+                                                                      IsChecked="{Binding IsAxialForceSeparated, Mode=TwoWay}"
+                                                                      AutomationProperties.Name="地震時軸力の分離入力"
+                                                                      ToolTip="地震時軸力を、上部構造慣性力による分 ΔL(U) と基礎部慣性力による分 ΔL(L) に分けて入力します。&#x0a;荷重組合せごとに 軸力 = VL + βL·ΔL(L) + βU·ΔL(U) で求めます (βU・βL は荷重組合せの係数)。&#x0a;入力は変動のみです (軸力モードは「変動」に固定)。分けない入力の値は別に残ります。"/>
                                                         </StackPanel>
 
                                                     </Grid>
@@ -3349,7 +3355,157 @@
 
                                                         <Line Height="10" Width="100"/>
 
-                                                        <Grid>
+                                                        <!-- 地震時軸力の分離入力のときの集計: ΔL(U)・ΔL(L) ごとの転倒モーメント (VL+VLadd 重心まわり) と合計 -->
+                                                        <Grid Visibility="{Binding IsAxialForceSeparated, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                              ToolTip="分離入力の集計。U = 上部構造慣性力による変動軸力、L = 基礎部慣性力による変動軸力。転倒モーメントは VL+VLadd の重心まわり。">
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="*"/>
+                                                                <RowDefinition Height="*"/>
+                                                                <RowDefinition Height="*"/>
+                                                                <RowDefinition Height="*"/>
+                                                                <RowDefinition Height="*"/>
+                                                                <RowDefinition Height="*"/>
+                                                                <RowDefinition Height="*"/>
+                                                            </Grid.RowDefinitions>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="2*"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                                <ColumnDefinition Width="*"/>
+                                                            </Grid.ColumnDefinitions>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="0" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="1" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="2" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="3" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="4" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="5" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="6" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="7" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="0" Grid.Column="8" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="0" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="1"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="2"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="3"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="4"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="5"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="6"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="7"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="1" Grid.Column="8"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="0" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="1"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="2"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="3"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="4"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="5"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="6"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="7"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="2" Grid.Column="8"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="3" Grid.Column="0" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="3" Grid.Column="1"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="3" Grid.Column="2"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="3" Grid.Column="3"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="3" Grid.Column="4"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="3" Grid.Column="5"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="3" Grid.Column="6"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="3" Grid.Column="7"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="3" Grid.Column="8"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="4" Grid.Column="0" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="4" Grid.Column="1"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="4" Grid.Column="2"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="4" Grid.Column="3"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="4" Grid.Column="4"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="4" Grid.Column="5"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="4" Grid.Column="6"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="4" Grid.Column="7"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="4" Grid.Column="8"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="5" Grid.Column="0" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="5" Grid.Column="1"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="5" Grid.Column="2"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="5" Grid.Column="3"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="5" Grid.Column="4"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="5" Grid.Column="5"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="5" Grid.Column="6"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="5" Grid.Column="7"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="5" Grid.Column="8"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="6" Grid.Column="0" Background="WhiteSmoke"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="6" Grid.Column="1"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="6" Grid.Column="2"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="6" Grid.Column="3"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="6" Grid.Column="4"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="6" Grid.Column="5"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="6" Grid.Column="6"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="6" Grid.Column="7"/>
+                                                            <Border BorderBrush="LightGray" BorderThickness="1" Grid.Row="6" Grid.Column="8"/>
+                                                            <TextBlock common:LoadCaseCodeLabel.Code="L1-1" Grid.Row="0" Grid.Column="1"/>
+                                                            <TextBlock common:LoadCaseCodeLabel.Code="L1-2" Grid.Row="0" Grid.Column="2"/>
+                                                            <TextBlock common:LoadCaseCodeLabel.Code="L1-3" Grid.Row="0" Grid.Column="3"/>
+                                                            <TextBlock common:LoadCaseCodeLabel.Code="L1-4" Grid.Row="0" Grid.Column="4"/>
+                                                            <TextBlock common:LoadCaseCodeLabel.Code="L2-1" Grid.Row="0" Grid.Column="5"/>
+                                                            <TextBlock common:LoadCaseCodeLabel.Code="L2-2" Grid.Row="0" Grid.Column="6"/>
+                                                            <TextBlock common:LoadCaseCodeLabel.Code="L2-3" Grid.Row="0" Grid.Column="7"/>
+                                                            <TextBlock common:LoadCaseCodeLabel.Code="L2-4" Grid.Row="0" Grid.Column="8"/>
+                                                            <TextBlock Text="OTM X(U)" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXUpper[0], StringFormat=N1, Mode=OneWay}" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXUpper[1], StringFormat=N1, Mode=OneWay}" Grid.Row="1" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXUpper[2], StringFormat=N1, Mode=OneWay}" Grid.Row="1" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXUpper[3], StringFormat=N1, Mode=OneWay}" Grid.Row="1" Grid.Column="4" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXUpper[4], StringFormat=N1, Mode=OneWay}" Grid.Row="1" Grid.Column="5" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXUpper[5], StringFormat=N1, Mode=OneWay}" Grid.Row="1" Grid.Column="6" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXUpper[6], StringFormat=N1, Mode=OneWay}" Grid.Row="1" Grid.Column="7" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXUpper[7], StringFormat=N1, Mode=OneWay}" Grid.Row="1" Grid.Column="8" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="OTM Y(U)" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYUpper[0], StringFormat=N1, Mode=OneWay}" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYUpper[1], StringFormat=N1, Mode=OneWay}" Grid.Row="2" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYUpper[2], StringFormat=N1, Mode=OneWay}" Grid.Row="2" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYUpper[3], StringFormat=N1, Mode=OneWay}" Grid.Row="2" Grid.Column="4" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYUpper[4], StringFormat=N1, Mode=OneWay}" Grid.Row="2" Grid.Column="5" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYUpper[5], StringFormat=N1, Mode=OneWay}" Grid.Row="2" Grid.Column="6" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYUpper[6], StringFormat=N1, Mode=OneWay}" Grid.Row="2" Grid.Column="7" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYUpper[7], StringFormat=N1, Mode=OneWay}" Grid.Row="2" Grid.Column="8" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="OTM X(L)" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXFoundation[0], StringFormat=N1, Mode=OneWay}" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXFoundation[1], StringFormat=N1, Mode=OneWay}" Grid.Row="3" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXFoundation[2], StringFormat=N1, Mode=OneWay}" Grid.Row="3" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXFoundation[3], StringFormat=N1, Mode=OneWay}" Grid.Row="3" Grid.Column="4" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXFoundation[4], StringFormat=N1, Mode=OneWay}" Grid.Row="3" Grid.Column="5" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXFoundation[5], StringFormat=N1, Mode=OneWay}" Grid.Row="3" Grid.Column="6" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXFoundation[6], StringFormat=N1, Mode=OneWay}" Grid.Row="3" Grid.Column="7" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmXFoundation[7], StringFormat=N1, Mode=OneWay}" Grid.Row="3" Grid.Column="8" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="OTM Y(L)" Grid.Row="4" Grid.Column="0" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYFoundation[0], StringFormat=N1, Mode=OneWay}" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYFoundation[1], StringFormat=N1, Mode=OneWay}" Grid.Row="4" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYFoundation[2], StringFormat=N1, Mode=OneWay}" Grid.Row="4" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYFoundation[3], StringFormat=N1, Mode=OneWay}" Grid.Row="4" Grid.Column="4" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYFoundation[4], StringFormat=N1, Mode=OneWay}" Grid.Row="4" Grid.Column="5" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYFoundation[5], StringFormat=N1, Mode=OneWay}" Grid.Row="4" Grid.Column="6" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYFoundation[6], StringFormat=N1, Mode=OneWay}" Grid.Row="4" Grid.Column="7" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedOtmYFoundation[7], StringFormat=N1, Mode=OneWay}" Grid.Row="4" Grid.Column="8" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="ΣΔ(U) (kN)" Grid.Row="5" Grid.Column="0" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding SeparatedSumUpper[0], StringFormat=N1, Mode=OneWay}" Grid.Row="5" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedSumUpper[1], StringFormat=N1, Mode=OneWay}" Grid.Row="5" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedSumUpper[2], StringFormat=N1, Mode=OneWay}" Grid.Row="5" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedSumUpper[3], StringFormat=N1, Mode=OneWay}" Grid.Row="5" Grid.Column="4" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedSumUpper[4], StringFormat=N1, Mode=OneWay}" Grid.Row="5" Grid.Column="5" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedSumUpper[5], StringFormat=N1, Mode=OneWay}" Grid.Row="5" Grid.Column="6" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedSumUpper[6], StringFormat=N1, Mode=OneWay}" Grid.Row="5" Grid.Column="7" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedSumUpper[7], StringFormat=N1, Mode=OneWay}" Grid.Row="5" Grid.Column="8" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="ΣΔ(L) (kN)" Grid.Row="6" Grid.Column="0" HorizontalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding SeparatedSumFoundation[0], StringFormat=N1, Mode=OneWay}" Grid.Row="6" Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedSumFoundation[1], StringFormat=N1, Mode=OneWay}" Grid.Row="6" Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedSumFoundation[2], StringFormat=N1, Mode=OneWay}" Grid.Row="6" Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedSumFoundation[3], StringFormat=N1, Mode=OneWay}" Grid.Row="6" Grid.Column="4" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedSumFoundation[4], StringFormat=N1, Mode=OneWay}" Grid.Row="6" Grid.Column="5" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedSumFoundation[5], StringFormat=N1, Mode=OneWay}" Grid.Row="6" Grid.Column="6" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedSumFoundation[6], StringFormat=N1, Mode=OneWay}" Grid.Row="6" Grid.Column="7" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                            <TextBlock Text="{Binding SeparatedSumFoundation[7], StringFormat=N1, Mode=OneWay}" Grid.Row="6" Grid.Column="8" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="Gray"/>
+                                                        </Grid>
+
+                                                        <Grid Visibility="{Binding IsAxialForceSeparated, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
                                                             <Grid.RowDefinitions>
                                                                 <RowDefinition Height="*"/>
                                                                 <RowDefinition Height="*"/>
@@ -3635,7 +3791,7 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel1s[0], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                                        Visibility="{Binding Data.IsAxialForceAbsoluteColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="L1-1" TextAlignment="Center" ToolTip="{Binding Data.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[0].LoadName, Source={StaticResource AxialForceVMProxy}, FallbackValue=L1-1}"/>
@@ -3663,7 +3819,7 @@
                                                     <!-- 変動モード用: Δ1-1 (= AxialForceLevel1s[0] - VL) -->
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel1s[0], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
@@ -3675,7 +3831,7 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel1s[1], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                                        Visibility="{Binding Data.IsAxialForceAbsoluteColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="L1-2" TextAlignment="Center" ToolTip="{Binding Data.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[1].LoadName, Source={StaticResource AxialForceVMProxy}, FallbackValue=L1-2}"/>
@@ -3702,7 +3858,7 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel1s[1], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
@@ -3714,7 +3870,7 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel1s[2], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                                        Visibility="{Binding Data.IsAxialForceAbsoluteColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="L1-3" TextAlignment="Center" ToolTip="{Binding Data.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[2].LoadName, Source={StaticResource AxialForceVMProxy}, FallbackValue=L1-3}"/>
@@ -3741,7 +3897,7 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel1s[2], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
@@ -3753,7 +3909,7 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel1s[3], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                                        Visibility="{Binding Data.IsAxialForceAbsoluteColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="L1-4" TextAlignment="Center" ToolTip="{Binding Data.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[3].LoadName, Source={StaticResource AxialForceVMProxy}, FallbackValue=L1-4}"/>
@@ -3780,7 +3936,7 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel1s[3], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
@@ -3792,7 +3948,7 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel2s[0], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                                        Visibility="{Binding Data.IsAxialForceAbsoluteColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="L2-1" TextAlignment="Center" ToolTip="{Binding Data.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[0].LoadName, Source={StaticResource AxialForceVMProxy}, FallbackValue=L2-1}"/>
@@ -3819,7 +3975,7 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel2s[0], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
@@ -3831,7 +3987,7 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel2s[1], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                                        Visibility="{Binding Data.IsAxialForceAbsoluteColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="L2-2" TextAlignment="Center" ToolTip="{Binding Data.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[1].LoadName, Source={StaticResource AxialForceVMProxy}, FallbackValue=L2-2}"/>
@@ -3858,7 +4014,7 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel2s[1], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
@@ -3870,7 +4026,7 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel2s[2], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                                        Visibility="{Binding Data.IsAxialForceAbsoluteColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="L2-3" TextAlignment="Center" ToolTip="{Binding Data.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[2].LoadName, Source={StaticResource AxialForceVMProxy}, FallbackValue=L2-3}"/>
@@ -3897,7 +4053,7 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel2s[2], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
@@ -3909,7 +4065,7 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel2s[3], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
+                                                                        Visibility="{Binding Data.IsAxialForceAbsoluteColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="L2-4" TextAlignment="Center" ToolTip="{Binding Data.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[3].LoadName, Source={StaticResource AxialForceVMProxy}, FallbackValue=L2-4}"/>
@@ -3936,11 +4092,205 @@
 
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceVariationLevel2s[3], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
-                                                                        Visibility="{Binding Data.IsAxialForceVariationMode, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        Visibility="{Binding Data.IsAxialForceVariationColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
                                                                         ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="ΔL2-4" TextAlignment="Center" ToolTip="{Binding Data.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[3].LoadName, Source={StaticResource AxialForceVMProxy}, FallbackValue=ΔL2-4}"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <!-- 地震時軸力の分離入力用: ΔL(U) = 上部構造慣性力による変動軸力、ΔL(L) = 基礎部慣性力による変動軸力。
+                                                         荷重組合せごとに 軸力 = VL + βL·ΔL(L) + βU·ΔL(U) (SeismicAxialForces)。分離入力のときだけ出す -->
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceUpperLevel1s[0], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="上部構造慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL1-1(U)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceFoundationLevel1s[0], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="基礎部慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL1-1(L)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceUpperLevel1s[1], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="上部構造慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL1-2(U)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceFoundationLevel1s[1], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="基礎部慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL1-2(L)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceUpperLevel1s[2], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="上部構造慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL1-3(U)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceFoundationLevel1s[2], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="基礎部慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL1-3(L)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceUpperLevel1s[3], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="上部構造慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL1-4(U)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceFoundationLevel1s[3], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="基礎部慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL1-4(L)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceUpperLevel2s[0], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="上部構造慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL2-1(U)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceFoundationLevel2s[0], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="基礎部慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL2-1(L)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceUpperLevel2s[1], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="上部構造慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL2-2(U)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceFoundationLevel2s[1], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="基礎部慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL2-2(L)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceUpperLevel2s[2], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="上部構造慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL2-3(U)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceFoundationLevel2s[2], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="基礎部慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL2-3(L)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceUpperLevel2s[3], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="上部構造慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL2-4(U)" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <DataGridTextColumn Width="56" Binding="{Binding AxialForceFoundationLevel2s[3], StringFormat=N1}" MinWidth="56"
+                                                                        HeaderStyle="{StaticResource PaleRedHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparated, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource RightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="基礎部慣性力による変動軸力 (分離入力。軸力 = VL + βL·ΔL(L) + βU·ΔL(U))">
+                                                                <TextBlock Text="ΔL2-4(L)" TextAlignment="Center"/>
                                                                 <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                             </StackPanel>
                                                         </DataGridTextColumn.Header>

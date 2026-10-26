@@ -662,6 +662,11 @@ namespace PileDesign.ViewModels
             if (switched) IsLiquefaction = liquefaction;
         }
 
+        /// <summary>リボンで選んでいる荷重組合せを、<paramref name="model"/> の組合せに解く (番号で照合)。選んでいない・解けなければ null。</summary>
+        internal LoadCombination? SelectedLoadCombinationIn(InputModel? model)
+            => string.IsNullOrEmpty(SelectedLoadCombinationName) ? null
+               : LoadCombinations.GetLoadCombination(model?.LoadCasesInput?.LoadCombinations, SelectedLoadCombinationName);
+
         private void UpdateDirectionOption()
         {
             if (CurrentInputModel == null) { DirectionOption = []; return; }

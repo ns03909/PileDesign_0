@@ -472,7 +472,7 @@ namespace PileDesign.ViewModels
                 if (SetProperty(ref _currentInputModel, value))
                 {
                     Common.AxialForceModeContext.IsVariationMode = value?.IsAxialForceVariationMode ?? false;
-                    OnPropertyChanged(nameof(IsAxialForceVariationMode));
+                    RaiseAxialForceModeChanged();
                     if (previous?.PileLayoutItems is { } previousPiles)
                     {
                         previousPiles.CollectionChanged -= PileLayoutItems_CollectionChanged;
@@ -1681,13 +1681,24 @@ namespace PileDesign.ViewModels
                 var tensileCases = new List<string>();
                 if (pile.AxialForceVL < 0)
                     tensileCases.Add($"常時 ({pile.AxialForceVL:N1}kN)");
-                if (pile.AxialForceLevel1s != null)
+                if (CurrentInputModel.IsAxialForceSeparated)
+                {
+                    // 地震時軸力の分離入力: 組合せのうち最小の軸力が引張なら挙げる (どの組合せかを添える)
+                    foreach (int level in new[] { 1, 2 })
+                        for (int no = 1; no <= (pile.AxialForceUpperOf(level)?.Count ?? 0); no++)
+                        {
+                            var e = Models.InputData.SeismicAxialForces.Envelope(CurrentInputModel, pile, no, level, reportFallback: false);
+                            if (e.Min < 0)
+                                tensileCases.Add($"L{level}-{no}{Models.InputData.SeismicAxialForces.CombinationSuffix(e.MinCombination)} ({e.Min:N1}kN)");
+                        }
+                }
+                else if (pile.AxialForceLevel1s != null)
                 {
                     for (int i = 0; i < pile.AxialForceLevel1s.Count; i++)
                         if (pile.AxialForceLevel1s[i] < 0)
                             tensileCases.Add($"L1-{i + 1} ({pile.AxialForceLevel1s[i]:N1}kN)");
                 }
-                if (pile.AxialForceLevel2s != null)
+                if (!CurrentInputModel.IsAxialForceSeparated && pile.AxialForceLevel2s != null)
                 {
                     for (int i = 0; i < pile.AxialForceLevel2s.Count; i++)
                         if (pile.AxialForceLevel2s[i] < 0)
@@ -2001,14 +2012,65 @@ namespace PileDesign.ViewModels
             {
                 if (CurrentInputModel == null) return;
                 if (CurrentInputModel.IsAxialForceVariationMode == value) return;
+                // 分離入力のあいだは「変動」に固定する (分離入力の欄は変動の値だけ)
+                if (!value && CurrentInputModel.IsAxialForceSeparated) { OnPropertyChanged(); return; }
                 var before = CaptureInputEdit();
                 CurrentInputModel.IsAxialForceVariationMode = value;
                 Common.AxialForceModeContext.IsVariationMode = value;
-                OnPropertyChanged();
+                RaiseAxialForceModeChanged();
                 // プロパティパネルの軸力ラベル/値表記が絶対⇔変動で切り替わるため再構築
                 UpdatePropertyPanel();
                 CompleteInputEdit(before, scope: AnalysisInputScope.None);
             }
+        }
+
+        /// <summary>
+        /// 地震時軸力の分離入力 (InputModel.IsAxialForceSeparated)。オンのとき、地震時軸力を荷重組合せごとに
+        /// N = VL + βL·ΔL(L) + βU·ΔL(U) で求め、表は ΔL(U)・ΔL(L) の欄になる。軸力モードは「変動」に固定する。
+        /// 解析・検定・沈下の結果を変えるので、切り替えは軸力の表の編集と同じく、確認のうえ結果を消してから行う。
+        /// 分離しない入力 (AxialForceLevel1s/2s) と分離入力の値は別に持つので、切り替えてもどちらも残る。
+        /// </summary>
+        public bool IsAxialForceSeparated
+        {
+            get => CurrentInputModel?.IsAxialForceSeparated ?? false;
+            set
+            {
+                if (CurrentInputModel == null || CurrentInputModel.IsAxialForceSeparated == value) return;
+                const string description = "地震時軸力の分離入力の切り替え";
+                if (!ConfirmAnalysisConditionChange("反復", description) || !CheckAndResetAnalysisResultsKeepingSplit(description))
+                {
+                    OnPropertyChanged();   // チェックボックスを元に戻す
+                    return;
+                }
+                var before = CaptureInputEdit();
+                CurrentInputModel.IsAxialForceSeparated = value;
+                if (value && !CurrentInputModel.IsAxialForceVariationMode)
+                {
+                    CurrentInputModel.IsAxialForceVariationMode = true;
+                    Common.AxialForceModeContext.IsVariationMode = true;
+                }
+                RaiseAxialForceModeChanged();
+                UpdatePropertyPanel();
+                UpdateSumAndOTM();
+                if (CurrentInputModel.LoadCasesInput?.AllSeismicLoadCases is { } cases)
+                    foreach (var lc in cases) lc?.RaiseForceSummaryChanged();
+                CompleteInputEdit(before, description);
+            }
+        }
+
+        /// <summary>軸力の表の「絶対」の欄を出すか (分離入力でなく、絶対モード)。</summary>
+        public bool IsAxialForceAbsoluteColumnsVisible => !IsAxialForceSeparated && !IsAxialForceVariationMode;
+
+        /// <summary>軸力の表の「変動 (ΔL1-1 など)」の欄を出すか (分離入力でなく、変動モード)。</summary>
+        public bool IsAxialForceVariationColumnsVisible => !IsAxialForceSeparated && IsAxialForceVariationMode;
+
+        /// <summary>軸力モードの切り替え・分離入力の切り替えに関わる表示をまとめて通知する。</summary>
+        internal void RaiseAxialForceModeChanged()
+        {
+            OnPropertyChanged(nameof(IsAxialForceVariationMode));
+            OnPropertyChanged(nameof(IsAxialForceSeparated));
+            OnPropertyChanged(nameof(IsAxialForceAbsoluteColumnsVisible));
+            OnPropertyChanged(nameof(IsAxialForceVariationColumnsVisible));
         }
 
         /// <summary>

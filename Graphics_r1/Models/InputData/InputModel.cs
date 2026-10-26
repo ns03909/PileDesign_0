@@ -153,6 +153,18 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _isAxialForceVariationMode, value);
         }
 
+        // 地震時軸力の分離入力: true のとき、地震時軸力を荷重組合せごとに
+        //     N = VL + βL·ΔL(L) + βU·ΔL(U)
+        // で求める (PileLayoutDataItem.AxialForceUpperLevel1s など)。入力は変動のみ (軸力モードは「変動」に固定)。
+        // false (既定) では従来どおり、荷重ケースごとに 1 つの軸力 (AxialForceLevel1s/2s) を組合せによらず使う。
+        // 軸力の引き方は SeismicAxialForces にまとめている。ファイル別に永続化。
+        private bool _isAxialForceSeparated = false;
+        public bool IsAxialForceSeparated
+        {
+            get => _isAxialForceSeparated;
+            set => SetProperty(ref _isAxialForceSeparated, value);
+        }
+
         // 水平解析: 杭先端鉛直境界を P-S 非線形ばねに置換するか (true: 沈下解析の LoadDisplacements を流用)
         // false (既定): 従来通り Uz 固定
         private bool _usePsSpringAtPileTip = false;
@@ -1028,6 +1040,7 @@ namespace PileDesign.Models.InputData
             // 新規作成しても前のプロジェクトの杭軸力の扱い・P-S ばね・常時ケース・ねじれ拘束が残った
             UseAnalysisAxialForce = false;
             IsAxialForceVariationMode = false;
+            IsAxialForceSeparated = false;
             UsePsSpringAtPileTip = false;
             PsSpringSource = PsSpringSourceMode.Normal;
             IsVLAnalysisEnabled = false;
@@ -2052,6 +2065,7 @@ namespace PileDesign.Models.InputData
                 {
                     UseAnalysisAxialForce = this.UseAnalysisAxialForce,
                     IsAxialForceVariationMode = this.IsAxialForceVariationMode,
+                    IsAxialForceSeparated = this.IsAxialForceSeparated,
                     // 杭先端の P-S 非線形ばねと VL 単独解析。写し忘れていた。
                     // 元に戻す操作でこの 2 つだけ既定へ落ちるうえ、保存で複製を書くように
                     // なってからは保存でも消えていた (SaveLoadRoundTripTests が検出)。

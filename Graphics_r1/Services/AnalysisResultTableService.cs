@@ -292,7 +292,7 @@ namespace PileDesign.Services
                         var pile = inputModel.PileLayoutItems.FirstOrDefault(p => p.No == pileInfo.pileNo);
                         if (pile != null)
                             inputAxialN = loadCase != null
-                                ? pile.ResolveDesignAxialForce(loadCase.No, loadCase.Level, reportFallback: false).N
+                                ? SeismicAxialForces.Design(inputModel, pile, loadCase.No, loadCase.Level, loadCombination, reportFallback: false).N
                                 : pile.AxialForceVL;
                     }
 

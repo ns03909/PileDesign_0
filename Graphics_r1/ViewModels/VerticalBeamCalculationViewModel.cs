@@ -413,8 +413,9 @@ namespace PileDesign.ViewModels
             // 解析対象ケース数を計算（進捗計算用）
             int totalCases = 0;
             if (settings.AnalyzeVL) totalCases++;
-            if (settings.AnalyzeLevel1) totalCases += InputModel.LoadCasesInput.LoadCasesLevel1.Count;
-            if (settings.AnalyzeLevel2) totalCases += InputModel.LoadCasesInput.LoadCasesLevel2.Count;
+            int combinationCount = SeismicAxialForces.CombinationsForVerticalAnalysis(InputModel).Count;
+            if (settings.AnalyzeLevel1) totalCases += InputModel.LoadCasesInput.LoadCasesLevel1.Count * combinationCount;
+            if (settings.AnalyzeLevel2) totalCases += InputModel.LoadCasesInput.LoadCasesLevel2.Count * combinationCount;
             int caseIndex = 0;
 
             // ─── Phase 1: VL ベースケース ───
@@ -463,89 +464,52 @@ namespace PileDesign.ViewModels
 
             // ─── Phase 2: 地震時ケース（VL状態から差分増分） ───
 
-            if (settings.AnalyzeLevel1 && vlSnapshot != null)
+            // 地震時軸力の分離入力では組合せごとに解く (全杭の軸力を 1 つの荷重状態として解くため、杭ごとに最大を拾えない)。
+            // 分離入力でなければ組合せは null の 1 件で、従来どおりケースごとに 1 回。
+            var combinations = SeismicAxialForces.CombinationsForVerticalAnalysis(InputModel);
+            foreach (var (level, enabled) in new[] { (1, settings.AnalyzeLevel1), (2, settings.AnalyzeLevel2) })
             {
-                var level1Cases = InputModel.LoadCasesInput.LoadCasesLevel1;
-                for (int i = 0; i < level1Cases.Count; i++)
+                if (!enabled || vlSnapshot == null) continue;
+                var levelCases = level == 1 ? InputModel.LoadCasesInput.LoadCasesLevel1 : InputModel.LoadCasesInput.LoadCasesLevel2;
+                for (int i = 0; i < levelCases.Count; i++)
                 {
-                    token.ThrowIfCancellationRequested();
-                    caseIndex++;
+                    foreach (var combination in combinations)
+                    {
+                        token.ThrowIfCancellationRequested();
+                        caseIndex++;
 
-                    string caseName = $"1-{i + 1}: {level1Cases[i].LoadName}";
-                    await AddLogAsync($"\n━━━ Phase 2: {caseName} ({caseIndex}/{totalCases}) ━━━");
+                        string caseName = $"{level}-{i + 1}: {levelCases[i].LoadName}" + SeismicAxialForces.CombinationSuffix(combination);
+                        await AddLogAsync($"\n━━━ Phase 2: {caseName} ({caseIndex}/{totalCases}) ━━━");
 
-                    // VL状態復元
-                    RestoreState(anaModel, vlSnapshot);
-                    await AddLogAsync("  VL収束状態から開始");
+                        // VL状態復元
+                        RestoreState(anaModel, vlSnapshot);
+                        await AddLogAsync("  VL収束状態から開始");
 
-                    // 差分荷重設定: delta = AxialForceLevel1s[i] - AxialForceVL
-                    int idx = i;
-                    double totalDelta = SetIncrementalLoads(modelling, anaModel, settings.LoadStepsCount,
-                        p => (p.AxialForceLevel1s != null && idx < p.AxialForceLevel1s.Count
-                            ? p.AxialForceLevel1s[idx] : p.AxialForceVL) - p.AxialForceVL);
-                    anaModel.MapOnVectorDF();
-                    await AddLogAsync($"  差分荷重合計: {totalDelta:F1} kN");
+                        // 差分荷重設定: delta = 地震時軸力 - AxialForceVL (従来は AxialForceLevel1s/2s[i]、欄が無ければ VL)
+                        int caseNo = i + 1, lv = level;
+                        var c = combination;
+                        double Seismic(PileLayoutDataItem p) => SeismicAxialForces.ForVerticalAnalysis(InputModel, p, caseNo, lv, c);
+                        double totalDelta = SetIncrementalLoads(modelling, anaModel, settings.LoadStepsCount,
+                            p => Seismic(p) - p.AxialForceVL);
+                        anaModel.MapOnVectorDF();
+                        await AddLogAsync($"  差分荷重合計: {totalDelta:F1} kN");
 
-                    // 杭ばね剛性をVL状態の値に更新
-                    UpdateSpringTangentStiffness(modelling, anaModel);
-                    UpdateSpringSecantStiffness(modelling, anaModel);
+                        // 杭ばね剛性をVL状態の値に更新
+                        UpdateSpringTangentStiffness(modelling, anaModel);
+                        UpdateSpringSecantStiffness(modelling, anaModel);
 
-                    // 荷重ステップ解析
-                    var caseResult = await RunLoadSteps(
-                        modelling, anaModel, settings, caseName, caseIndex, totalCases, token);
+                        // 荷重ステップ解析
+                        var caseResult = await RunLoadSteps(
+                            modelling, anaModel, settings, caseName, caseIndex, totalCases, token);
 
-                    // 結果収集（最終状態 = VL + delta）
-                    CollectResults(modelling, anaModel, caseResult,
-                        p => p.AxialForceLevel1s != null && idx < p.AxialForceLevel1s.Count
-                            ? p.AxialForceLevel1s[idx] : p.AxialForceVL);
+                        // 結果収集（最終状態 = VL + delta）
+                        CollectResults(modelling, anaModel, caseResult, Seismic);
 
-                    double totalLoad = caseResult.PileResults.Sum(r => r.InputLoad_kN);
-                    await LogPileResultSummary(caseResult, totalLoad);
+                        double totalLoad = caseResult.PileResults.Sum(r => r.InputLoad_kN);
+                        await LogPileResultSummary(caseResult, totalLoad);
 
-                    Application.Current?.Dispatcher.Invoke(() => CaseResults.Add(caseResult));
-                }
-            }
-
-            if (settings.AnalyzeLevel2 && vlSnapshot != null)
-            {
-                var level2Cases = InputModel.LoadCasesInput.LoadCasesLevel2;
-                for (int i = 0; i < level2Cases.Count; i++)
-                {
-                    token.ThrowIfCancellationRequested();
-                    caseIndex++;
-
-                    string caseName = $"2-{i + 1}: {level2Cases[i].LoadName}";
-                    await AddLogAsync($"\n━━━ Phase 2: {caseName} ({caseIndex}/{totalCases}) ━━━");
-
-                    // VL状態復元
-                    RestoreState(anaModel, vlSnapshot);
-                    await AddLogAsync("  VL収束状態から開始");
-
-                    // 差分荷重設定: delta = AxialForceLevel2s[i] - AxialForceVL
-                    int idx = i;
-                    double totalDelta = SetIncrementalLoads(modelling, anaModel, settings.LoadStepsCount,
-                        p => (p.AxialForceLevel2s != null && idx < p.AxialForceLevel2s.Count
-                            ? p.AxialForceLevel2s[idx] : p.AxialForceVL) - p.AxialForceVL);
-                    anaModel.MapOnVectorDF();
-                    await AddLogAsync($"  差分荷重合計: {totalDelta:F1} kN");
-
-                    // 杭ばね剛性をVL状態の値に更新
-                    UpdateSpringTangentStiffness(modelling, anaModel);
-                    UpdateSpringSecantStiffness(modelling, anaModel);
-
-                    // 荷重ステップ解析
-                    var caseResult = await RunLoadSteps(
-                        modelling, anaModel, settings, caseName, caseIndex, totalCases, token);
-
-                    // 結果収集
-                    CollectResults(modelling, anaModel, caseResult,
-                        p => p.AxialForceLevel2s != null && idx < p.AxialForceLevel2s.Count
-                            ? p.AxialForceLevel2s[idx] : p.AxialForceVL);
-
-                    double totalLoad = caseResult.PileResults.Sum(r => r.InputLoad_kN);
-                    await LogPileResultSummary(caseResult, totalLoad);
-
-                    Application.Current?.Dispatcher.Invoke(() => CaseResults.Add(caseResult));
+                        Application.Current?.Dispatcher.Invoke(() => CaseResults.Add(caseResult));
+                    }
                 }
             }
 

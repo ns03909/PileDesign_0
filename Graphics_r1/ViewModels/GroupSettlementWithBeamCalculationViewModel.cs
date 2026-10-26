@@ -704,15 +704,23 @@ namespace PileDesign.ViewModels
             }
             // 地震時は、水平解析と同じく「解析対象」の荷重ケースだけ (適用しないケースも除く)。
             // 以前はレベルの荷重ケースをすべて並べ、解析対象・適用を外したケースまで解いていた
+            // 地震時軸力の分離入力では組合せごとに解く (全杭の軸力を 1 つの荷重状態として解くため)。
+            // 分離入力でなければ組合せは null の 1 件で、従来どおり。
+            var combinations = SeismicAxialForces.CombinationsForVerticalAnalysis(InputModel);
             foreach (var lc in PlannedSeismicCases())
             {
-                int idx = lc.No - 1;   // 杭の地震時軸力は荷重ケースの並び (= 番号 - 1) に対応する
-                var ppi = piles.ToDictionary(p => p.PileNo, p =>
+                foreach (var combination in combinations)
                 {
-                    var forces = lc.Level == 1 ? p.AxialForceLevel1s : p.AxialForceLevel2s;
-                    return idx >= 0 && idx < (forces?.Count ?? 0) ? forces![idx] : 0.0;
-                });
-                list.Add((CaseLabel(lc), ppi));
+                    int idx = lc.No - 1;   // 杭の地震時軸力は荷重ケースの並び (= 番号 - 1) に対応する
+                    var ppi = piles.ToDictionary(p => p.PileNo, p =>
+                    {
+                        if (combination != null)
+                            return SeismicAxialForces.ForVerticalAnalysis(InputModel, p, lc.No, lc.Level, combination);
+                        var forces = lc.Level == 1 ? p.AxialForceLevel1s : p.AxialForceLevel2s;
+                        return idx >= 0 && idx < (forces?.Count ?? 0) ? forces![idx] : 0.0;
+                    });
+                    list.Add((CaseLabel(lc) + SeismicAxialForces.CombinationSuffix(combination), ppi));
+                }
             }
             return list;
         }
@@ -743,7 +751,8 @@ namespace PileDesign.ViewModels
                 var names = new List<string>();
                 if (LoadSource == SourceRectLoads) names.Add("矩形荷重 (VL)");
                 else if (AnalyzeVL) names.Add("杭軸力 VL");
-                names.AddRange(PlannedSeismicCases().Select(CaseLabel));
+                var combinations = SeismicAxialForces.CombinationsForVerticalAnalysis(InputModel);
+                names.AddRange(PlannedSeismicCases().SelectMany(lc => combinations.Select(c => CaseLabel(lc) + SeismicAxialForces.CombinationSuffix(c))));
                 return names.Count == 0 ? "解くケースがありません"
                     : $"解くケース {names.Count} 件: " + string.Join(" / ", names);
             }

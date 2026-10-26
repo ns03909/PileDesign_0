@@ -621,6 +621,10 @@ namespace PileDesign.Views
         {
             if (string.IsNullOrEmpty(caseName)) return caseName ?? string.Empty;
 
+            // 地震時軸力の分離入力では組合せごとに解き、"1-1: U1 / 組合せNo.2 (βU=1, βL=-1)" のように組合せを添える
+            int comboIdx = caseName.IndexOf(" / 組合せ", StringComparison.Ordinal);
+            if (comboIdx > 0) caseName = caseName[..comboIdx];
+
             // "1-1: U1" → "U1"
             int colonIdx = caseName.IndexOf(": ", StringComparison.Ordinal);
             string stripped = colonIdx >= 0 ? caseName[(colonIdx + 2)..].Trim() : caseName;
@@ -639,7 +643,13 @@ namespace PileDesign.Views
 
             // 選択中の荷重ケース名に対応する VB 結果を取得（なければ先頭にフォールバック）
             string selectedName = viewModel.SelectedLoadCaseName;
-            var caseResult = caseResults.FirstOrDefault(c => ExtractVBCaseBaseName(c.LoadCaseName) == selectedName)
+            // 分離入力では同じケースに組合せごとの結果が並ぶ。リボンで選んでいる組合せのものを優先する
+            // (βU・βL の同じ組合せはまとめて解くので、選んだ組合せの番号の結果が無ければ同じケースの先頭)
+            var sameCase = caseResults.Where(c => ExtractVBCaseBaseName(c.LoadCaseName) == selectedName).ToList();
+            var selectedCombination = viewModel.SelectedLoadCombinationIn(viewModel.ResultInputModel);
+            string comboSuffix = PileDesign.Models.InputData.SeismicAxialForces.CombinationSuffix(selectedCombination);
+            var caseResult = (comboSuffix.Length > 0 ? sameCase.FirstOrDefault(c => c.LoadCaseName.EndsWith(comboSuffix, StringComparison.Ordinal)) : null)
+                             ?? sameCase.FirstOrDefault()
                              ?? caseResults[0];
             string content = viewModel.EffectiveSettlementContent;
 
@@ -749,10 +759,11 @@ namespace PileDesign.Views
             if (selected == null) return null;
 
             var cases = selected.Level == 1 ? lcs.LoadCasesLevel1 : lcs.LoadCasesLevel2;
-            var forces = selected.Level == 1 ? pile.AxialForceLevel1s : pile.AxialForceLevel2s;
+            // 単杭沈下を求めた軸力 (分離入力ではリボンで選んでいる組合せの軸力)
+            var combination = vm.SelectedLoadCombinationIn(vm.ResultInputModel);
             for (int i = 0; i < cases.Count; i++)
-                if (LoadCase.IsSameCase(selected, cases[i]) && i < forces.Count)
-                    return forces[i];
+                if (LoadCase.IsSameCase(selected, cases[i]))
+                    return SeismicAxialForces.ForSettlementDisplay(vm.ResultInputModel, pile, i + 1, selected.Level, combination);
             return null;
         }
 

@@ -354,6 +354,26 @@ namespace PileDesign.ViewModels
                 MakeDoubleCommit(() => pile.AxialForceVL0, v => pile.AxialForceVL0 = v, "F1"),
                 nameColor: "#3271AD"));
 
+            // 地震時軸力の分離入力: ΔL(U)・ΔL(L) (レベル1 緑・レベル2 桃赤)
+            if (CurrentInputModel?.IsAxialForceSeparated == true)
+            {
+                foreach (int level in new[] { 1, 2 })
+                {
+                    string color = level == 1 ? "#238966" : "#E95541";
+                    var upper = pile.AxialForceUpperOf(level);
+                    var foundation = pile.AxialForceFoundationOf(level);
+                    for (int i = 0; i < System.Math.Min(upper.Count, foundation.Count); i++)
+                    {
+                        int idx = i;
+                        SelectedItemProperties.Add(new($"ΔL{level}-{i + 1}(U)", $"{upper[i]:F1}", "kN", PropertyInputType.Number,
+                            MakeDoubleCommit(() => upper[idx], v => upper[idx] = v, "F1"), nameColor: color));
+                        SelectedItemProperties.Add(new($"ΔL{level}-{i + 1}(L)", $"{foundation[i]:F1}", "kN", PropertyInputType.Number,
+                            MakeDoubleCommit(() => foundation[idx], v => foundation[idx] = v, "F1"), nameColor: color));
+                    }
+                }
+                return;
+            }
+
             bool isVar = Common.AxialForceModeContext.IsVariationMode;
 
             // 軸力: レベル1 — 緑 (絶対 or 変動)
@@ -601,6 +621,50 @@ namespace PileDesign.ViewModels
             else
                 SelectedItemProperties.Add(new("軸力 VL (each)", CommonDoubleOrVarious(piles.Select(p => p.AxialForceVL), "F1"), "kN", nameColor: "#3271AD"));
 
+            // 1 行 (total: 合計・読み取り専用、each: 各値・編集可)
+            void AddMultiAxialRow(string name, System.Func<PileLayoutDataItem, double> getter,
+                System.Action<PileLayoutDataItem, double> setter, string color)
+            {
+                if (PropertyDisplayIsTotal)
+                {
+                    SelectedItemProperties.Add(new($"{name} (total)",
+                        $"{piles.Sum(p => getter(p)):F1}", "kN",
+                        nameColor: color));
+                    return;
+                }
+                SelectedItemProperties.Add(new($"{name} (each)",
+                    CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1"), "kN",
+                    PropertyInputType.Number,
+                    (item, rawValue) =>
+                    {
+                        if (!PileDesign.Common.NumericText.TryParse(rawValue, out double newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
+                        if (!ValidatePanelValue(item, newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
+                        if (piles.All(p => getter(p) == newVal)) return;
+                        if (!ConfirmDiscardInvalidatedByInputChange(true)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
+                        var before = CaptureInputEdit();
+                        foreach (var p in piles) setter(p, newVal);
+                        CompleteInputEdit(before);
+                    },
+                    nameColor: color));
+            }
+
+            // 地震時軸力の分離入力: ΔL(U)・ΔL(L) の行 (レベル1 緑・レベル2 桃赤)
+            if (CurrentInputModel?.IsAxialForceSeparated == true)
+            {
+                foreach (int level in new[] { 1, 2 })
+                {
+                    string color = level == 1 ? "#238966" : "#E95541";
+                    int count = piles.Min(p => System.Math.Min(p.AxialForceUpperOf(level)?.Count ?? 0, p.AxialForceFoundationOf(level)?.Count ?? 0));
+                    for (int i = 0; i < count; i++)
+                    {
+                        int idx = i, lv = level;
+                        AddMultiAxialRow($"ΔL{level}-{i + 1}(U)", p => p.AxialForceUpperOf(lv)[idx], (p, v) => p.AxialForceUpperOf(lv)[idx] = v, color);
+                        AddMultiAxialRow($"ΔL{level}-{i + 1}(L)", p => p.AxialForceFoundationOf(lv)[idx], (p, v) => p.AxialForceFoundationOf(lv)[idx] = v, color);
+                    }
+                }
+                return;
+            }
+
             bool isVar = Common.AxialForceModeContext.IsVariationMode;
             string l1Prefix = isVar ? "ΔN" : "軸力";
             string l2Prefix = isVar ? "ΔN" : "軸力";
@@ -617,30 +681,7 @@ namespace PileDesign.ViewModels
                 System.Action<PileLayoutDataItem, double> setter = isVar
                     ? ((p, v) => p.AxialForceVariationLevel1s[idx] = v)
                     : ((p, v) => p.AxialForceLevel1s[idx] = v);
-
-                if (PropertyDisplayIsTotal)
-                {
-                    SelectedItemProperties.Add(new($"{l1Prefix} 1-{i + 1} (total)",
-                        $"{piles.Sum(p => getter(p)):F1}", "kN",
-                        nameColor: "#238966"));
-                }
-                else
-                {
-                    SelectedItemProperties.Add(new($"{l1Prefix} 1-{i + 1} (each)",
-                        CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1"), "kN",
-                        PropertyInputType.Number,
-                        (item, rawValue) =>
-                        {
-                            if (!PileDesign.Common.NumericText.TryParse(rawValue, out double newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
-                    if (!ValidatePanelValue(item, newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
-                    if (piles.All(p => getter(p) == newVal)) return;
-                            if (!ConfirmDiscardInvalidatedByInputChange(true)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
-                            var before = CaptureInputEdit();
-                            foreach (var p in piles) setter(p, newVal);
-                            CompleteInputEdit(before);
-                        },
-                        nameColor: "#238966"));
-                }
+                AddMultiAxialRow($"{l1Prefix} 1-{i + 1}", getter, setter, "#238966");
             }
 
             // レベル2軸力 — 桃赤 (total: 合計・読み取り専用、each: 各値・編集可)
@@ -654,30 +695,7 @@ namespace PileDesign.ViewModels
                 System.Action<PileLayoutDataItem, double> setter = isVar
                     ? ((p, v) => p.AxialForceVariationLevel2s[idx] = v)
                     : ((p, v) => p.AxialForceLevel2s[idx] = v);
-
-                if (PropertyDisplayIsTotal)
-                {
-                    SelectedItemProperties.Add(new($"{l2Prefix} 2-{i + 1} (total)",
-                        $"{piles.Sum(p => getter(p)):F1}", "kN",
-                        nameColor: "#E95541"));
-                }
-                else
-                {
-                    SelectedItemProperties.Add(new($"{l2Prefix} 2-{i + 1} (each)",
-                        CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1"), "kN",
-                        PropertyInputType.Number,
-                        (item, rawValue) =>
-                        {
-                            if (!PileDesign.Common.NumericText.TryParse(rawValue, out double newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
-                    if (!ValidatePanelValue(item, newVal)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
-                    if (piles.All(p => getter(p) == newVal)) return;
-                            if (!ConfirmDiscardInvalidatedByInputChange(true)) { item.SetValueSilent(CommonDoubleOrVarious(piles.Select(p => getter(p)), "F1")); return; }
-                            var before = CaptureInputEdit();
-                            foreach (var p in piles) setter(p, newVal);
-                            CompleteInputEdit(before);
-                        },
-                        nameColor: "#E95541"));
-                }
+                AddMultiAxialRow($"{l2Prefix} 2-{i + 1}", getter, setter, "#E95541");
             }
         }
 

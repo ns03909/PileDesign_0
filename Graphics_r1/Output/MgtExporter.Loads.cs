@@ -305,7 +305,11 @@ namespace PileDesign.Output
             foreach (var pile in piles)
             {
                 int iLC = lc.No - 1;
+                // 地震時軸力の分離入力: MGT の荷重ケースは組合せごとに軸力を変えられないので、組合せのうち最大 (圧縮側) を書く
+                // (ファイル先頭に注記。CollectApproximations)
                 double n = IsVL(lc) ? pile.AxialForceVL
+                    : SeismicAxialForces.IsSeparated(_anaModel.InputModel)
+                        ? SeismicAxialForces.Envelope(_anaModel.InputModel, pile, lc.No, lc.Level, reportFallback: false).Max
                     : lc.Level == 1 ? (pile.AxialForceLevel1s != null && iLC >= 0 && iLC < pile.AxialForceLevel1s.Count ? pile.AxialForceLevel1s[iLC] : pile.AxialForceVL)
                     : (pile.AxialForceLevel2s != null && iLC >= 0 && iLC < pile.AxialForceLevel2s.Count ? pile.AxialForceLevel2s[iLC] : pile.AxialForceVL);
                 var joint = _anaModel.PileJointNodeOf(pile.No);

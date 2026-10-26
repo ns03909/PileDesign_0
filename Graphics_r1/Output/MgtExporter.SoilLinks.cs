@@ -346,6 +346,9 @@ namespace PileDesign.Output
                 notes.Add($"前方杭/後方杭の判定が荷重ケースで変わる杭があります (杭 No.{string.Join(", ", frontDiffers)})。");
             if (hasY && plan.SoilLinks.Any(l => l.Direction == LinkDirection.Y))
                 notes.Add("X・Y 方向の地盤ばねは別々のばねです。解析は X・Y を合わせた変位で剛性を決めます。");
+            if (SeismicAxialForces.IsSeparated(_anaModel.InputModel))
+                notes.Add("地震時軸力を分離入力 (VL + βL·ΔL(L) + βU·ΔL(U)) にしています。荷重ケースの杭の軸力は組合せごとに変えられないため、"
+                          + "組合せのうち最大 (圧縮側) の値を書きます。");
             if (headNotes.Count > 0)
                 notes.Add($"杭頭の回転ばねは、常時軸力 (VL) での M-θ の初期剛性 (ひび割れ前) の線形ばねです (杭 No.{string.Join(", ", headNotes)})。"
                           + "解析は荷重ケースの軸力ごとの M-θ で、ひび割れ・降伏で剛性が下がります。");

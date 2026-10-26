@@ -506,6 +506,15 @@ namespace PileDesign.ViewModels
             double y = deltaForce * Math.Sin(PileDesign.Common.Units.DegToRad(loadAngle)); // y方向の増分荷重 [kN]
 
             targetModel.Nodes[0].SetIncrementalLoad(new(x, y, 0.0, 0.0, 0.0, 0.0)); // 増分荷重ベクトル [kN]
+
+            // 地震時軸力の分離入力: この組合せの軸力 N = VL + βL·ΔL(L) + βU·ΔL(U)。欄が無ければ VL (下の従来の扱いと同じ)。
+            // 分離入力でなければ下の従来の式 (AxialForceLevel1s/2s をそのまま読む) を通し、値は変わらない。
+            bool separatedAxial = Models.InputData.SeismicAxialForces.IsSeparated(InputModel);
+            double SeparatedTargetN(Models.InputData.PileLayoutDataItem pli)
+            {
+                try { return Models.InputData.SeismicAxialForces.Input(InputModel, pli, iLC + 1, level, loadCombination); }
+                catch (ArgumentOutOfRangeException) { return pli.AxialForceVL; }
+            }
             // 案 Z (P-S 非線形ばね 有効時): 杭軸力 (ケース別) を各杭の接合節点 Z 方向に下向き外力として段階適用。
             // 接合節点優先順位:
             //   1. ConnectionNode "FoundationNode-P{No}" (基礎梁設定時に存在)
@@ -544,6 +553,8 @@ namespace PileDesign.ViewModels
                         // VL 単独ケース: 常時軸力 AxialForceVL を使用
                         targetN = pli.AxialForceVL;
                     }
+                    else if (separatedAxial)
+                        targetN = SeparatedTargetN(pli);
                     else if (level == 1)
                         targetN = pli.AxialForceLevel1s != null && iLC < pli.AxialForceLevel1s.Count
                             ? pli.AxialForceLevel1s[iLC] : pli.AxialForceVL;
@@ -643,6 +654,10 @@ namespace PileDesign.ViewModels
                 {
                     // VL ケース: 地震時軸力増分なし (常時のみ)。SetAxialForceIncrement は 0
                     increment = 0.0;
+                }
+                else if (separatedAxial)
+                {
+                    increment = (SeparatedTargetN(pileLayoutItem) - pileLayoutItem.AxialForceVL) / nStep;
                 }
                 else if (level == 1)
                 {

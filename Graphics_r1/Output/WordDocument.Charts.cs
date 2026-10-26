@@ -176,11 +176,10 @@ namespace PileDesign.Output
                             foreach (var loadCase in allSeismicLoadCases)
                             {
                                 if (loadCase == null || !loadCase.IsReported) continue;
-                                // 点の軸力は検定と同じ設計軸力 (CheckAxialForce)
-                                double axialForce = CheckAxialForce(pli, loadCase);
-
                                 foreach (var loadCombination in allLoadCombinations)
                                 {
+                                    // 点の軸力は検定と同じ設計軸力 (CheckAxialForce。分離入力では組合せごとに変わるので、組合せのループの中で求める)
+                                    double axialForce = CheckAxialForce(inputModel, pli, loadCase, loadCombination);
                                     // 液状化パターン（ユーザー選択に基づく）
                                     var liqPatternsNM = new List<bool>();
                                     if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatternsNM.Add(true);
@@ -230,7 +229,7 @@ namespace PileDesign.Output
                                         // Fxi は圧縮が負なので符号を反転して足す。
                                         // 反映しないと、同じ図なのに画面と計算書で点が横にずれる。
                                         // 点の軸力は検定と同じ (入力値＋応力解析結果では解析と同じく杭頭の要素の軸力を足す)
-                                        double plotAxialForce = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pli, loadCase.No, loadCase.Level,
+                                        double plotAxialForce = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pli, loadCase.No, loadCase.Level, loadCombination,
                                             ViewModels.EvaluationService.PileHeadBeam(pli) is { } head ? GetBeamResultCached(head, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi : null).N;
 
                                         if (loadCase.Level == 1)
@@ -513,11 +512,10 @@ namespace PileDesign.Output
                             foreach (var loadCase in allSeismicLoadCases)
                             {
                                 if (loadCase == null || !loadCase.IsReported) continue;
-                                // 点の軸力は検定と同じ設計軸力 (CheckAxialForce)
-                                double axialForce = CheckAxialForce(pli, loadCase);
-
                                 foreach (var loadCombination in allLoadCombinations)
                                 {
+                                    // 点の軸力は検定と同じ設計軸力 (CheckAxialForce。分離入力では組合せごとに変わるので、組合せのループの中で求める)
+                                    double axialForce = CheckAxialForce(inputModel, pli, loadCase, loadCombination);
                                     var liqPatterns = new List<bool>();
                                     if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionYes) liqPatterns.Add(true);
                                     if (mainWindowViewModel.DocxOutput.IncludeOutputLiquefactionNo) liqPatterns.Add(false);
@@ -562,7 +560,7 @@ namespace PileDesign.Output
 
                                         // 横軸は N-M 図と同じ扱いにする (画面の QNINT も同じ)
                                         // 点の軸力は検定と同じ (入力値＋応力解析結果では解析と同じく杭頭の要素の軸力を足す)
-                                        double plotAxialForce = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pli, loadCase.No, loadCase.Level,
+                                        double plotAxialForce = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pli, loadCase.No, loadCase.Level, loadCombination,
                                             ViewModels.EvaluationService.PileHeadBeam(pli) is { } head ? GetBeamResultCached(head, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi : null).N;
 
                                         if (loadCase.Level == 1)
@@ -686,7 +684,7 @@ namespace PileDesign.Output
                                         // 曲線の軸力は検定と同じ規則 (EvaluationService.ResolveCheckAxialForce。GraphWindow と同じ)。
                                         // 以前は地震時軸力が未入力 (0) だと杭配置の AxialForce (直前に解いたケースの解析が残した値) に
                                         // 落ちていて、どのケースを最後に解いたかで凡例・キャプションの軸力と代わりの曲線が変わった。
-                                        double axialN = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pli, loadCase.No, loadCase.Level,
+                                        double axialN = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pli, loadCase.No, loadCase.Level, loadCombination,
                                             ViewModels.EvaluationService.PileHeadBeam(pli) is { } mphiHead ? GetBeamResultCached(mphiHead, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi : null).N;
 
                                         // M-φ曲線取得（GraphWindow と同一優先順位）
@@ -882,7 +880,7 @@ namespace PileDesign.Output
                             {
                                 // 軸力は杭頭回転角の検定と同じ規則 (EvaluationService.ResolveCheckAxialForce)。
                                 // 以前は地震時軸力が未入力 (0) だと杭配置の AxialForce (直前に解いたケースの解析が残した値) に落ちていた
-                                double axialN = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pileLayout, loadCase.No, loadCase.Level,
+                                double axialN = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pileLayout, loadCase.No, loadCase.Level, loadCombination,
                                     ViewModels.EvaluationService.PileHeadBeam(pileLayout) is { } mthetaHead ? GetBeamResultCached(mthetaHead, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi : null).N;
 
                                 // 曲線はグラフ画面 (GraphViewModel.CurveGraphs) と同じく、解析中に取ったこのケースの控え
@@ -1054,8 +1052,8 @@ namespace PileDesign.Output
         /// 以前は地震時軸力をそのまま使っていたので、未入力の杭は図だけが N = 0 に点を打ち、検定 (VL で判定) と
         /// 違う位置に出た。欄が無いと範囲外の例外で計算書の出力が止まっていたのも、設計軸力は常時軸力へ落とすので起きない。
         /// </summary>
-        internal static double CheckAxialForce(PileLayoutDataItem pli, LoadCase loadCase)
-            => pli.GetDesignAxialForce(loadCase.No, loadCase.Level);
+        internal static double CheckAxialForce(InputModel? inputModel, PileLayoutDataItem pli, LoadCase loadCase, LoadCombination? loadCombination)
+            => SeismicAxialForces.Design(inputModel, pli, loadCase.No, loadCase.Level, loadCombination).N;
 
         /// <summary>
         /// 杭頭の回転ばねの Kθ が剛結の印か。解析は剛結を K = 1e10 (KBig) で表すので、その 1 桁下を閾値にする
@@ -1322,7 +1320,7 @@ namespace PileDesign.Output
                 // 「入力値＋応力解析結果」では杭頭の要素の軸力を足す。以前は入力の軸力だけで、このモードでは検定と食い違った)。
                 // さらに以前は要素端力の平均 (Fxi + Fxj)/2 を使っていたが、梁要素の端力は軸方向で
                 // 逆対称 (Fxj = -Fxi) なので恒等的に 0 になり、常に N=0 の耐力を出力していた。
-                double axialN = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pli, lc.No, lc.Level,
+                double axialN = ViewModels.EvaluationService.ResolveCheckAxialForce(inputModel, pli, lc.No, lc.Level, comb,
                     ViewModels.EvaluationService.PileHeadBeam(pli) is { } head ? GetBeamResultCached(head, lc, comb, isLiq)?.CumulativeForce?.Fxi : null).N;
 
                 // モーメント限界。損傷限界はその荷重レベルの曲線を使う

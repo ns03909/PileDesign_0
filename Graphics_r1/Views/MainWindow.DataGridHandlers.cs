@@ -229,11 +229,11 @@ namespace PileDesign.Views
                 vm.SelectedLoadCaseName = vm.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[3].LoadName;
             else if (header.Contains("2-1") || bindingPath.Contains("AxialForceLevel2s[0]"))
                 vm.SelectedLoadCaseName = vm.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[0].LoadName;
-            else if (header.Contains("1-2") || bindingPath.Contains("AxialForceLevel2s[1]"))
+            else if (header.Contains("2-2") || bindingPath.Contains("AxialForceLevel2s[1]"))
                 vm.SelectedLoadCaseName = vm.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[1].LoadName;
-            else if (header.Contains("1-3") || bindingPath.Contains("AxialForceLevel2s[2]"))
+            else if (header.Contains("2-3") || bindingPath.Contains("AxialForceLevel2s[2]"))
                 vm.SelectedLoadCaseName = vm.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[2].LoadName;
-            else if (header.Contains("1-4") || bindingPath.Contains("AxialForceLevel2s[3]"))
+            else if (header.Contains("2-4") || bindingPath.Contains("AxialForceLevel2s[3]"))
                 vm.SelectedLoadCaseName = vm.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[3].LoadName;
 
             vm.IsMassLoadingVisible = true;

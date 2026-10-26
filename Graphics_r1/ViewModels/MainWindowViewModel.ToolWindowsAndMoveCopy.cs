@@ -815,7 +815,12 @@ namespace PileDesign.ViewModels
                 ]
             };
 
-            var problem = PileLayoutService.DescribeBulkEditProblem(CurrentInputModel.PileLayoutItems, options);
+            // 地震時軸力の分離入力のあいだは、L1/L2 の一括編集 (分けない入力を書き換える) を受け付けない。
+            // 解析は分離入力の ΔL(U)・ΔL(L) を使うので、書いても効かない
+            var problem = CurrentInputModel.IsAxialForceSeparated && (options.ApplyLevel1.Any(a => a) || options.ApplyLevel2.Any(a => a))
+                ? "地震時軸力を分離入力にしているあいだは、レベル1・レベル2 の軸力の一括編集は使えません。\n"
+                  + "軸力タブの ΔL(U)・ΔL(L) の欄で入力してください (範囲の貼り付けも使えます)。"
+                : PileLayoutService.DescribeBulkEditProblem(CurrentInputModel.PileLayoutItems, options);
             if (problem != null)
             {
                 e.Cancel = true;

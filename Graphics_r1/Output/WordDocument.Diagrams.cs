@@ -970,6 +970,28 @@ diameterSelector,
                 }
             }
 
+            // 地震時軸力の分離入力: ΔL(U)・ΔL(L) を並べる (軸力は組合せごとに VL + βL·ΔL(L) + βU·ΔL(U))
+            void AddSeparatedLoads(ObservableCollection<LoadCase> loadCases, int level)
+            {
+                var upper = pileLayoutItem.AxialForceUpperOf(level);
+                var foundation = pileLayoutItem.AxialForceFoundationOf(level);
+                if (loadCases == null || upper == null || foundation == null) return;
+                int cnt = Math.Min(loadCases.Count, Math.Min(upper.Count, foundation.Count));
+                for (int i = 0; i < cnt; i++)
+                {
+                    var lc = loadCases[i];
+                    if (lc?.IsReported != true) continue;
+                    mark += $"\n{lc.LoadName}:ΔU {upper[i]:N1} / ΔL {foundation[i]:N1}";
+                }
+            }
+
+            if (inputModel.IsAxialForceSeparated)
+            {
+                AddSeparatedLoads(inputModel.LoadCasesInput.LoadCasesLevel1, 1);
+                AddSeparatedLoads(inputModel.LoadCasesInput.LoadCasesLevel2, 2);
+                return mark;
+            }
+
             AddLoads(inputModel.LoadCasesInput.LoadCasesLevel1, pileLayoutItem.AxialForceLevel1s);
             AddLoads(inputModel.LoadCasesInput.LoadCasesLevel2, pileLayoutItem.AxialForceLevel2s);
 

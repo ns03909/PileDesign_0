@@ -208,6 +208,9 @@ namespace PileDesign.Views
                 {
                     var pgs = viewModel.ResultInputModel.PileGroupSettlement;
                     double loadingPlaneAlt = pgs.LoadingPlaneAltitude;
+                    // 地震時軸力の分離入力では、リボンで選んでいる組合せの単杭沈下を描く (無ければその杭は描かない)
+                    bool separated = SeismicAxialForces.IsSeparated(viewModel.ResultInputModel);
+                    var selectedCombination = viewModel.SelectedLoadCombinationIn(viewModel.ResultInputModel);
                     foreach (PileLayoutDataItem pileLocation in viewModel.ResultInputModel.PileLayoutItems)
                     {
                         if (viewModel.SelectedLoadCaseName == "VL")
@@ -223,7 +226,11 @@ namespace PileDesign.Views
                                 LoadCase loadCase = viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel1[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
-                                    values.Add(pileLocation.SinglePileSettlementLevel1s[i] * 1000); // m → mm
+                                    double? s1 = separated && selectedCombination != null
+                                        ? SeismicAxialForces.FindSeparatedSettlement(pileLocation, 1, i + 1, selectedCombination)?.Settlement
+                                        : pileLocation.SinglePileSettlementLevel1s[i];
+                                    if (s1 is not double v1) continue;
+                                    values.Add(v1 * 1000); // m → mm
                                     points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                                 }
                             }
@@ -232,7 +239,11 @@ namespace PileDesign.Views
                                 LoadCase loadCase = viewModel.ResultInputModel.LoadCasesInput.LoadCasesLevel2[i];
                                 if (viewModel.SelectedLoadCaseName == loadCase.LoadName)
                                 {
-                                    values.Add(pileLocation.SinglePileSettlementLevel2s[i] * 1000); // m → mm
+                                    double? s2 = separated && selectedCombination != null
+                                        ? SeismicAxialForces.FindSeparatedSettlement(pileLocation, 2, i + 1, selectedCombination)?.Settlement
+                                        : pileLocation.SinglePileSettlementLevel2s[i];
+                                    if (s2 is not double v2) continue;
+                                    values.Add(v2 * 1000); // m → mm
                                     points.Add(new Point3D(pileLocation.Point3D.X, pileLocation.Point3D.Y, loadingPlaneAlt));
                                 }
                             }

@@ -71,7 +71,9 @@ public class BrokenFileTests
         breakIt(input);
         string path = Path.Combine(Folder, name);
         Service().SaveProjectData(path, input, null);
-        if (editJson != null) File.WriteAllText(path, editJson(File.ReadAllText(path)));
+        // 保存は圧縮して書く (2026-10-24 から)。中身を書き換えるときは展開して読み、そのまま (圧縮しない JSON で) 書く。
+        // 読込は先頭で判断するので、圧縮していないファイルもそのまま開ける
+        if (editJson != null) File.WriteAllText(path, editJson(FileOperationService.ReadSaveFileText(path)));
     }
 
     /// <summary>fixture を実際の読込の経路 (<see cref="MainWindowViewModel.ApplyLoadedProjectData"/>) で開く。</summary>

@@ -576,7 +576,7 @@ namespace PileDesign.ViewModels
                 // (食い違うと判定が一致しない)
                 var (axialN_kN, axialSource) = pileItem != null
                     ? ResolveCheckAxialForce(_mainVm.ResultInputModel, pileItem, stepResult.LoadCase?.No ?? 0, stepResult.LoadCase?.Level ?? 1,
-                        HeadFxi(pileItem, stepResult))
+                        stepResult.LoadCombination, HeadFxi(pileItem, stepResult))
                     : (0.0, "杭を特定できないため 0");
 
                 // NM相関曲線をキャッシュから取得 (ConcurrentDictionary、初回のみ計算)
@@ -807,18 +807,20 @@ namespace PileDesign.ViewModels
         /// 以前は検定が入力値の軸力だけを使い、解析の M-φ (入力＋解析の軸力) と図 (最大モーメントの要素の Fxi を足す) と
         /// 3 通りに食い違っていた。
         /// </summary>
+        /// <param name="combination">荷重組合せ。地震時軸力の分離入力では組合せで軸力が変わる (分離入力でなければ使わない)。</param>
         /// <param name="headFxi">杭頭の要素のこのケース・組合せ・ステップの軸力 Fxi (圧縮が負)。無ければ null (入力値の軸力だけ)。</param>
         internal static (double N, string Source) ResolveCheckAxialForce(
-            InputModel? input, PileLayoutDataItem pile, int loadCaseNo, int level, double? headFxi)
+            InputModel? input, PileLayoutDataItem pile, int loadCaseNo, int level, LoadCombination? combination, double? headFxi)
         {
-            var (n, source) = pile.ResolveDesignAxialForce(loadCaseNo, level);
+            // 地震時軸力の分離入力では組合せごとの軸力 (SeismicAxialForces。分離入力でなければ従来の ResolveDesignAxialForce)
+            var (n, source) = SeismicAxialForces.Design(input, pile, loadCaseNo, level, combination);
             if (input?.UseAnalysisAxialForce != true || level == 0 || headFxi is not double fxi || !double.IsFinite(fxi))
                 return (n, source);
 
             double appliedAsLoad = 0.0;
             if (input.UsePsSpringAtPileTip)
             {
-                try { appliedAsLoad = pile.GetSeismicAxialForce(loadCaseNo, level); }
+                try { appliedAsLoad = SeismicAxialForces.Input(input, pile, loadCaseNo, level, combination); }
                 catch (ArgumentOutOfRangeException) { appliedAsLoad = 0.0; }
                 if (!double.IsFinite(appliedAsLoad)) appliedAsLoad = 0.0;
             }
@@ -940,7 +942,7 @@ namespace PileDesign.ViewModels
                 // 軸力: 曲げと同じ値を使う (食い違うと同じ断面で限界線の前提が 2 通りになる)
                 var (axialN_kN, axialSource) = pileItem != null
                     ? ResolveCheckAxialForce(_mainVm.ResultInputModel, pileItem, stepResult.LoadCase?.No ?? 0, stepResult.LoadCase?.Level ?? 1,
-                        HeadFxi(pileItem, stepResult))
+                        stepResult.LoadCombination, HeadFxi(pileItem, stepResult))
                     : (0.0, "杭を特定できないため 0");
 
                 // 損傷限界はレベルで低減係数が変わる (レベル1: β2 なし / レベル2: β1×β2)。
@@ -1364,7 +1366,7 @@ namespace PileDesign.ViewModels
                 {
                     int lcNo = stepResult.LoadCase?.No ?? 0;
                     axialN_kN = ResolveCheckAxialForce(_mainVm.ResultInputModel, pileItem, lcNo, level,
-                        HeadFxi(pileItem, stepResult)).N;
+                        stepResult.LoadCombination, HeadFxi(pileItem, stepResult)).N;
                 }
 
                 var criterion = ResolveRotationCriterion(

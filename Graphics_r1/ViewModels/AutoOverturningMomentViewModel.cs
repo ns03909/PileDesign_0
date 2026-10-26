@@ -99,6 +99,41 @@ namespace PileDesign.ViewModels
             OverturningMoment2 = BuildingWeight * EffectiveHeight * ShearCoefficient2 * 0.001; // MNm
         }
 
+        // ── 地震時軸力の分離入力のときの基礎部分 (ΔL(L)) ──
+        // 上の建物重量・有効高さ・層せん断力係数は上部構造分 (ΔL(U)) に使う。
+        // 基礎部分は基礎部の重量 × 作用高さ × 水平震度 で転倒モーメントを求める。
+
+        /// <summary>地震時軸力の分離入力か (基礎部分の欄を出し、ΔL(U)・ΔL(L) に書く)。</summary>
+        public bool IsSeparated => InputModel?.IsAxialForceSeparated == true;
+
+        [ObservableProperty]
+        private double _foundationWeight;
+        partial void OnFoundationWeightChanged(double value) => SetFoundationOverturningMoment();
+
+        [ObservableProperty]
+        private double _foundationHeight;
+        partial void OnFoundationHeightChanged(double value) => SetFoundationOverturningMoment();
+
+        [ObservableProperty]
+        private double _foundationCoefficient1;
+        partial void OnFoundationCoefficient1Changed(double value) => SetFoundationOverturningMoment();
+
+        [ObservableProperty]
+        private double _foundationCoefficient2;
+        partial void OnFoundationCoefficient2Changed(double value) => SetFoundationOverturningMoment();
+
+        [ObservableProperty]
+        private double _foundationOverturningMoment1;
+
+        [ObservableProperty]
+        private double _foundationOverturningMoment2;
+
+        private void SetFoundationOverturningMoment()
+        {
+            FoundationOverturningMoment1 = FoundationWeight * FoundationHeight * FoundationCoefficient1 * 0.001; // MNm
+            FoundationOverturningMoment2 = FoundationWeight * FoundationHeight * FoundationCoefficient2 * 0.001; // MNm
+        }
+
         [ObservableProperty]
         private bool _isApplicableE1 = true;
 
@@ -146,7 +181,10 @@ namespace PileDesign.ViewModels
             try
             {
                 if (InputModel.PileLayoutItems.Count == 0) throw new ArgumentException("杭を配置してから反力を適用してください。");
-                void Prepare(ObservableCollection<LoadCase> cases, ObservableCollection<bool> selected, double moment, bool level1)
+                // 分離入力では ΔL(U) (上部構造分) と ΔL(L) (基礎部分) に分けて書く。変動の値なので VL は足さない
+                bool separated = IsSeparated;
+                void Prepare(ObservableCollection<LoadCase> cases, ObservableCollection<bool> selected, double moment, bool level1,
+                    System.Func<PileLayoutDataItem, ObservableCollection<double>>? target = null)
                 {
                     if (selected == null || selected.Count < cases.Count) throw new ArgumentException("適用する荷重ケースの指定が不足しています。");
                     for (int i = 0; i < cases.Count; i++)
@@ -162,17 +200,27 @@ namespace PileDesign.ViewModels
                         for (int j = 0; j < reactions.Count; j++)
                         {
                             var pile = InputModel.PileLayoutItems[j];
-                            var loads = level1 ? pile.AxialForceLevel1s : pile.AxialForceLevel2s;
+                            var loads = target != null ? target(pile) : level1 ? pile.AxialForceLevel1s : pile.AxialForceLevel2s;
                             if (loads == null || loads.Count <= i) throw new ArgumentException("杭の軸力データが不足しています。");
-                            double value = reactions[j] * moment * 1000 + (IsApplicableVL ? pile.AxialForceVL0 : 0);
+                            double value = reactions[j] * moment * 1000 + (target == null && IsApplicableVL ? pile.AxialForceVL0 : 0);
                             if (!double.IsFinite(value) || !double.IsFinite(value - pile.AxialForceVL))
                                 throw new ArgumentException("反力が数値の範囲外です。軸力は変更しません。");
                             if (loads[i] != value) changes.Add((loads, i, value));
                         }
                     }
                 }
-                Prepare(InputModel.LoadCasesInput.LoadCasesLevel1, IsApplicableE1s, OverturningMoment1, true);
-                Prepare(InputModel.LoadCasesInput.LoadCasesLevel2, IsApplicableE2s, OverturningMoment2, false);
+                if (separated)
+                {
+                    Prepare(InputModel.LoadCasesInput.LoadCasesLevel1, IsApplicableE1s, OverturningMoment1, true, p => p.AxialForceUpperLevel1s);
+                    Prepare(InputModel.LoadCasesInput.LoadCasesLevel2, IsApplicableE2s, OverturningMoment2, false, p => p.AxialForceUpperLevel2s);
+                    Prepare(InputModel.LoadCasesInput.LoadCasesLevel1, IsApplicableE1s, FoundationOverturningMoment1, true, p => p.AxialForceFoundationLevel1s);
+                    Prepare(InputModel.LoadCasesInput.LoadCasesLevel2, IsApplicableE2s, FoundationOverturningMoment2, false, p => p.AxialForceFoundationLevel2s);
+                }
+                else
+                {
+                    Prepare(InputModel.LoadCasesInput.LoadCasesLevel1, IsApplicableE1s, OverturningMoment1, true);
+                    Prepare(InputModel.LoadCasesInput.LoadCasesLevel2, IsApplicableE2s, OverturningMoment2, false);
+                }
             }
             catch (ArgumentException ex) { MessageService.ShowInputRejected(ex); return false; }
             if (changes.Count == 0) return true;

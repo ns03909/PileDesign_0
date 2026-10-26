@@ -274,7 +274,7 @@ namespace PileDesign.ViewModels
                             // 「入力値＋応力解析結果」では杭頭の要素の軸力を足す)。凡例と、解析の曲線が無いときに作り直す曲線に使う。
                             // 以前は地震時軸力が未入力 (0) だと杭配置の AxialForce (直前に解いたケースの解析が残した値) に落ちていて、
                             // どのケースを最後に解いたかで図の軸力が変わった (計算書の M-φ 図も同じ写しを持っていた)
-                            double axialN = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayout, loadCase.No, loadCase.Level,
+                            double axialN = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayout, loadCase.No, loadCase.Level, loadCombination,
                                 model != null
                                     ? EvaluationService.PileHeadBeam(pileLayout)?.GetBeamResult(model, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi
                                     : null).N;
@@ -515,13 +515,15 @@ namespace PileDesign.ViewModels
                         foreach (var isLiq in SelectedLiquefactionCases)
                         {
                             if (model.GetAnalysisLastStep(loadCase, loadCombination, isLiq) < 0) continue;
-                            double n = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayout, loadCase.No, loadCase.Level,
+                            double n = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayout, loadCase.No, loadCase.Level, loadCombination,
                                 headBeam?.GetBeamResult(model, loadCase, loadCombination, isLiq)?.CumulativeForce?.Fxi).N;
                             if (!axialForcesKN.Any(x => Math.Abs(x - n) < 0.5)) axialForcesKN.Add(n);
                         }
                     }
                     if (axialForcesKN.Count == 0)
-                        axialForcesKN.Add(EvaluationService.ResolveCheckAxialForce(InputModel, pileLayout, loadCase.No, loadCase.Level, null).N);
+                        // 結果が無いときは入力値の軸力。分離入力では組合せで変わるので、選んでいる組合せの先頭で描く
+                        axialForcesKN.Add(EvaluationService.ResolveCheckAxialForce(InputModel, pileLayout, loadCase.No, loadCase.Level,
+                            selectedCombinations.FirstOrDefault(), null).N);
 
                     bool anyCurve = false;
                     foreach (double axialN_kN in axialForcesKN)
@@ -653,7 +655,7 @@ namespace PileDesign.ViewModels
 
                             // 凡例・ホバーの軸力は杭頭回転角の検定と同じ規則 (EvaluationService.ResolveCheckAxialForce)。
                             // 以前は地震時軸力が未入力 (0) だと杭配置の AxialForce (直前に解いたケースの解析が残した値) に落ちていた
-                            double axialN = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayout, loadCase.No, loadCase.Level,
+                            double axialN = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayout, loadCase.No, loadCase.Level, loadCombination,
                                 EvaluationService.PileHeadBeam(pileLayout)?.GetBeamResult(model, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi).N;
 
                             // Y 案: 表示中ケースに対応するスナップショットから曲線取得 (解析実体と整合)

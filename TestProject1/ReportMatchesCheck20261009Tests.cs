@@ -18,14 +18,14 @@ namespace TestProject1
             var pile = new PileLayoutDataItem { No = 1, PileNo = 1, AxialForceVL0 = 1200.0 };
             pile.AxialForceLevel1s = [0.0, 0.0, 0.0, 0.0];
             var lc = new LoadCase { No = 1, Level = 1 };
-            Assert.AreEqual(pile.GetDesignAxialForce(1, 1), WordDocument.CheckAxialForce(pile, lc), 1e-9);
-            Assert.AreEqual(pile.AxialForceVL, WordDocument.CheckAxialForce(pile, lc), 1e-9, "未入力の地震時軸力で常時軸力を使っていません");
+            Assert.AreEqual(pile.GetDesignAxialForce(1, 1), WordDocument.CheckAxialForce(null, pile, lc, null), 1e-9);
+            Assert.AreEqual(pile.AxialForceVL, WordDocument.CheckAxialForce(null, pile, lc, null), 1e-9, "未入力の地震時軸力で常時軸力を使っていません");
 
             pile.AxialForceLevel1s[0] = 1500.0;
-            Assert.AreEqual(1500.0, WordDocument.CheckAxialForce(pile, lc), 1e-9);
+            Assert.AreEqual(1500.0, WordDocument.CheckAxialForce(null, pile, lc, null), 1e-9);
 
             // 欄が無いケースでも出力を止めない (常時軸力に落とす)
-            Assert.AreEqual(pile.AxialForceVL, WordDocument.CheckAxialForce(pile, new LoadCase { No = 9, Level = 1 }), 1e-9);
+            Assert.AreEqual(pile.AxialForceVL, WordDocument.CheckAxialForce(null, pile, new LoadCase { No = 9, Level = 1 }, null), 1e-9);
 
             string graph = TestSource.Read("Graphics_r1", "ViewModels", "GraphViewModel.cs");
             Assert.IsFalse(graph.Contains("var axialForce = pileLayoutDataItem.GetSeismicAxialForce("),
@@ -45,22 +45,22 @@ namespace TestProject1
             double fxi = -300.0;   // 圧縮 300 kN
 
             input.UseAnalysisAxialForce = false;
-            Assert.AreEqual(1500.0, PileDesign.ViewModels.EvaluationService.ResolveCheckAxialForce(input, pile, 1, 1, fxi).N, 1e-9,
+            Assert.AreEqual(1500.0, PileDesign.ViewModels.EvaluationService.ResolveCheckAxialForce(input, pile, 1, 1, null, fxi).N, 1e-9,
                 "入力値モードで解析の軸力を足しています");
 
             input.UseAnalysisAxialForce = true;
-            Assert.AreEqual(1800.0, PileDesign.ViewModels.EvaluationService.ResolveCheckAxialForce(input, pile, 1, 1, fxi).N, 1e-9,
+            Assert.AreEqual(1800.0, PileDesign.ViewModels.EvaluationService.ResolveCheckAxialForce(input, pile, 1, 1, null, fxi).N, 1e-9,
                 "入力値＋応力解析結果モードで解析の軸力を足していません");
-            Assert.AreEqual(1300.0, PileDesign.ViewModels.EvaluationService.ResolveCheckAxialForce(input, pile, 2, 1, fxi).N, 1e-9,
+            Assert.AreEqual(1300.0, PileDesign.ViewModels.EvaluationService.ResolveCheckAxialForce(input, pile, 2, 1, null, fxi).N, 1e-9,
                 "未入力の地震時軸力は常時軸力 VL に解析の軸力を足します");
 
             input.UsePsSpringAtPileTip = true;
-            Assert.AreEqual(300.0, PileDesign.ViewModels.EvaluationService.ResolveCheckAxialForce(input, pile, 1, 1, fxi).N, 1e-9,
+            Assert.AreEqual(300.0, PileDesign.ViewModels.EvaluationService.ResolveCheckAxialForce(input, pile, 1, 1, null, fxi).N, 1e-9,
                 "P-S ばねでは地震時軸力が Fxi に含まれているので二重に数えています");
-            Assert.AreEqual(1300.0, PileDesign.ViewModels.EvaluationService.ResolveCheckAxialForce(input, pile, 2, 1, fxi).N, 1e-9,
+            Assert.AreEqual(1300.0, PileDesign.ViewModels.EvaluationService.ResolveCheckAxialForce(input, pile, 2, 1, null, fxi).N, 1e-9,
                 "P-S ばねで地震時軸力が未入力なら、外力は与えていないので VL に解析の軸力を足します");
 
-            Assert.AreEqual(1500.0, PileDesign.ViewModels.EvaluationService.ResolveCheckAxialForce(input, pile, 1, 1, null).N, 1e-9,
+            Assert.AreEqual(1500.0, PileDesign.ViewModels.EvaluationService.ResolveCheckAxialForce(input, pile, 1, 1, null, null).N, 1e-9,
                 "杭頭の要素の結果が無ければ入力値の軸力");
         }
 

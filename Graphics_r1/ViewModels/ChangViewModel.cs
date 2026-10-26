@@ -298,7 +298,7 @@ namespace PileDesign.ViewModels
         }
 
         // ヘルパ：単一杭の軸力を取得（選択 loadCase に応じて）
-        private double GetPileAxialForLoadCase(Models.InputData.PileLayoutDataItem pile, LoadCase lc)
+        private double GetPileAxialForLoadCase(Models.InputData.PileLayoutDataItem pile, LoadCase lc, LoadCombination? combination)
         {
             if (lc == null) return 0.0;
 
@@ -310,6 +310,18 @@ namespace PileDesign.ViewModels
                     return pile.AxialForceVLAdditional;
                 case "VL":
                     return pile.AxialForceVL0 + pile.AxialForceVLAdditional;
+            }
+
+            // 地震時軸力の分離入力: 選んでいる組合せの軸力 (組合せを選んでいなければ組合せのうち最大)
+            if (SeismicAxialForces.IsSeparated(_inputModel) && lc.Level is 1 or 2)
+            {
+                var levelCases = lc.Level == 1 ? _inputModel.LoadCasesInput.LoadCasesLevel1 : _inputModel.LoadCasesInput.LoadCasesLevel2;
+                for (int i = 0; i < levelCases.Count; i++)
+                    if (levelCases[i].LoadName == lc.LoadName)
+                        return combination != null
+                            ? SeismicAxialForces.ForVerticalAnalysis(_inputModel, pile, i + 1, lc.Level, combination)
+                            : SeismicAxialForces.Envelope(_inputModel, pile, i + 1, lc.Level, reportFallback: false).Max;
+                return 0.0;
             }
 
             if (lc.Level == 1)
@@ -602,7 +614,7 @@ namespace PileDesign.ViewModels
 
                     if (selectedLC != null)
                     {
-                        newChang.AxialForce = GetPileAxialForLoadCase(pile, selectedLC);
+                        newChang.AxialForce = GetPileAxialForLoadCase(pile, selectedLC, selectedComb);
                     }
                     else
                     {
@@ -652,7 +664,7 @@ namespace PileDesign.ViewModels
             {
                 foreach (var pile in input.PileLayoutItems)
                 {
-                    sumAxial += GetPileAxialForLoadCase(pile, selectedLC);
+                    sumAxial += GetPileAxialForLoadCase(pile, selectedLC, selectedComb);
                 }
             }
             SumAxialForSelectedLoadCase = sumAxial;

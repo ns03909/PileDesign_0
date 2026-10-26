@@ -338,6 +338,10 @@ namespace PileDesign.ViewModels
         {
             if (e.PropertyName == nameof(PileLayoutDataItem.AxialForceLevel1s) ||
                 e.PropertyName == nameof(PileLayoutDataItem.AxialForceLevel2s) ||
+                e.PropertyName == nameof(PileLayoutDataItem.AxialForceUpperLevel1s) ||
+                e.PropertyName == nameof(PileLayoutDataItem.AxialForceFoundationLevel1s) ||
+                e.PropertyName == nameof(PileLayoutDataItem.AxialForceUpperLevel2s) ||
+                e.PropertyName == nameof(PileLayoutDataItem.AxialForceFoundationLevel2s) ||
                 e.PropertyName == nameof(PileLayoutDataItem.AxialForceVL0) ||
                 e.PropertyName == nameof(PileLayoutDataItem.AxialForceVLAdditional) ||
                 e.PropertyName == nameof(PileLayoutDataItem.X) ||
@@ -363,6 +367,8 @@ namespace PileDesign.ViewModels
                 nameof(OverturningMoment2_2X), nameof(OverturningMoment2_2Y),
                 nameof(OverturningMoment2_3X), nameof(OverturningMoment2_3Y),
                 nameof(OverturningMoment2_4X), nameof(OverturningMoment2_4Y),
+                nameof(SeparatedSumUpper), nameof(SeparatedSumFoundation),
+                nameof(SeparatedOtmXUpper), nameof(SeparatedOtmYUpper), nameof(SeparatedOtmXFoundation), nameof(SeparatedOtmYFoundation),
                 nameof(GravityCenterVL0), nameof(GravityCenterVLadd), nameof(GravityCenterVLPlusVLadd),
                 nameof(GroupPileSettlementXMin), nameof(GroupPileSettlementXMax),
                 nameof(GroupPileSettlementYMin), nameof(GroupPileSettlementYMax)

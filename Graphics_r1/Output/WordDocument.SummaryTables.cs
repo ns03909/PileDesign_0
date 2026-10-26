@@ -296,14 +296,19 @@ namespace PileDesign.Output
         /// 以前は同じ決め方をここに書き写していた (写しは直すと取り残されるので、ResolveDesignAxialForce を呼ぶ)。
         /// </summary>
         internal static IEnumerable<(int Level, double N)> ReportedSeismicAxialForces(
-            PileLayoutDataItem pile, IEnumerable<LoadCase>? seismicCases)
+            InputModel? inputModel, PileLayoutDataItem pile, IEnumerable<LoadCase>? seismicCases)
         {
             if (pile == null || seismicCases == null) yield break;
+            // 地震時軸力の分離入力では組合せごとに軸力が違うので、計算書に載せる組合せすべてを集める
+            IEnumerable<LoadCombination?> combinations = SeismicAxialForces.IsSeparated(inputModel)
+                ? (inputModel!.LoadCasesInput?.ReportedLoadCombinations ?? []).Cast<LoadCombination?>()
+                : [null];
             foreach (var loadCase in seismicCases)
             {
                 if (loadCase == null || !loadCase.IsReported) continue;
                 if (loadCase.Level is not (1 or 2)) continue;
-                yield return (loadCase.Level, pile.ResolveDesignAxialForce(loadCase.No, loadCase.Level, reportFallback: false).N);
+                foreach (var combination in combinations)
+                    yield return (loadCase.Level, SeismicAxialForces.Design(inputModel, pile, loadCase.No, loadCase.Level, combination, reportFallback: false).N);
             }
         }
 
@@ -348,7 +353,7 @@ namespace PileDesign.Output
                     // 計算書に載せるケース (他の列と同じ IsReported の地震時ケース) の軸力だけを集める。
                     // 以前は入力欄の全セル (使っていないケースの列・未入力の 0 を含む) から最大・最小を取っていたので、
                     // 載せていないケースの軸力や 0 が N_Max / N_Min に出た。
-                    foreach (var (level, n) in ReportedSeismicAxialForces(pile, inputModel.LoadCasesInput.AllSeismicLoadCases))
+                    foreach (var (level, n) in ReportedSeismicAxialForces(inputModel, pile, inputModel.LoadCasesInput.AllSeismicLoadCases))
                     {
                         int k = level - 1;
                         foreach (var row in rowBySegment.Values)

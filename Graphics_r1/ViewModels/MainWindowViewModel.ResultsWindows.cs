@@ -882,10 +882,19 @@ namespace PileDesign.ViewModels
                         Note = pile.SinglePileSettlementVLBeyondCurve ? BeyondCurveNote : "",
                     });
 
-                    AddLevelRows(pileRows, pile, loadCases?.LoadCasesLevel1,
-                        pile.SinglePileSettlementLevel1s, pile.AxialForceLevel1s, pile.SinglePileSettlementLevel1sBeyondCurve);
-                    AddLevelRows(pileRows, pile, loadCases?.LoadCasesLevel2,
-                        pile.SinglePileSettlementLevel2s, pile.AxialForceLevel2s, pile.SinglePileSettlementLevel2sBeyondCurve);
+                    if (Models.InputData.SeismicAxialForces.IsSeparated(ResultInputModel))
+                    {
+                        // 地震時軸力の分離入力: ケース × 組合せごとの行 (βU・βL の同じ組合せは 1 行)
+                        AddSeparatedRows(pileRows, pile, 1, loadCases?.LoadCasesLevel1);
+                        AddSeparatedRows(pileRows, pile, 2, loadCases?.LoadCasesLevel2);
+                    }
+                    else
+                    {
+                        AddLevelRows(pileRows, pile, loadCases?.LoadCasesLevel1,
+                            pile.SinglePileSettlementLevel1s, pile.AxialForceLevel1s, pile.SinglePileSettlementLevel1sBeyondCurve);
+                        AddLevelRows(pileRows, pile, loadCases?.LoadCasesLevel2,
+                            pile.SinglePileSettlementLevel2s, pile.AxialForceLevel2s, pile.SinglePileSettlementLevel2sBeyondCurve);
+                    }
                 }
 
                 tables.Add(new ResultTable
@@ -916,6 +925,27 @@ namespace PileDesign.ViewModels
         /// 沈下量・軸力は荷重ケースと<b>同じ並び</b>で持たれている (グラフ側も同じ対応で読む)。
         /// 並びが足りないときは足さない (解析前・ケース追加後などで長さが揃わないことがある)。
         /// </summary>
+        /// <summary>地震時軸力の分離入力のときの、単杭沈下のケース × 組合せごとの行。</summary>
+        private static void AddSeparatedRows(List<object> rows, Models.InputData.PileLayoutDataItem pile, int level,
+            System.Collections.Generic.IList<Models.InputData.LoadCase>? cases)
+        {
+            if (cases == null || pile.SinglePileSettlementsSeparated == null) return;
+            foreach (var r in pile.SinglePileSettlementsSeparated.Where(r => r.Level == level).OrderBy(r => r.CaseNo).ThenBy(r => r.CombinationNo))
+            {
+                if (r.CaseNo < 1 || r.CaseNo > cases.Count) continue;
+                rows.Add(new SinglePileSettlementPileRow
+                {
+                    PileNo = pile.PileNo,
+                    X = pile.Point3D.X,
+                    Y = pile.Point3D.Y,
+                    LoadCaseName = (cases[r.CaseNo - 1]?.LoadName ?? "") + Models.InputData.SeismicAxialForces.CombinationSuffix(r.CombinationNo, r.BetaU, r.BetaL),
+                    AxialForce_kN = r.AxialLoad,
+                    Settlement_mm = r.Settlement * 1000.0,   // m → mm
+                    Note = r.BeyondCurve ? BeyondCurveNote : "",
+                });
+            }
+        }
+
         private static void AddLevelRows(
             List<object> rows, Models.InputData.PileLayoutDataItem pile,
             System.Collections.Generic.IList<Models.InputData.LoadCase>? cases,

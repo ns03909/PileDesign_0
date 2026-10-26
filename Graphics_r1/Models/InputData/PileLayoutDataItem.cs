@@ -267,6 +267,66 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        // ─────────────── 分離入力の変動軸力 (ΔL(U)・ΔL(L)、ファイル保存対象) ───────────────
+        // 「分離入力」(InputModel.IsAxialForceSeparated) のときだけ使う。地震時軸力を荷重組合せごとに
+        //     N = VL + βL·ΔL(L) + βU·ΔL(U)
+        // で求める (βU・βL は荷重組合せの上部構造慣性力・基礎部慣性力の係数)。
+        // ΔL(U) は上部構造慣性力による変動軸力、ΔL(L) は基礎部慣性力による変動軸力。
+        // 上の AxialForceLevel1s/2s (分離しない入力) とは別に持ち、切り替えてもどちらも残る。
+        // 要素はレベルごとの荷重ケースの並び (番号 − 1) に対応する。
+
+        private ObservableCollection<double> _axialForceUpperLevel1s = [0.0, 0.0, 0.0, 0.0];
+        /// <summary>ΔL1-i(U): レベル1の上部構造慣性力による変動軸力 [kN] (分離入力)。</summary>
+        public ObservableCollection<double> AxialForceUpperLevel1s
+        {
+            get => _axialForceUpperLevel1s;
+            set => SetProperty(ref _axialForceUpperLevel1s, value ?? []);
+        }
+
+        private ObservableCollection<double> _axialForceFoundationLevel1s = [0.0, 0.0, 0.0, 0.0];
+        /// <summary>ΔL1-i(L): レベル1の基礎部慣性力による変動軸力 [kN] (分離入力)。</summary>
+        public ObservableCollection<double> AxialForceFoundationLevel1s
+        {
+            get => _axialForceFoundationLevel1s;
+            set => SetProperty(ref _axialForceFoundationLevel1s, value ?? []);
+        }
+
+        private ObservableCollection<double> _axialForceUpperLevel2s = [0.0, 0.0, 0.0, 0.0];
+        /// <summary>ΔL2-i(U): レベル2の上部構造慣性力による変動軸力 [kN] (分離入力)。</summary>
+        public ObservableCollection<double> AxialForceUpperLevel2s
+        {
+            get => _axialForceUpperLevel2s;
+            set => SetProperty(ref _axialForceUpperLevel2s, value ?? []);
+        }
+
+        private ObservableCollection<double> _axialForceFoundationLevel2s = [0.0, 0.0, 0.0, 0.0];
+        /// <summary>ΔL2-i(L): レベル2の基礎部慣性力による変動軸力 [kN] (分離入力)。</summary>
+        public ObservableCollection<double> AxialForceFoundationLevel2s
+        {
+            get => _axialForceFoundationLevel2s;
+            set => SetProperty(ref _axialForceFoundationLevel2s, value ?? []);
+        }
+
+        /// <summary>分離入力の ΔL(U) の一覧 (レベル 1 / 2)。</summary>
+        internal ObservableCollection<double> AxialForceUpperOf(int level) => level == 1 ? AxialForceUpperLevel1s : AxialForceUpperLevel2s;
+
+        /// <summary>分離入力の ΔL(L) の一覧 (レベル 1 / 2)。</summary>
+        internal ObservableCollection<double> AxialForceFoundationOf(int level) => level == 1 ? AxialForceFoundationLevel1s : AxialForceFoundationLevel2s;
+
+        /// <summary>
+        /// 分離入力の地震時軸力 [kN] = VL + βL·ΔL(L) + βU·ΔL(U)。<paramref name="loadCaseNo"/> は 1 始まり。
+        /// 呼び出しは <see cref="SeismicAxialForces"/> を通す (分離入力かどうかの判定と組合せの受け渡しをそこにまとめている)。
+        /// </summary>
+        internal double GetSeparatedSeismicAxialForce(int loadCaseNo, int level, double betaU, double betaL)
+        {
+            if (level == 0) return AxialForceVL;
+            var upper = AxialForceUpperOf(level);
+            var foundation = AxialForceFoundationOf(level);
+            if (loadCaseNo <= 0 || upper == null || foundation == null || upper.Count < loadCaseNo || foundation.Count < loadCaseNo)
+                throw new ArgumentOutOfRangeException(nameof(loadCaseNo), $"Invalid load case index for Level {level} (separated input).");
+            return AxialForceVL + betaL * foundation[loadCaseNo - 1] + betaU * upper[loadCaseNo - 1];
+        }
+
         // ─────────────── 変動軸力 (= 絶対 − VL、表示用、Json 非永続) ───────────────
         // AxialForceModeContext.IsVariationMode が true のとき、UI はこちらにバインドする。
         // 絶対値と双方向同期され、変動値の編集は絶対値の更新に連動する。
@@ -424,13 +484,15 @@ namespace PileDesign.Models.InputData
 
         /// <summary>単杭沈下の結果 (沈下量と、荷重-沈下曲線の範囲外の印) の控え。単杭沈下の画面のキャンセルで戻すために使う。</summary>
         internal sealed record SinglePileSettlementState(
-            double VL, bool VLBeyondCurve, double[]? Level1s, bool[]? Level1sBeyondCurve, double[]? Level2s, bool[]? Level2sBeyondCurve);
+            double VL, bool VLBeyondCurve, double[]? Level1s, bool[]? Level1sBeyondCurve, double[]? Level2s, bool[]? Level2sBeyondCurve,
+            SeparatedSettlementResult[] Separated);
 
         /// <summary>単杭沈下の結果を控える (一覧は中身を写す。画面は一覧の中身をその場で書き換えるため)。</summary>
         internal SinglePileSettlementState CaptureSinglePileSettlement() => new(
             SinglePileSettlementVL, SinglePileSettlementVLBeyondCurve,
             SinglePileSettlementLevel1s?.ToArray(), SinglePileSettlementLevel1sBeyondCurve?.ToArray(),
-            SinglePileSettlementLevel2s?.ToArray(), SinglePileSettlementLevel2sBeyondCurve?.ToArray());
+            SinglePileSettlementLevel2s?.ToArray(), SinglePileSettlementLevel2sBeyondCurve?.ToArray(),
+            (SinglePileSettlementsSeparated ?? []).Select(r => r.Clone()).ToArray());
 
         /// <summary>控えた単杭沈下の結果へ戻す。</summary>
         internal void RestoreSinglePileSettlement(SinglePileSettlementState state)
@@ -441,7 +503,14 @@ namespace PileDesign.Models.InputData
             SinglePileSettlementLevel1sBeyondCurve = state.Level1sBeyondCurve == null ? [] : new ObservableCollection<bool>(state.Level1sBeyondCurve);
             SinglePileSettlementLevel2s = state.Level2s == null ? null! : new ObservableCollection<double>(state.Level2s);
             SinglePileSettlementLevel2sBeyondCurve = state.Level2sBeyondCurve == null ? [] : new ObservableCollection<bool>(state.Level2sBeyondCurve);
+            SinglePileSettlementsSeparated = new ObservableCollection<SeparatedSettlementResult>(state.Separated.Select(r => r.Clone()));
         }
+
+        /// <summary>
+        /// 地震時軸力の分離入力のときの、単杭沈下の組合せごとの結果 (保存する)。分離入力でなければ空。
+        /// ケースごとの欄 (<see cref="SinglePileSettlementLevel1s"/> など) には組合せのうち軸力が最大のものが入る。
+        /// </summary>
+        public ObservableCollection<SeparatedSettlementResult> SinglePileSettlementsSeparated { get; set; } = [];
 
         // 常時単杭沈下
         private double _singlePileSettlementVL;
@@ -822,10 +891,15 @@ namespace PileDesign.Models.InputData
             // 正しい値で実行される (VL=0 で先に L1/L2 が設定される事故を起こさない)。
             copy.AxialForceLevel1s = new ObservableCollection<double>(this.AxialForceLevel1s);
             copy.AxialForceLevel2s = new ObservableCollection<double>(this.AxialForceLevel2s);
+            copy.AxialForceUpperLevel1s = new ObservableCollection<double>(this.AxialForceUpperLevel1s ?? []);
+            copy.AxialForceFoundationLevel1s = new ObservableCollection<double>(this.AxialForceFoundationLevel1s ?? []);
+            copy.AxialForceUpperLevel2s = new ObservableCollection<double>(this.AxialForceUpperLevel2s ?? []);
+            copy.AxialForceFoundationLevel2s = new ObservableCollection<double>(this.AxialForceFoundationLevel2s ?? []);
             copy.SinglePileSettlementLevel1s = new ObservableCollection<double>(this.SinglePileSettlementLevel1s);
             copy.SinglePileSettlementLevel2s = new ObservableCollection<double>(this.SinglePileSettlementLevel2s);
             copy.SinglePileSettlementLevel1sBeyondCurve = new ObservableCollection<bool>(this.SinglePileSettlementLevel1sBeyondCurve ?? []);
             copy.SinglePileSettlementLevel2sBeyondCurve = new ObservableCollection<bool>(this.SinglePileSettlementLevel2sBeyondCurve ?? []);
+            copy.SinglePileSettlementsSeparated = new ObservableCollection<SeparatedSettlementResult>((this.SinglePileSettlementsSeparated ?? []).Select(r => r.Clone()));
             copy.IsFrontPiles = new ObservableCollection<bool>(this.IsFrontPiles);
             copy.IsFrontPilesLevel2 = new ObservableCollection<bool>(this.IsFrontPilesLevel2 ?? this.IsFrontPiles ?? []);
 

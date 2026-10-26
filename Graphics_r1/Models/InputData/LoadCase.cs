@@ -317,6 +317,19 @@ namespace PileDesign.Models.InputData
                 if (pileLayouts == null || pileLayouts.Count == 0) return 0;
                 double sum = 0;
                 int idx = No - 1;
+                // 地震時軸力の分離入力: ΣH (慣性力を係数なしで足す) に合わせ、βU = βL = 1 の VL + ΔL(L) + ΔL(U) を足す
+                if (InputModel?.IsAxialForceSeparated == true && Level is 1 or 2)
+                {
+                    foreach (var p in pileLayouts)
+                    {
+                        var u = p.AxialForceUpperOf(Level);
+                        var l = p.AxialForceFoundationOf(Level);
+                        sum += p.AxialForceVL
+                            + (l != null && idx >= 0 && idx < l.Count ? l[idx] : 0)
+                            + (u != null && idx >= 0 && idx < u.Count ? u[idx] : 0);
+                    }
+                    return sum;
+                }
                 foreach (var p in pileLayouts)
                 {
                     var forces = Level == 1 ? p.AxialForceLevel1s : p.AxialForceLevel2s;

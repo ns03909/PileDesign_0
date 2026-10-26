@@ -1226,11 +1226,11 @@ namespace PileDesign.ViewModels
 
                         foreach (LoadCase loadCase in GetSelectedLoadCases())
                         {
-                            // 点の軸力は検定と同じ設計軸力 (未入力 (0) は常時軸力 VL。以前は図だけが N = 0 に点を打った)
-                            var axialForce = pileLayoutDataItem.GetDesignAxialForce(loadCase.No, loadCase.Level);
-
                             foreach (LoadCombination loadCombination in GetSelectedLoadCombinations())
                             {
+                                // 点の軸力は検定と同じ設計軸力 (未入力 (0) は常時軸力 VL。以前は図だけが N = 0 に点を打った)。
+                                // 地震時軸力の分離入力では組合せごとに変わるので、組合せのループの中で求める
+                                var axialForce = SeismicAxialForces.Design(InputModel, pileLayoutDataItem, loadCase.No, loadCase.Level, loadCombination).N;
                                 foreach (var isLiquefaction in SelectedLiquefactionCases)
                                 {
                                     // 解析結果がない場合はスキップ
@@ -1271,7 +1271,7 @@ namespace PileDesign.ViewModels
                                     if (moment == double.MinValue) continue;
 
                                     // 点の軸力は検定と同じ (入力値＋応力解析結果では解析と同じく杭頭の要素の軸力を足す。以前は最大モーメントの要素の Fxi だった)
-                                    double plotAxialForce = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayoutDataItem, loadCase.No, loadCase.Level,
+                                    double plotAxialForce = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayoutDataItem, loadCase.No, loadCase.Level, loadCombination,
                                         EvaluationService.PileHeadBeam(pileLayoutDataItem)?.GetBeamResult(AnaModel, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi).N;
 
                                     // セグメントループの外で結果を追加
@@ -1378,11 +1378,11 @@ namespace PileDesign.ViewModels
 
                     foreach (LoadCase loadCase in GetSelectedLoadCases())
                     {
-                        // 点の軸力は検定と同じ設計軸力 (未入力 (0) は常時軸力 VL。以前は図だけが N = 0 に点を打った)
-                        var axialForce = pileLayoutDataItem.GetDesignAxialForce(loadCase.No, loadCase.Level);
-
                         foreach (LoadCombination loadCombination in GetSelectedLoadCombinations())
                         {
+                            // 点の軸力は検定と同じ設計軸力 (未入力 (0) は常時軸力 VL。以前は図だけが N = 0 に点を打った)。
+                            // 地震時軸力の分離入力では組合せごとに変わるので、組合せのループの中で求める
+                            var axialForce = SeismicAxialForces.Design(InputModel, pileLayoutDataItem, loadCase.No, loadCase.Level, loadCombination).N;
                             foreach (var isLiquefaction in SelectedLiquefactionCases)
                             {
                                 int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
@@ -1406,7 +1406,7 @@ namespace PileDesign.ViewModels
                                 if (moment <= double.MinValue) continue;
 
                                 // 点の軸力は検定と同じ (入力値＋応力解析結果では解析と同じく杭頭の要素の軸力を足す。以前は最大モーメントの要素の Fxi だった)
-                                double plotAxialForce = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayoutDataItem, loadCase.No, loadCase.Level,
+                                double plotAxialForce = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayoutDataItem, loadCase.No, loadCase.Level, loadCombination,
                                     EvaluationService.PileHeadBeam(pileLayoutDataItem)?.GetBeamResult(AnaModel, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi).N;
 
                                 if (loadCase.Level == 1)
@@ -1589,11 +1589,11 @@ namespace PileDesign.ViewModels
 
                         foreach (LoadCase loadCase in GetSelectedLoadCases())
                         {
-                            // 点の軸力は検定と同じ設計軸力 (未入力 (0) は常時軸力 VL。以前は図だけが N = 0 に点を打った)
-                            var axialForce = pileLayoutDataItem.GetDesignAxialForce(loadCase.No, loadCase.Level);
-
                             foreach (LoadCombination loadCombination in GetSelectedLoadCombinations())
                             {
+                                // 点の軸力は検定と同じ設計軸力 (未入力 (0) は常時軸力 VL。以前は図だけが N = 0 に点を打った)。
+                                // 地震時軸力の分離入力では組合せごとに変わるので、組合せのループの中で求める
+                                var axialForce = SeismicAxialForces.Design(InputModel, pileLayoutDataItem, loadCase.No, loadCase.Level, loadCombination).N;
                                 foreach (var isLiquefaction in SelectedLiquefactionCases)
                                 {
                                     int lastStep = AnaModel.GetAnalysisLastStep(loadCase, loadCombination, isLiquefaction);
@@ -1632,7 +1632,7 @@ namespace PileDesign.ViewModels
                                     // 横軸は NMINT と同じ扱いにする。同じ杭・同じケースなのに
                                     // 図によって軸力が違うと、2 つの図を並べて読めない。
                                     // 点の軸力は検定と同じ (入力値＋応力解析結果では解析と同じく杭頭の要素の軸力を足す。以前は最大モーメントの要素の Fxi だった)
-                                    double plotAxialForceQ = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayoutDataItem, loadCase.No, loadCase.Level,
+                                    double plotAxialForceQ = EvaluationService.ResolveCheckAxialForce(InputModel, pileLayoutDataItem, loadCase.No, loadCase.Level, loadCombination,
                                         EvaluationService.PileHeadBeam(pileLayoutDataItem)?.GetBeamResult(AnaModel, loadCase, loadCombination, isLiquefaction)?.CumulativeForce?.Fxi).N;
 
                                     if (loadCase.Level == 1)

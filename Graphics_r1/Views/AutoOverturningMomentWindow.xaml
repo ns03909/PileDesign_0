@@ -5,14 +5,19 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PileDesign.ViewModels"
         xmlns:common="clr-namespace:PileDesign.Common"
+        xmlns:conv="clr-namespace:PileDesign.Converters"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime" d:DataContext="{d:DesignInstance Type=local:AutoOverturningMomentViewModel}"
         mc:Ignorable="d"
-        Title="剛盤を仮定した転倒モーメントによる変動軸力の自動入力" Height="450" Width="600"
+        Title="剛盤を仮定した転倒モーメントによる変動軸力の自動入力" Height="560" Width="600"
         common:EscapeKeyBehavior.Enable="True">
+    <Window.Resources>
+        <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+    </Window.Resources>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
@@ -99,7 +104,53 @@
             </StackPanel>
         </GroupBox>
 
-        <StackPanel Grid.Row="2" Grid.Column="0">
+        <!-- 地震時軸力の分離入力のとき: 上の欄は上部構造分 ΔL(U)、ここは基礎部分 ΔL(L) -->
+        <GroupBox Header="基礎部分 ΔL(L) (分離入力。上の欄は上部構造分 ΔL(U) に使います)" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                  Visibility="{Binding IsSeparated, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="基礎部の重量 (kN)" Width="150" ToolTip="基礎部慣性力を求める重量 (基礎・地下部分など)"/>
+                        <TextBox Text="{Binding FoundationWeight, StringFormat=N0, UpdateSourceTrigger=LostFocus}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0"
+                                 KeyDown="TextBox_KeyDown"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="基礎部の作用高さ (m)" Width="150" ToolTip="基礎部慣性力の作用高さ (杭頭から測る)"/>
+                        <TextBox Text="{Binding FoundationHeight, StringFormat=N2, UpdateSourceTrigger=LostFocus}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0"
+                                 KeyDown="TextBox_KeyDown"/>
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="1">
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="水平震度 (レベル1)" Width="150" ToolTip="基礎部の水平震度 (レベル1)"/>
+                        <TextBox Text="{Binding FoundationCoefficient1, StringFormat=N3, UpdateSourceTrigger=LostFocus}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="2"
+                                 KeyDown="TextBox_KeyDown"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="水平震度 (レベル2)" Width="150" ToolTip="基礎部の水平震度 (レベル2)"/>
+                        <TextBox Text="{Binding FoundationCoefficient2, StringFormat=N3, UpdateSourceTrigger=LostFocus}" Width="100"
+                                 Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="2"
+                                 KeyDown="TextBox_KeyDown"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Label Content="転倒モーメント L1/L2 (MNm)" Width="150"/>
+                        <TextBox Text="{Binding FoundationOverturningMoment1, StringFormat=N1, Mode=OneWay}" Width="48"
+                                 IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
+                        <TextBox Text="{Binding FoundationOverturningMoment2, StringFormat=N1, Mode=OneWay}" Width="48" Margin="4,0,0,0"
+                                 IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </GroupBox>
+
+        <StackPanel Grid.Row="3" Grid.Column="0">
             <CheckBox Content="レベル1" IsChecked="{Binding IsApplicableE1, UpdateSourceTrigger=PropertyChanged}"/>
             <CheckBox Content="1-1への適用" IsChecked="{Binding IsApplicableE1s[0], UpdateSourceTrigger=PropertyChanged}"/>
             <CheckBox Content="1-2への適用" IsChecked="{Binding IsApplicableE1s[1], UpdateSourceTrigger=PropertyChanged}"/>
@@ -107,7 +158,7 @@
             <CheckBox Content="1-4への適用" IsChecked="{Binding IsApplicableE1s[3], UpdateSourceTrigger=PropertyChanged}"/>
         </StackPanel>
 
-        <StackPanel Grid.Row="2" Grid.Column="1">
+        <StackPanel Grid.Row="3" Grid.Column="1">
             <CheckBox Content="レベル2" IsChecked="{Binding IsApplicableE2, UpdateSourceTrigger=PropertyChanged}"/>
             <CheckBox Content="2-1への適用" IsChecked="{Binding IsApplicableE2s[0], UpdateSourceTrigger=PropertyChanged}"/>
             <CheckBox Content="2-2への適用" IsChecked="{Binding IsApplicableE2s[1], UpdateSourceTrigger=PropertyChanged}"/>
@@ -115,12 +166,13 @@
             <CheckBox Content="2-4への適用" IsChecked="{Binding IsApplicableE2s[3], UpdateSourceTrigger=PropertyChanged}"/>
         </StackPanel>
 
-        <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="0">
+        <StackPanel Orientation="Horizontal" Grid.Row="4" Grid.Column="0"
+                    Visibility="{Binding IsSeparated, Converter={StaticResource BooleanToVisibilityConverter}, ConverterParameter=Inverse}">
             <CheckBox Content="地震時荷重へのVLの加算" IsChecked="{Binding IsApplicableVL, UpdateSourceTrigger=PropertyChanged}"
                       ToolTip="地震時軸力に長期軸力VLを加算するかどうか"/>
         </StackPanel>
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="4" Grid.Column="1">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Row="5" Grid.Column="1">
             <Button x:Name="OkButton" Content="OK(_O)" Style="{StaticResource PrimaryDialogButtonStyle}" Click="OkButton_Click" IsDefault="True"
                     ToolTip="設定を適用して閉じます (Enter / Alt+O)"/>
             <Button Content="キャンセル(_C)" Style="{StaticResource DialogCancelButtonStyle}" Click="CancelButton_Click" IsCancel="True"

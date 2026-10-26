@@ -99,7 +99,7 @@ namespace PileDesign.Services
             foreach (var pile in _input.PileLayoutItems ?? [])
             {
                 if (pile.SoilPileAltNo == soilPileNo)
-                    WriteSinglePileSettlements(pile, vtm);
+                    WriteSinglePileSettlements(_input, pile, vtm);
             }
             // 曲線の精度が落ちた/範囲外の軸力があった杭を集める (沈下量の取り出しの後で見る)
             foreach (var w in vtm.Warnings)
@@ -163,7 +163,7 @@ namespace PileDesign.Services
         /// 足すと取り残されるので 1 つにした。</para>
         /// </summary>
         public static (List<(double Force, double Settlement)> VL, List<(double Force, double Settlement)> Level1,
-            List<(double Force, double Settlement)> Level2) WriteSinglePileSettlements(PileLayoutDataItem pile, VerticalLoadTransferMethod vtm)
+            List<(double Force, double Settlement)> Level2) WriteSinglePileSettlements(InputModel? input, PileLayoutDataItem pile, VerticalLoadTransferMethod vtm)
         {
             var vl = new List<(double, double)>();
             var l1 = new List<(double, double)>();
@@ -178,14 +178,45 @@ namespace PileDesign.Services
                 vl.Add((force, v[0]));
             }
 
-            pile.SinglePileSettlementLevel1sBeyondCurve = LevelSettlements(pile.AxialForceLevel1s, pile.SinglePileSettlementLevel1s,
+            // 地震時軸力の分離入力では、各ケースの組合せのうち圧縮が最大の軸力 (SeismicAxialForces.PerCaseForSettlement)
+            pile.SinglePileSettlementLevel1sBeyondCurve = LevelSettlements(SeismicAxialForces.PerCaseForSettlement(input, pile, 1), pile.SinglePileSettlementLevel1s,
                 pile.SinglePileSettlementLevel1sBeyondCurve, l1);
-            pile.SinglePileSettlementLevel2sBeyondCurve = LevelSettlements(pile.AxialForceLevel2s, pile.SinglePileSettlementLevel2s,
-                pile.SinglePileSettlementLevel2sBeyondCurve, l2);
+            // 分離入力ではケースごとの欄には組合せのうち軸力が最大のものが入る。グラフの点は下で組合せごとに足すので、ここでは集めない
+            bool separated = SeismicAxialForces.IsSeparated(input);
+            pile.SinglePileSettlementLevel2sBeyondCurve = LevelSettlements(SeismicAxialForces.PerCaseForSettlement(input, pile, 2), pile.SinglePileSettlementLevel2s,
+                pile.SinglePileSettlementLevel2sBeyondCurve, separated ? new List<(double, double)>() : l2);
+            if (separated) l1.Clear();
+
+            // 地震時軸力の分離入力: (レベル, ケース, 組合せ) ごとに求めて残す (βU・βL の同じ組合せは 1 件)。
+            // 引けなかったものは残さない (表・図は「結果なし」になる。前回値を黙って使わない)
+            var separatedResults = new ObservableCollection<SeparatedSettlementResult>();
+            if (separated)
+            {
+                var combinations = SeismicAxialForces.CombinationsForVerticalAnalysis(input);
+                foreach (int level in new[] { 1, 2 })
+                {
+                    int count = pile.AxialForceUpperOf(level)?.Count ?? 0;
+                    for (int no = 1; no <= count; no++)
+                        foreach (var c in combinations)
+                        {
+                            if (c == null) continue;
+                            double n = SeismicAxialForces.ForVerticalAnalysis(input, pile, no, level, c);
+                            var sv = vtm.GetDisplacementForGivenLoad(n, out bool b);
+                            if (sv == null) continue;
+                            separatedResults.Add(new SeparatedSettlementResult
+                            {
+                                Level = level, CaseNo = no, CombinationNo = c.No, BetaU = c.Beta1, BetaL = c.Beta2,
+                                AxialLoad = n, Settlement = sv[0], BeyondCurve = b,
+                            });
+                            (level == 1 ? l1 : l2).Add((n, sv[0]));
+                        }
+                }
+            }
+            pile.SinglePileSettlementsSeparated = separatedResults;
             return (vl, l1, l2);
 
             ObservableCollection<bool> LevelSettlements(
-                IList<double> forces, IList<double> settlements, IList<bool>? oldFlags, List<(double, double)> points)
+                IReadOnlyList<double> forces, IList<double> settlements, IList<bool>? oldFlags, List<(double, double)> points)
             {
                 var flags = new ObservableCollection<bool>(
                     Enumerable.Range(0, forces.Count).Select(j => PileLayoutDataItem.BeyondAt(oldFlags, j)));
