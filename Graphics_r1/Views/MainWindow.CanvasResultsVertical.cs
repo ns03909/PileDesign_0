@@ -613,44 +613,13 @@ namespace PileDesign.Views
         /// 基礎梁考慮沈下/反力のデータを _pendingSettlement に準備し、
         /// 沈下/単杭と同じ DrawBubbleAndArrow で描画する
         /// </summary>
-        /// <summary>
-        /// VB 解析の LoadCaseName は "1-1: U1" / "2-1: U6" / "VL (常時+追加)" のように
-        /// 装飾付きで保存されているため、ベース名（U1 / U6 / VL）を抽出する。
-        /// </summary>
-        private static string ExtractVBCaseBaseName(string caseName)
-        {
-            if (string.IsNullOrEmpty(caseName)) return caseName ?? string.Empty;
-
-            // 地震時軸力の分離入力では組合せごとに解き、"1-1: U1 / 組合せNo.2 (βU=1, βL=-1)" のように組合せを添える
-            int comboIdx = caseName.IndexOf(" / 組合せ", StringComparison.Ordinal);
-            if (comboIdx > 0) caseName = caseName[..comboIdx];
-
-            // "1-1: U1" → "U1"
-            int colonIdx = caseName.IndexOf(": ", StringComparison.Ordinal);
-            string stripped = colonIdx >= 0 ? caseName[(colonIdx + 2)..].Trim() : caseName;
-
-            // "VL (常時+追加)" → "VL"
-            int parenIdx = stripped.IndexOf(" (", StringComparison.Ordinal);
-            if (parenIdx > 0) stripped = stripped[..parenIdx].Trim();
-
-            return stripped;
-        }
-
         private void PrepareVBSettlementPending(MainWindowViewModel viewModel)
         {
             var caseResults = viewModel.VerticalBeamCaseResults;
             if (caseResults == null || caseResults.Count == 0) return;
 
-            // 選択中の荷重ケース名に対応する VB 結果を取得（なければ先頭にフォールバック）
-            string selectedName = viewModel.SelectedLoadCaseName;
-            // 分離入力では同じケースに組合せごとの結果が並ぶ。リボンで選んでいる組合せのものを優先する
-            // (βU・βL の同じ組合せはまとめて解くので、選んだ組合せの番号の結果が無ければ同じケースの先頭)
-            var sameCase = caseResults.Where(c => ExtractVBCaseBaseName(c.LoadCaseName) == selectedName).ToList();
-            var selectedCombination = viewModel.SelectedLoadCombinationIn(viewModel.ResultInputModel);
-            string comboSuffix = PileDesign.Models.InputData.SeismicAxialForces.CombinationSuffix(selectedCombination);
-            var caseResult = (comboSuffix.Length > 0 ? sameCase.FirstOrDefault(c => c.LoadCaseName.EndsWith(comboSuffix, StringComparison.Ordinal)) : null)
-                             ?? sameCase.FirstOrDefault()
-                             ?? caseResults[0];
+            // 選択中の荷重ケース (と分離入力では組合せ) に対応する VB 結果。選び方は ViewModel の 1 か所 (なければ先頭)
+            var caseResult = viewModel.SelectedVerticalBeamCaseResult() ?? caseResults[0];
             string content = viewModel.EffectiveSettlementContent;
 
             ObservableCollection<Point3D> points = [];

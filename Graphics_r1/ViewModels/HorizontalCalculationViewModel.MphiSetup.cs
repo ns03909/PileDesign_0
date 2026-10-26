@@ -128,22 +128,27 @@ namespace PileDesign.ViewModels
                 // (per-step の SetupMPhiByCurrentAxialForMiddleBeam がステップごとに再解決するため、
                 //  ここでの値は step 0 の K 行列構築時に効く)
                 double axialN_kN = 0.0;
+                bool fromInput = false;
                 var pile = ownerPile ?? (pileByPileBodyNo.TryGetValue(pb, out var firstPile) ? firstPile : null);
                 if (pile != null)
                 {
                     try
                     {
-                        // 分離入力ではこの組合せの軸力 (SeismicAxialForces。分離入力でなければ従来の GetSeismicAxialForce と同じ)
+                        // 分離入力ではこの組合せの軸力 (SeismicAxialForces。分離入力でなければ従来の GetSeismicAxialForce と同じ)。
+                        // 分離入力では合成した 0 も有効な軸力 (未入力の印ではない)。分離入力でなければ従来どおり 0 は未入力
                         double nSeis = Models.InputData.SeismicAxialForces.Input(InputModel, pile, loadCase.No, loadCase.Level, loadCombination);
-                        if (double.IsFinite(nSeis) && nSeis != 0.0)
+                        if (double.IsFinite(nSeis) && (nSeis != 0.0 || Models.InputData.SeismicAxialForces.IsSeparated(InputModel)))
+                        {
                             axialN_kN = nSeis;
+                            fromInput = true;
+                        }
                     }
                     catch (Exception ex) when (ex is not InvalidOperationException) // 分離入力で組合せを渡し忘れたら止める
                     {
                         Log.Warning(ex, "[SetupMPhi] GetSeismicAxialForce(loadCaseNo={No}, level={Lv}) failed, fallback to gravity baseline.",
                             loadCase.No, loadCase.Level);
                     }
-                    if (axialN_kN == 0.0)
+                    if (!fromInput)
                     {
                         axialN_kN = model.GetAxialForce(pile); // kN フォールバック (重力ベース)
                     }
@@ -227,14 +232,19 @@ namespace PileDesign.ViewModels
                         var pile = InputModel.PileLayoutItems?.FirstOrDefault(p => p.No == pileNo);
                         if (pile != null)
                         {
+                            bool fromInput = false;
                             if (useSeismicAxialForce)
                             {
                                 try
                                 {
-                                    // 分離入力ではこの組合せの軸力 (SeismicAxialForces。分離入力でなければ従来の GetSeismicAxialForce と同じ)
+                                    // 分離入力ではこの組合せの軸力 (SeismicAxialForces。分離入力でなければ従来の GetSeismicAxialForce と同じ)。
+                                    // 分離入力では合成した 0 も有効な軸力 (未入力の印ではない)。分離入力でなければ従来どおり 0 は未入力
                                     double nSeis = Models.InputData.SeismicAxialForces.Input(InputModel, pile, loadCase.No, loadCase.Level, loadCombination);
-                                    if (double.IsFinite(nSeis) && nSeis != 0.0)
+                                    if (double.IsFinite(nSeis) && (nSeis != 0.0 || Models.InputData.SeismicAxialForces.IsSeparated(InputModel)))
+                                    {
                                         axialN = nSeis;
+                                        fromInput = true;
+                                    }
                                 }
                                 catch (Exception ex) when (ex is not InvalidOperationException) // 分離入力で組合せを渡し忘れたら止める
                                 {
@@ -242,7 +252,7 @@ namespace PileDesign.ViewModels
                                         loadCase.No, loadCase.Level);
                                 }
                             }
-                            if (axialN == 0.0)
+                            if (!fromInput)
                             {
                                 // ステップ毎の再解決はこちら。荷重ステップ比例のランプ (VL → 地震時軸力)。
                                 // E3b: case-local AxialForce 経由 (主モデルでは pile.AxialForce と同値)

@@ -285,6 +285,107 @@ namespace TestProject1
                 "βU = 0.5 の組合せで軸力が変わっていない (組合せが解析に届いていない)");
         }
 
+        // ── 結果の見出しの照合 (2026-10-27 のレビューの 3 件) ──
+
+        [TestMethod]
+        public void CaseLabels_StripTheCombination_AndMatchTheCase()
+        {
+            const string withCombo = "L1-1: U1 / 組合せNo.2 (βU=1, βL=-1)";
+            Assert.AreEqual("U1", SeismicCaseLabels.BaseCaseName(withCombo));
+            Assert.AreEqual("U1", SeismicCaseLabels.BaseCaseName("1-1: U1 / 組合せNo.2 (βU=1, βL=-1)"));
+            Assert.AreEqual("U1", SeismicCaseLabels.BaseCaseName("1-1: U1"));
+            Assert.AreEqual("VL", SeismicCaseLabels.BaseCaseName("VL (常時+追加)"));
+            Assert.IsTrue(SeismicCaseLabels.RefersToCase(withCombo, "U1"), "組合せを添えた見出しが荷重ケースに当たらない (群杭沈下の記録を選べない)");
+            Assert.IsTrue(SeismicCaseLabels.RefersToCase("L1-1: U1", "U1"));
+            Assert.IsFalse(SeismicCaseLabels.RefersToCase("L1-1: U10", "U1"));
+            Assert.AreEqual(" / 組合せNo.2 (βU=1, βL=-1)", SeismicCaseLabels.CombinationPartOf(withCombo));
+        }
+
+        [TestMethod]
+        public void CaseLabels_SelectingAMergedCombination_PicksItsRepresentativesResult()
+        {
+            // No.2 と No.3 は βU・βL が同じ → まとめて解き、結果は代表 No.2 の見出しを持つ
+            var c1 = new LoadCombination(1, 1.0, 1.0, 1.0);
+            var c2 = new LoadCombination(2, 1.0, 1.0, -1.0);
+            var c3 = new LoadCombination(3, 0.5, 1.0, -1.0);
+            var input = MakeInput(true, c1, c2, c3);
+            var labels = new List<string>
+            {
+                "VL (常時+追加)",
+                "1-1: U1" + SeismicAxialForces.CombinationSuffix(c1),
+                "1-1: U1" + SeismicAxialForces.CombinationSuffix(c2),
+            };
+            bool SameCase(int i) => SeismicCaseLabels.BaseCaseName(labels[i]) == "U1";
+            Assert.AreEqual(2, SeismicCaseLabels.Pick(labels, SameCase, SeismicCaseLabels.SuffixFor(input, c3)),
+                "No.3 を選んだのに代表 (No.2) の結果を選ばない (別の組合せの沈下量が出る)");
+            Assert.AreEqual(1, SeismicCaseLabels.Pick(labels, SameCase, SeismicCaseLabels.SuffixFor(input, c1)));
+            // 分離入力でなければ組合せは見ない (従来どおり同じケースの最初)
+            Assert.AreEqual("", SeismicCaseLabels.SuffixFor(MakeInput(false, c1, c2, c3), c3));
+        }
+
+        /// <summary>結果の見出しからケース名を取り出す・末尾で照合する処理は SeismicCaseLabels だけ (写しは直すと取り残される)。</summary>
+        [TestMethod]
+        public void CaseLabelMatching_HasNoCopies()
+        {
+            var copy = new Regex(@"ExtractVBCaseBaseName|EndsWith\(\s*"":\s""\s*\+");
+            int scanned = 0;
+            var offenders = new List<string>();
+            foreach (var file in Directory.GetFiles(TestSource.Dir("Graphics_r1"), "*.cs", SearchOption.AllDirectories))
+            {
+                if (file.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar)) continue;
+                scanned++;
+                if (Path.GetFileName(file) == "SeismicAxialForces.cs") continue;
+                var lines = File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
+                    if (copy.IsMatch(lines[i].Split("//")[0])) offenders.Add($"{Path.GetFileName(file)}:{i + 1}");
+            }
+            TestSource.AssertScanned(scanned, 300, "本体の .cs");
+            Assert.AreEqual(0, offenders.Count, "結果の見出しを自前で照合しています (SeismicCaseLabels を使う): " + string.Join(", ", offenders));
+        }
+
+        // ── 合成した軸力 0 (2026-10-27 のレビュー) ──
+
+        /// <summary>
+        /// 分離入力では合成した軸力 0 も有効。杭頭の M-θ をケース開始時に 0 の軸力で作る
+        /// (以前は「0 = 未入力」として常時軸力の曲線を作り、図・計算書にも残った)。
+        /// </summary>
+        [TestMethod]
+        public void SeparatedZeroAxialForce_IsUsedForTheMThetaCurve()
+        {
+            var (input, _) = IntegrationTests.BuildExampleInputModel("Example10", "PileExample10");
+            if (input == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+            foreach (var c in input.LoadCasesInput.AnalysisTargetSeismicLoadCases) c.IsPileNonLinear = true;
+            var lc = input.LoadCasesInput.AnalysisTargetSeismicLoadCases.First(c => c.Level == 2);
+            var combo = new LoadCombination(1, 1.0, 1.0, 1.0);
+
+            input.IsAxialForceSeparated = true;
+            foreach (var p in input.PileLayoutItems)
+            {
+                // ΔL(U) = -VL、ΔL(L) = 0 → 合成した軸力 0
+                p.AxialForceUpperOf(lc.Level)[lc.No - 1] = -p.AxialForceVL;
+                p.AxialForceFoundationOf(lc.Level)[lc.No - 1] = 0.0;
+            }
+
+            var mainVm = new PileDesign.ViewModels.MainWindowViewModel { CurrentInputModel = input };
+            var vm = new PileDesign.ViewModels.HorizontalCalculationViewModel(mainVm) { BypassUiPromptsForTesting = true };
+            var modelling = new PileDesign.FEM.AnalysisModelling(input);
+            var model = new PileDesign.FEM.AnaModel(input, modelling.Nodes, modelling.Beams, modelling.DummyBeams,
+                modelling.RigidBodies, modelling.HorizontalSoilSprings, modelling.RotationalSprings);
+            model.InitializeStates();
+            vm.SetupNonlinearMThetaForLoadCase(model, lc, combo);
+
+            var spring = model.RotationalSprings.FirstOrDefault(s => s.McrXY.HasValue && s.Name != null && s.Name.Contains('-'));
+            if (spring == null) { Assert.Inconclusive("Mcr を持つ杭頭ばねが無い例題"); return; }
+            int pileNo = int.Parse(spring.Name!.Split('-')[^1]);
+            var pile = input.PileLayoutItems.First(p => p.No == pileNo);
+            Assert.AreEqual(0.0, SeismicAxialForces.Input(input, pile, lc.No, lc.Level, combo), 1e-9, "(前提) 合成した軸力が 0");
+            var pileBody = input.PileBodies[(spring.PileBodyNo is int v && v > 0 ? v : 1) - 1];
+            double atZero = pileBody.GetMThetaRelationship(0).McrXY ?? double.NaN;
+            double atVl = pileBody.GetMThetaRelationship(Math.Round(pile.AxialForceVL)).McrXY ?? double.NaN;
+            Assert.AreNotEqual(atZero, atVl, 1e-6, "(前提) 軸力 0 と常時軸力で Mcr が違う");
+            Assert.AreEqual(atZero, spring.McrXY!.Value, 1e-6, "合成した軸力 0 を未入力として常時軸力の M-θ を作っている");
+        }
+
         // ── 網 ──
 
         /// <summary>

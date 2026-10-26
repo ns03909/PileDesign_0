@@ -193,6 +193,85 @@ namespace PileDesign.Models.InputData
                 + "組合せをまたぐ所は SeismicAxialForces.Envelope を使ってください。");
     }
 
+    /// <summary>
+    /// 鉛直に解く計算 (基礎梁考慮の群杭沈下・単杭沈下 (基礎梁考慮)) の結果の見出しと、画面で選んでいる荷重ケース・組合せの照合。
+    ///
+    /// <para>見出しは「L1-1: U1」「1-1: U1」「VL (常時+追加)」の形で、分離入力では
+    /// 「L1-1: U1 / 組合せNo.2 (βU=1, βL=-1)」と組合せを添える (<see cref="SeismicAxialForces.CombinationSuffix(LoadCombination?)"/>)。
+    /// βU・βL の同じ組合せはまとめて解くので、結果は代表 (先頭) の組合せの番号を持つ。照合は代表に読み替えてから行う。</para>
+    ///
+    /// <para>以前は見出しからケース名を取り出す関数が画面 (MainWindow.CanvasResultsVertical) と ViewModel に写しで 2 つ、
+    /// 「末尾が ": ケース名"」で探す所が群杭沈下の記録とグラフに 2 つあり、組合せを添えた見出しを片方だけ直して
+    /// ほかは先頭の結果 (常時) へ戻っていた。照合はここだけで行う (SeparatedAxialForceTests が写しを見張る)。</para>
+    /// </summary>
+    public static class SeismicCaseLabels
+    {
+        private const string CombinationMarker = " / 組合せ";
+
+        /// <summary>見出しの組合せの部分 (" / 組合せNo.…")。無ければ空。</summary>
+        public static string CombinationPartOf(string? label)
+        {
+            if (string.IsNullOrEmpty(label)) return "";
+            int i = label.IndexOf(CombinationMarker, StringComparison.Ordinal);
+            return i >= 0 ? label[i..] : "";
+        }
+
+        /// <summary>見出しから組合せの部分を外したもの。</summary>
+        public static string WithoutCombination(string? label)
+        {
+            if (string.IsNullOrEmpty(label)) return label ?? "";
+            int i = label.IndexOf(CombinationMarker, StringComparison.Ordinal);
+            return i >= 0 ? label[..i] : label;
+        }
+
+        /// <summary>見出しのケース名 ("1-1: U1 / 組合せ…" → "U1"、"VL (常時+追加)" → "VL")。</summary>
+        public static string BaseCaseName(string? label)
+        {
+            string s = WithoutCombination(label);
+            int colon = s.IndexOf(": ", StringComparison.Ordinal);
+            if (colon >= 0) s = s[(colon + 2)..].Trim();
+            int paren = s.IndexOf(" (", StringComparison.Ordinal);
+            if (paren > 0) s = s[..paren].Trim();
+            return s;
+        }
+
+        /// <summary>見出しがこの荷重ケース名の結果か (厳密一致か、組合せを外して末尾が ": ケース名")。</summary>
+        public static bool RefersToCase(string? label, string? caseName)
+        {
+            if (string.IsNullOrEmpty(label) || string.IsNullOrEmpty(caseName)) return false;
+            if (label == caseName) return true;
+            return WithoutCombination(label).EndsWith(": " + caseName, StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// 選んでいる組合せの結果の見出しに付く組合せの部分。分離入力でない・組合せを選んでいないときは空。
+        /// βU・βL の同じ組合せは代表 (<see cref="SeismicAxialForces.CombinationsForVerticalAnalysis"/> の先頭) に読み替える。
+        /// </summary>
+        public static string SuffixFor(InputModel? input, LoadCombination? selected)
+        {
+            if (selected == null || !SeismicAxialForces.IsSeparated(input)) return "";
+            var representative = SeismicAxialForces.CombinationsForVerticalAnalysis(input)
+                .FirstOrDefault(c => c != null && c.Beta1 == selected.Beta1 && c.Beta2 == selected.Beta2);
+            return SeismicAxialForces.CombinationSuffix(representative ?? selected);
+        }
+
+        /// <summary>
+        /// 同じケースの結果のうち、組合せの部分が <paramref name="suffix"/> のものを選ぶ (空なら最初)。
+        /// <paramref name="isCandidate"/> を満たすものだけが候補。無ければ -1。
+        /// </summary>
+        public static int Pick(IReadOnlyList<string> labels, Func<int, bool> isCandidate, string suffix)
+        {
+            int first = -1;
+            for (int i = 0; i < labels.Count; i++)
+            {
+                if (!isCandidate(i)) continue;
+                if (first < 0) first = i;
+                if (suffix.Length > 0 && CombinationPartOf(labels[i]) == suffix) return i;
+            }
+            return first;
+        }
+    }
+
     /// <summary>荷重ケースの軸力の最大・最小 (組合せをまたいで 1 つに決めるため)。組合せは分離入力でなければ null。</summary>
     public readonly record struct AxialForceEnvelope(
         double Max, LoadCombination? MaxCombination, string MaxSource,

@@ -1929,19 +1929,14 @@ namespace PileDesign.ViewModels
             var vbResults = _mainWindowViewModel.VerticalBeamCaseResults;
             if (vbResults == null || vbResults.Count == 0) return 0;
 
-            // 荷重ケース名でマッチするケースを探す（VLの場合は最初のケース）
-            FEM.VerticalBeamCaseResult caseResult = null;
-            foreach (var cr in vbResults)
-            {
-                if (cr.LoadCaseName == loadCaseName ||
-                    (loadCaseName == "VL" && cr.LoadCaseName.Contains("VL")))
-                {
-                    caseResult = cr;
-                    break;
-                }
-            }
+            // 荷重ケース名で結果を探す。結果の見出しは "1-1: U1" "VL (常時+追加)" (分離入力では組合せを添える) なので、
+            // 見出しのケース名で照合し、分離入力では選んでいる組合せのものを選ぶ (SeismicCaseLabels)。
+            // 以前は見出しを丸ごとケース名と比べていて、地震時のケースは一致せず、いつも先頭 (常時) の結果を使っていた
+            var labels = vbResults.Select(c => c.LoadCaseName).ToList();
+            int picked = SeismicCaseLabels.Pick(labels, i => SeismicCaseLabels.BaseCaseName(labels[i]) == loadCaseName,
+                _mainWindowViewModel.SelectedCombinationSuffix());
             // マッチしなければ最初のケースを使用
-            caseResult ??= vbResults[0];
+            FEM.VerticalBeamCaseResult caseResult = picked >= 0 ? vbResults[picked] : vbResults[0];
 
             if (caseResult.PileResults == null) return 0;
             foreach (var pr in caseResult.PileResults)
@@ -1996,8 +1991,11 @@ namespace PileDesign.ViewModels
             {
                 var exact = beamAware.FirstOrDefault(r => r.LoadCaseName == loadCaseName);
                 if (exact != null) return exact;
-                var suffix = beamAware.FirstOrDefault(r => r.LoadCaseName.EndsWith(": " + loadCaseName));
-                if (suffix != null) return suffix;
+                // 分離入力では組合せごとに並ぶので、選んでいる組合せ (代表に読み替え) のものを優先する (照合は SeismicCaseLabels)
+                var labels = beamAware.Select(r => r.LoadCaseName).ToList();
+                int picked = SeismicCaseLabels.Pick(labels, i => SeismicCaseLabels.RefersToCase(labels[i], loadCaseName),
+                    _mainWindowViewModel.SelectedCombinationSuffix());
+                if (picked >= 0) return beamAware[picked];
             }
 
             int idx = pgs.ActiveCaseIndex;

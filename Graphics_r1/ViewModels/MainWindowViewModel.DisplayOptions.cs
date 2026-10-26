@@ -557,7 +557,7 @@ namespace PileDesign.ViewModels
             var pgs = CurrentInputModel?.PileGroupSettlement;
             if (pgs?.CaseRecords == null || pgs.CaseRecords.Count == 0) return;
 
-            int idx = FindMatchingCaseRecordIndex(pgs.CaseRecords, loadCaseName, pgs.ActiveLoadingType);
+            int idx = FindMatchingCaseRecordIndex(pgs.CaseRecords, loadCaseName, pgs.ActiveLoadingType, SelectedCombinationSuffix());
             if (idx == pgs.ActiveCaseIndex) return;
 
             if (idx < 0)
@@ -588,7 +588,7 @@ namespace PileDesign.ViewModels
         /// </summary>
         private static int FindMatchingCaseRecordIndex(
             ObservableCollection<Models.Results.GroupSettlementCaseRecord> records,
-            string loadCaseName, string activeLoadingType = null)
+            string loadCaseName, string activeLoadingType = null, string combinationSuffix = null)
         {
             if (records == null || records.Count == 0 || string.IsNullOrEmpty(loadCaseName)) return -1;
             bool TypeMatch(int i) =>
@@ -598,13 +598,12 @@ namespace PileDesign.ViewModels
             for (int i = 0; i < records.Count; i++)
                 if (TypeMatch(i) && records[i].LoadCaseName == loadCaseName) return i;
 
-            // 2. 末尾一致 (例: "L1-1: U1" の "U1")
-            for (int i = 0; i < records.Count; i++)
-            {
-                if (!TypeMatch(i)) continue;
-                var name = records[i].LoadCaseName;
-                if (name.EndsWith(": " + loadCaseName)) return i;
-            }
+            // 2. 末尾一致 (例: "L1-1: U1" の "U1")。分離入力では "L1-1: U1 / 組合せNo.2 (…)" と組合せごとに並ぶので、
+            //    選んでいる組合せ (代表に読み替え) のものを優先する。照合は SeismicCaseLabels
+            var labels = records.Select(r => r.LoadCaseName).ToList();
+            int picked = SeismicCaseLabels.Pick(labels, i => TypeMatch(i) && SeismicCaseLabels.RefersToCase(labels[i], loadCaseName),
+                combinationSuffix ?? "");
+            if (picked >= 0) return picked;
 
             // 3. "VL" の厳密一致のみ VL ケースへフォールバック (VL0/VLadd は対象外)
             if (loadCaseName == "VL")
@@ -732,6 +731,13 @@ namespace PileDesign.ViewModels
                 if (SetProperty(ref _selectedLoadCombinationName, value))
                 {
                     AutoDetectLiquefactionState();
+                    // 地震時軸力の分離入力では、群杭沈下・単杭沈下 (基礎梁考慮) の結果が組合せごとに並ぶ。
+                    // 組合せを切り替えたら、その組合せの結果を選び直して描き直す (荷重ケースの切り替えと同じ)
+                    if (CurrentInputModel?.IsAxialForceSeparated == true)
+                    {
+                        SyncGroupSettlementActiveCaseFromLoadCase(SelectedLoadCaseName);
+                        UpdateCanvas3DAction?.Invoke();
+                    }
                 }
             }
         }
@@ -2644,7 +2650,7 @@ namespace PileDesign.ViewModels
                 // 一致するケースが無ければコンタを消去 (1回解析の結果を地震時ケースに誤って表示しないため)。
                 if (pgs.CaseRecords != null && pgs.CaseRecords.Count > 0)
                 {
-                    int idx = FindMatchingCaseRecordIndex(pgs.CaseRecords, SelectedLoadCaseName, pgs.ActiveLoadingType);
+                    int idx = FindMatchingCaseRecordIndex(pgs.CaseRecords, SelectedLoadCaseName, pgs.ActiveLoadingType, SelectedCombinationSuffix());
                     if (idx >= 0)
                     {
                         pgs.ActiveCaseIndex = idx;
@@ -2707,22 +2713,27 @@ namespace PileDesign.ViewModels
 
             // フォールバック: 既存 VerticalBeamCaseResults
             if (VerticalBeamCaseResults == null || VerticalBeamCaseResults.Count == 0) return null;
-            string selectedName = SelectedLoadCaseName;
-            return VerticalBeamCaseResults.FirstOrDefault(c =>
-                       ExtractVBCaseBaseName(c.LoadCaseName) == selectedName)
-                   ?? VerticalBeamCaseResults[0];
+            return SelectedVerticalBeamCaseResult() ?? VerticalBeamCaseResults[0];
         }
 
-        /// <summary>VB 解析の LoadCaseName ("1-1: U1" 等) からベース名を抽出。</summary>
-        private static string ExtractVBCaseBaseName(string caseName)
+        /// <summary>
+        /// 単杭沈下 (基礎梁考慮) の結果のうち、選んでいる荷重ケースのもの。分離入力では同じケースに組合せごとの結果が並ぶので、
+        /// リボンで選んでいる組合せ (βU・βL の同じ組合せは代表に読み替え) のものを選ぶ。照合は SeismicCaseLabels。無ければ null。
+        /// </summary>
+        internal FEM.VerticalBeamCaseResult? SelectedVerticalBeamCaseResult()
         {
-            if (string.IsNullOrEmpty(caseName)) return caseName ?? string.Empty;
-            int colonIdx = caseName.IndexOf(": ", StringComparison.Ordinal);
-            string stripped = colonIdx >= 0 ? caseName[(colonIdx + 2)..].Trim() : caseName;
-            int parenIdx = stripped.IndexOf(" (", StringComparison.Ordinal);
-            if (parenIdx > 0) stripped = stripped[..parenIdx].Trim();
-            return stripped;
+            var results = VerticalBeamCaseResults;
+            if (results == null || results.Count == 0) return null;
+            var labels = results.Select(c => c.LoadCaseName).ToList();
+            string selectedName = SelectedLoadCaseName;
+            int i = SeismicCaseLabels.Pick(labels, k => SeismicCaseLabels.BaseCaseName(labels[k]) == selectedName,
+                SelectedCombinationSuffix());
+            return i >= 0 ? results[i] : null;
         }
+
+        /// <summary>選んでいる組合せの、鉛直の結果の見出しに付く組合せの部分 (分離入力でなければ空)。</summary>
+        internal string SelectedCombinationSuffix()
+            => SeismicCaseLabels.SuffixFor(CurrentInputModel, SelectedLoadCombinationIn(CurrentInputModel));
 
         // 基礎梁鉛直解析結果
         private ObservableCollection<FEM.VerticalBeamCaseResult> _verticalBeamCaseResults;
