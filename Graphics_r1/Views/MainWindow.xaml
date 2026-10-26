@@ -3258,20 +3258,30 @@
                                                                                FontWeight="Bold" Margin="0,0,8,0"/>
                                                                     <RadioButton Content="絶対" Padding="4,2" Margin="0,0,10,0" VerticalAlignment="Center"
                                                                                  GroupName="AxialModeTab"
-                                                                                 IsEnabled="{Binding IsAxialForceSeparated, Converter={StaticResource BooleanNegationConverter}}"
-                                                                                 ToolTipService.ShowOnDisabled="True"
                                                                                  IsChecked="{Binding IsAxialForceVariationMode, Mode=TwoWay, Converter={StaticResource BooleanNegationConverter}}"
-                                                                                 ToolTip="絶対モード: L1/L2 列に絶対軸力 (VL+地震時) を表示・編集 (分離入力のあいだは使えません。分離入力の欄は変動の値だけです)"/>
+                                                                                 ToolTip="絶対モード: L1/L2 列に絶対軸力 (VL+地震時) を表示・編集&#x0a;分離入力のときは βU = βL = 1.0 の和 (VL + ΔL(L) + ΔL(U)) を表示します (読み取り専用)"/>
                                                                     <RadioButton Content="変動" Padding="4,2" VerticalAlignment="Center"
                                                                                  GroupName="AxialModeTab"
                                                                                  IsChecked="{Binding IsAxialForceVariationMode, Mode=TwoWay}"
                                                                                  ToolTip="変動モード: L1/L2 列に変動軸力 (= 絶対 − VL) を表示・編集 (VL 変更時は絶対が連動)"/>
                                                                 </StackPanel>
                                                             </Border>
+
+                                                            <!--
+                                                                分離入力の絶対モードの断り書き。**何の和を見ているのかを言う。**
+                                                                組合せごとに値が変わるので、断りが無いと βU・βL を掛けた値だと読まれる。
+                                                            -->
+                                                            <Border BorderBrush="#F0AD4E" BorderThickness="1" CornerRadius="3"
+                                                                    Padding="6,3" Margin="8,2,0,2" Background="#FFF8E7" VerticalAlignment="Center"
+                                                                    Visibility="{Binding IsSeparatedAbsoluteNoticeVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                                <TextBlock VerticalAlignment="Center"
+                                                                           Text="L1/L2 列は βU = βL = 1.0 の和 (VL + ΔL(L) + ΔL(U))。読み取り専用です。"
+                                                                           ToolTip="分離入力では荷重組合せごとに軸力が変わるため、絶対モードでは βU = βL = 1.0 の和だけを表示します。&#x0a;値を変えるには「変動」に切り替えて ΔL(U)・ΔL(L) を入力してください。&#x0a;解析・検定・沈下は、荷重組合せごとの βU・βL を掛けた軸力を使います。"/>
+                                                            </Border>
                                                             <CheckBox Content="分離入力" Margin="8,2,0,2" VerticalAlignment="Center"
                                                                       IsChecked="{Binding IsAxialForceSeparated, Mode=TwoWay}"
                                                                       AutomationProperties.Name="地震時軸力の分離入力"
-                                                                      ToolTip="地震時軸力を、上部構造慣性力による分 ΔL(U) と基礎部慣性力による分 ΔL(L) に分けて入力します。&#x0a;荷重組合せごとに 軸力 = VL + βL·ΔL(L) + βU·ΔL(U) で求めます (βU・βL は荷重組合せの係数)。&#x0a;入力は変動のみです (軸力モードは「変動」に固定)。分けない入力の値は別に残ります。"/>
+                                                                      ToolTip="地震時軸力を、上部構造慣性力による分 ΔL(U) と基礎部慣性力による分 ΔL(L) に分けて入力します。&#x0a;荷重組合せごとに 軸力 = VL + βL·ΔL(L) + βU·ΔL(U) で求めます (βU・βL は荷重組合せの係数)。&#x0a;入力は変動 (ΔL(U)・ΔL(L)) で行います。「絶対」に切り替えると βU = βL = 1.0 の和を読み取り専用で表示します。&#x0a;入力済みの軸力があるときは、引き継ぎ方を確認します (オンで比例配分または 0、オフで ΔL(L) と ΔL(U) の和)。"/>
                                                         </StackPanel>
 
                                                     </Grid>
@@ -3829,6 +3839,20 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
+                                                    <!-- 分離入力の絶対モード: betaU = betaL = 1 の和。読み取り専用 -->
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceSeparatedSumLevel1s[0], StringFormat=N1}" MinWidth="50"
+                                                                        IsReadOnly="True"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparatedSumColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="betaU = betaL = 1.0 のときの和 (VL + DL(L) + DL(U)) です。&#x0a;読み取り専用です。値を変えるには「変動」に切り替えて DL(U)・DL(L) を入力してください。&#x0a;解析・検定・沈下は、荷重組合せごとの betaU・betaL を掛けた軸力を使います。">
+                                                                <TextBlock Text="L1-1" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel1s[1], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceAbsoluteColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -3863,6 +3887,20 @@
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="ΔL1-2" TextAlignment="Center" ToolTip="{Binding Data.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[1].LoadName, Source={StaticResource AxialForceVMProxy}, FallbackValue=ΔL1-2}"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <!-- 分離入力の絶対モード: betaU = betaL = 1 の和。読み取り専用 -->
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceSeparatedSumLevel1s[1], StringFormat=N1}" MinWidth="50"
+                                                                        IsReadOnly="True"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparatedSumColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="betaU = betaL = 1.0 のときの和 (VL + DL(L) + DL(U)) です。&#x0a;読み取り専用です。値を変えるには「変動」に切り替えて DL(U)・DL(L) を入力してください。&#x0a;解析・検定・沈下は、荷重組合せごとの betaU・betaL を掛けた軸力を使います。">
+                                                                <TextBlock Text="L1-2" TextAlignment="Center"/>
                                                                 <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                             </StackPanel>
                                                         </DataGridTextColumn.Header>
@@ -3907,6 +3945,20 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
+                                                    <!-- 分離入力の絶対モード: betaU = betaL = 1 の和。読み取り専用 -->
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceSeparatedSumLevel1s[2], StringFormat=N1}" MinWidth="50"
+                                                                        IsReadOnly="True"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparatedSumColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="betaU = betaL = 1.0 のときの和 (VL + DL(L) + DL(U)) です。&#x0a;読み取り専用です。値を変えるには「変動」に切り替えて DL(U)・DL(L) を入力してください。&#x0a;解析・検定・沈下は、荷重組合せごとの betaU・betaL を掛けた軸力を使います。">
+                                                                <TextBlock Text="L1-3" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel1s[3], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource GreenHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceAbsoluteColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -3941,6 +3993,20 @@
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="ΔL1-4" TextAlignment="Center" ToolTip="{Binding Data.CurrentInputModel.LoadCasesInput.LoadCasesLevel1[3].LoadName, Source={StaticResource AxialForceVMProxy}, FallbackValue=ΔL1-4}"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <!-- 分離入力の絶対モード: betaU = betaL = 1 の和。読み取り専用 -->
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceSeparatedSumLevel1s[3], StringFormat=N1}" MinWidth="50"
+                                                                        IsReadOnly="True"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparatedSumColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="betaU = betaL = 1.0 のときの和 (VL + DL(L) + DL(U)) です。&#x0a;読み取り専用です。値を変えるには「変動」に切り替えて DL(U)・DL(L) を入力してください。&#x0a;解析・検定・沈下は、荷重組合せごとの betaU・betaL を掛けた軸力を使います。">
+                                                                <TextBlock Text="L1-4" TextAlignment="Center"/>
                                                                 <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                             </StackPanel>
                                                         </DataGridTextColumn.Header>
@@ -3985,6 +4051,20 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
+                                                    <!-- 分離入力の絶対モード: betaU = betaL = 1 の和。読み取り専用 -->
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceSeparatedSumLevel2s[0], StringFormat=N1}" MinWidth="50"
+                                                                        IsReadOnly="True"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparatedSumColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="betaU = betaL = 1.0 のときの和 (VL + DL(L) + DL(U)) です。&#x0a;読み取り専用です。値を変えるには「変動」に切り替えて DL(U)・DL(L) を入力してください。&#x0a;解析・検定・沈下は、荷重組合せごとの betaU・betaL を掛けた軸力を使います。">
+                                                                <TextBlock Text="L2-1" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel2s[1], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceAbsoluteColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -4019,6 +4099,20 @@
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="ΔL2-2" TextAlignment="Center" ToolTip="{Binding Data.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[1].LoadName, Source={StaticResource AxialForceVMProxy}, FallbackValue=ΔL2-2}"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <!-- 分離入力の絶対モード: betaU = betaL = 1 の和。読み取り専用 -->
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceSeparatedSumLevel2s[1], StringFormat=N1}" MinWidth="50"
+                                                                        IsReadOnly="True"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparatedSumColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="betaU = betaL = 1.0 のときの和 (VL + DL(L) + DL(U)) です。&#x0a;読み取り専用です。値を変えるには「変動」に切り替えて DL(U)・DL(L) を入力してください。&#x0a;解析・検定・沈下は、荷重組合せごとの betaU・betaL を掛けた軸力を使います。">
+                                                                <TextBlock Text="L2-2" TextAlignment="Center"/>
                                                                 <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                             </StackPanel>
                                                         </DataGridTextColumn.Header>
@@ -4063,6 +4157,20 @@
                                                         </DataGridTextColumn.Header>
                                                     </DataGridTextColumn>
 
+                                                    <!-- 分離入力の絶対モード: betaU = betaL = 1 の和。読み取り専用 -->
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceSeparatedSumLevel2s[2], StringFormat=N1}" MinWidth="50"
+                                                                        IsReadOnly="True"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparatedSumColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="betaU = betaL = 1.0 のときの和 (VL + DL(L) + DL(U)) です。&#x0a;読み取り専用です。値を変えるには「変動」に切り替えて DL(U)・DL(L) を入力してください。&#x0a;解析・検定・沈下は、荷重組合せごとの betaU・betaL を掛けた軸力を使います。">
+                                                                <TextBlock Text="L2-3" TextAlignment="Center"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
                                                     <DataGridTextColumn Width="50" Binding="{Binding AxialForceLevel2s[3], StringFormat=N1}" MinWidth="50"
                                                                         HeaderStyle="{StaticResource PaleRedHeaderStyle}"
                                                                         Visibility="{Binding Data.IsAxialForceAbsoluteColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}">
@@ -4097,6 +4205,20 @@
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel>
                                                                 <TextBlock Text="ΔL2-4" TextAlignment="Center" ToolTip="{Binding Data.CurrentInputModel.LoadCasesInput.LoadCasesLevel2[3].LoadName, Source={StaticResource AxialForceVMProxy}, FallbackValue=ΔL2-4}"/>
+                                                                <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridTextColumn.Header>
+                                                    </DataGridTextColumn>
+
+                                                    <!-- 分離入力の絶対モード: betaU = betaL = 1 の和。読み取り専用 -->
+                                                    <DataGridTextColumn Width="50" Binding="{Binding AxialForceSeparatedSumLevel2s[3], StringFormat=N1}" MinWidth="50"
+                                                                        IsReadOnly="True"
+                                                                        HeaderStyle="{StaticResource GreenHeaderStyle}"
+                                                                        Visibility="{Binding Data.IsAxialForceSeparatedSumColumnsVisible, Source={StaticResource AxialForceVMProxy}, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                                        ElementStyle="{StaticResource ReadOnlyRightAlignedTextBlockStyle}">
+                                                        <DataGridTextColumn.Header>
+                                                            <StackPanel ToolTip="betaU = betaL = 1.0 のときの和 (VL + DL(L) + DL(U)) です。&#x0a;読み取り専用です。値を変えるには「変動」に切り替えて DL(U)・DL(L) を入力してください。&#x0a;解析・検定・沈下は、荷重組合せごとの betaU・betaL を掛けた軸力を使います。">
+                                                                <TextBlock Text="L2-4" TextAlignment="Center"/>
                                                                 <TextBlock Text="(kN)" TextAlignment="Center" HorizontalAlignment="Center"/>
                                                             </StackPanel>
                                                         </DataGridTextColumn.Header>

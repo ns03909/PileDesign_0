@@ -12,6 +12,7 @@ using PileDesign.Views;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -2004,6 +2005,10 @@ namespace PileDesign.ViewModels
         /// 切替後の編集動作:
         ///   - 絶対モード: 絶対値を直接編集、VL 変更時は変動が再計算される (絶対は不変)
         ///   - 変動モード: 変動値を編集すると絶対値が自動更新、VL 変更時は絶対値が Δ VL シフト (変動は不変)
+        ///
+        /// 分離入力でも「絶対」を選べる。ただし組合せごとに値が変わるので、出すのは βU = βL = 1 の和
+        /// (VL + ΔL(L) + ΔL(U)) で、<b>読み取り専用</b>——編集は変動の欄 (ΔL(U)・ΔL(L)) で行う
+        /// (<see cref="IsAxialForceAbsoluteReadOnly"/>)。
         /// </summary>
         public bool IsAxialForceVariationMode
         {
@@ -2012,8 +2017,6 @@ namespace PileDesign.ViewModels
             {
                 if (CurrentInputModel == null) return;
                 if (CurrentInputModel.IsAxialForceVariationMode == value) return;
-                // 分離入力のあいだは「変動」に固定する (分離入力の欄は変動の値だけ)
-                if (!value && CurrentInputModel.IsAxialForceSeparated) { OnPropertyChanged(); return; }
                 var before = CaptureInputEdit();
                 CurrentInputModel.IsAxialForceVariationMode = value;
                 Common.AxialForceModeContext.IsVariationMode = value;
@@ -2026,9 +2029,12 @@ namespace PileDesign.ViewModels
 
         /// <summary>
         /// 地震時軸力の分離入力 (InputModel.IsAxialForceSeparated)。オンのとき、地震時軸力を荷重組合せごとに
-        /// N = VL + βL·ΔL(L) + βU·ΔL(U) で求め、表は ΔL(U)・ΔL(L) の欄になる。軸力モードは「変動」に固定する。
+        /// N = VL + βL·ΔL(L) + βU·ΔL(U) で求め、「変動」では表が ΔL(U)・ΔL(L) の欄になる。
+        /// 「絶対」も選べるが、そこに出すのは βU = βL = 1 の和で読み取り専用
+        /// (<see cref="IsAxialForceSeparatedSumColumnsVisible"/>)。
         /// 解析・検定・沈下の結果を変えるので、切り替えは軸力の表の編集と同じく、確認のうえ結果を消してから行う。
-        /// 分離しない入力 (AxialForceLevel1s/2s) と分離入力の値は別に持つので、切り替えてもどちらも残る。
+        /// 分離しない入力 (AxialForceLevel1s/2s) と分離入力の値は別に持つが、入力済みの軸力は
+        /// 切り替えのときに引き継ぐ (<see cref="AskAxialForceTakeOver"/>)。
         /// </summary>
         public bool IsAxialForceSeparated
         {
@@ -2036,6 +2042,15 @@ namespace PileDesign.ViewModels
             set
             {
                 if (CurrentInputModel == null || CurrentInputModel.IsAxialForceSeparated == value) return;
+
+                // **引き継ぎを先に訊く。**ここでやめる人が居るので、結果を消す前に訊く
+                // ——順を逆にすると、やめたのに解析結果だけ消えて戻ってこない。
+                if (!AskAxialForceTakeOver(value, out var takeOver))
+                {
+                    OnPropertyChanged();   // チェックボックスを元に戻す
+                    return;
+                }
+
                 const string description = "地震時軸力の分離入力の切り替え";
                 if (!ConfirmAnalysisConditionChange("反復", description) || !CheckAndResetAnalysisResultsKeepingSplit(description))
                 {
@@ -2044,6 +2059,10 @@ namespace PileDesign.ViewModels
                 }
                 var before = CaptureInputEdit();
                 CurrentInputModel.IsAxialForceSeparated = value;
+
+                // 引き継ぎは控えを採ったあと。**切り替えと同じ一手で元に戻る。**
+                takeOver?.Invoke();
+
                 if (value && !CurrentInputModel.IsAxialForceVariationMode)
                 {
                     CurrentInputModel.IsAxialForceVariationMode = true;
@@ -2058,11 +2077,118 @@ namespace PileDesign.ViewModels
             }
         }
 
-        /// <summary>軸力の表の「絶対」の欄を出すか (分離入力でなく、絶対モード)。</summary>
+        /// <summary>
+        /// ΔL(U) の割合 (%) を聞く。画面側 (<c>MainWindow</c>) が入れる。初期値を渡し、入力された文字を返す
+        /// (キャンセルなら null)。入っていなければ比例配分は選べない。
+        /// </summary>
+        public Func<string, string?>? AskUpperSharePercent { get; set; }
+
+        /// <summary>比例配分の割合の初期値 (%)。変動軸力は骨組解析の値、つまり上部構造の分で入れることが多い。</summary>
+        internal const double DefaultUpperSharePercent = 100.0;
+
+        /// <summary>
+        /// 分離入力を切り替えるとき、<b>入力済みの軸力をどう引き継ぐか</b>を訊く。
+        ///
+        /// <para>分けない入力 (絶対値) と分離入力 (ΔL(U)・ΔL(L)) は別に持っているので、切り替えただけでは
+        /// 引き継がれない。入力済みの軸力が 0 に見えるので、入れ直すかチェックを戻すしかなかった。</para>
+        ///
+        /// <para>オンにするとき: 変動軸力 ΔL を比例配分するか、ΔL(U)・ΔL(L) を 0 にするかを訊く。
+        /// 比例配分なら ΔL(U) の割合 (0〜100%) も訊く。オフにするとき: 変動軸力 ΔL を ΔL(L) + ΔL(U) に
+        /// することを伝える。<b>入っていなければ訊かない</b>——新しいファイルで毎回出るのは邪魔なだけ。</para>
+        /// </summary>
+        /// <param name="toSeparated">これから分離入力にするか (false なら、やめる)。</param>
+        /// <param name="takeOver">引き継ぎの処理。引き継がないときは null。</param>
+        /// <returns>続けてよいか (キャンセルなら false)。</returns>
+        private bool AskAxialForceTakeOver(bool toSeparated, out Action? takeOver)
+        {
+            takeOver = null;
+            var piles = CurrentInputModel?.PileLayoutItems;
+            if (piles == null) return true;
+
+            if (toSeparated)
+            {
+                if (!AxialForceSeparation.HasVariation(piles)) return true;
+
+                var answer = MessageService.ConfirmWithCancel(
+                    GuardMessages.SeparateAxialForceTakeOver, "地震時軸力の分離入力");
+
+                if (answer == MessageBoxResult.Cancel) return false;
+
+                if (answer == MessageBoxResult.No)
+                {
+                    takeOver = () => AxialForceSeparation.Clear(piles);
+                    return true;
+                }
+
+                if (AskUpperShare() is not { } share) return false;
+
+                takeOver = () => AxialForceSeparation.Split(piles, share);
+                return true;
+            }
+
+            if (!AxialForceSeparation.HasSeparated(piles)) return true;
+
+            if (MessageService.Show(
+                    GuardMessages.MergeAxialForceTakeOver, "地震時軸力の分離入力",
+                    MessageBoxButton.OKCancel, MessageBoxImage.Information) != MessageBoxResult.OK)
+            {
+                return false;
+            }
+
+            takeOver = () => AxialForceSeparation.Merge(piles);
+            return true;
+        }
+
+        /// <summary>
+        /// ΔL(U) の割合を聞いて 0.0〜1.0 で返す。キャンセル・読めない値なら null。
+        ///
+        /// <para><b>聞き直しは 3 回まで。</b>無人実行や試験で同じ答えが返り続けると、
+        /// 聞き直しの繰り返しから出られなくなる。</para>
+        /// </summary>
+        private double? AskUpperShare()
+        {
+            if (AskUpperSharePercent == null) return null;
+
+            string initial = DefaultUpperSharePercent.ToString("0.#", CultureInfo.InvariantCulture);
+
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                string? answer = AskUpperSharePercent(initial);
+                if (answer == null) return null;   // キャンセル
+
+                if (double.TryParse(answer.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double percent)
+                    && percent >= 0.0 && percent <= 100.0)
+                {
+                    return percent / 100.0;
+                }
+
+                MessageService.ShowWarning(GuardMessages.UpperShareRejected, "入力の確認");
+                initial = answer;
+            }
+
+            return null;
+        }
+
+        /// <summary>軸力の表の「絶対」の打てる欄を出すか (分離入力でなく、絶対モード)。</summary>
         public bool IsAxialForceAbsoluteColumnsVisible => !IsAxialForceSeparated && !IsAxialForceVariationMode;
 
         /// <summary>軸力の表の「変動 (ΔL1-1 など)」の欄を出すか (分離入力でなく、変動モード)。</summary>
         public bool IsAxialForceVariationColumnsVisible => !IsAxialForceSeparated && IsAxialForceVariationMode;
+
+        /// <summary>
+        /// 軸力の表の<b>分離入力の絶対軸力</b>の欄を出すか (分離入力の絶対モード)。
+        ///
+        /// <para>出すのは βU = βL = 1 の和 (VL + ΔL(L) + ΔL(U)) で、<b>読み取り専用</b>。
+        /// 組合せごとに値が変わるので、打った値をどの組合せの ΔL(U)・ΔL(L) へ戻すかが決まらない
+        /// ——編集は変動の欄で行う。</para>
+        /// </summary>
+        public bool IsAxialForceSeparatedSumColumnsVisible => IsAxialForceSeparated && !IsAxialForceVariationMode;
+
+        /// <summary>
+        /// 分離入力の絶対モードであることの断り書きを出すか。
+        /// <b>何の和を見ているのかが分からないと、組合せの係数を掛けた値だと読まれる。</b>
+        /// </summary>
+        public bool IsSeparatedAbsoluteNoticeVisible => IsAxialForceSeparatedSumColumnsVisible;
 
         /// <summary>軸力モードの切り替え・分離入力の切り替えに関わる表示をまとめて通知する。</summary>
         internal void RaiseAxialForceModeChanged()
@@ -2071,6 +2197,8 @@ namespace PileDesign.ViewModels
             OnPropertyChanged(nameof(IsAxialForceSeparated));
             OnPropertyChanged(nameof(IsAxialForceAbsoluteColumnsVisible));
             OnPropertyChanged(nameof(IsAxialForceVariationColumnsVisible));
+            OnPropertyChanged(nameof(IsAxialForceSeparatedSumColumnsVisible));
+            OnPropertyChanged(nameof(IsSeparatedAbsoluteNoticeVisible));
         }
 
         /// <summary>

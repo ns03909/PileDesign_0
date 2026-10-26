@@ -272,7 +272,8 @@ namespace PileDesign.Models.InputData
         //     N = VL + βL·ΔL(L) + βU·ΔL(U)
         // で求める (βU・βL は荷重組合せの上部構造慣性力・基礎部慣性力の係数)。
         // ΔL(U) は上部構造慣性力による変動軸力、ΔL(L) は基礎部慣性力による変動軸力。
-        // 上の AxialForceLevel1s/2s (分離しない入力) とは別に持ち、切り替えてもどちらも残る。
+        // 上の AxialForceLevel1s/2s (分離しない入力) とは別に持つ。入力済みの軸力は切り替えのときに
+        // 引き継ぐ (AxialForceSeparation。オンで比例配分または 0、オフで ΔL(L) + ΔL(U) の和)。
         // 要素はレベルごとの荷重ケースの並び (番号 − 1) に対応する。
 
         private ObservableCollection<double> _axialForceUpperLevel1s = [0.0, 0.0, 0.0, 0.0];
@@ -280,7 +281,7 @@ namespace PileDesign.Models.InputData
         public ObservableCollection<double> AxialForceUpperLevel1s
         {
             get => _axialForceUpperLevel1s;
-            set => SetProperty(ref _axialForceUpperLevel1s, value ?? []);
+            set => SetSeparated(ref _axialForceUpperLevel1s, value, 1);
         }
 
         private ObservableCollection<double> _axialForceFoundationLevel1s = [0.0, 0.0, 0.0, 0.0];
@@ -288,7 +289,7 @@ namespace PileDesign.Models.InputData
         public ObservableCollection<double> AxialForceFoundationLevel1s
         {
             get => _axialForceFoundationLevel1s;
-            set => SetProperty(ref _axialForceFoundationLevel1s, value ?? []);
+            set => SetSeparated(ref _axialForceFoundationLevel1s, value, 1);
         }
 
         private ObservableCollection<double> _axialForceUpperLevel2s = [0.0, 0.0, 0.0, 0.0];
@@ -296,7 +297,7 @@ namespace PileDesign.Models.InputData
         public ObservableCollection<double> AxialForceUpperLevel2s
         {
             get => _axialForceUpperLevel2s;
-            set => SetProperty(ref _axialForceUpperLevel2s, value ?? []);
+            set => SetSeparated(ref _axialForceUpperLevel2s, value, 2);
         }
 
         private ObservableCollection<double> _axialForceFoundationLevel2s = [0.0, 0.0, 0.0, 0.0];
@@ -304,7 +305,7 @@ namespace PileDesign.Models.InputData
         public ObservableCollection<double> AxialForceFoundationLevel2s
         {
             get => _axialForceFoundationLevel2s;
-            set => SetProperty(ref _axialForceFoundationLevel2s, value ?? []);
+            set => SetSeparated(ref _axialForceFoundationLevel2s, value, 2);
         }
 
         /// <summary>分離入力の ΔL(U) の一覧 (レベル 1 / 2)。</summary>
@@ -312,6 +313,79 @@ namespace PileDesign.Models.InputData
 
         /// <summary>分離入力の ΔL(L) の一覧 (レベル 1 / 2)。</summary>
         internal ObservableCollection<double> AxialForceFoundationOf(int level) => level == 1 ? AxialForceFoundationLevel1s : AxialForceFoundationLevel2s;
+
+        // ─────────────── 分離入力の絶対軸力 (βU = βL = 1 の和、表示用、Json 非永続) ───────────────
+        // 分離入力でも「軸力モード: 絶対」を選べる。ただし組合せごとに値が変わるので、どれか 1 つを
+        // 「絶対軸力」として出すしかない——出すのは βU = βL = 1 の和
+        //     VL + ΔL(L) + ΔL(U)
+        // で、読み取り専用。編集は変動の欄 (ΔL(U)・ΔL(L)) で行う。
+        //
+        // 入力の値ではなく派生値なので [JsonIgnore]。ΔL(U)・ΔL(L)・VL が動いたら作り直す。
+
+        private readonly ObservableCollection<double> _axialForceSeparatedSumLevel1s = [];
+        /// <summary>レベル1の分離入力を βU = βL = 1 で足した絶対軸力 [kN] (読み取り専用)。</summary>
+        [JsonIgnore]
+        public ObservableCollection<double> AxialForceSeparatedSumLevel1s => _axialForceSeparatedSumLevel1s;
+
+        private readonly ObservableCollection<double> _axialForceSeparatedSumLevel2s = [];
+        /// <summary>レベル2の分離入力を βU = βL = 1 で足した絶対軸力 [kN] (読み取り専用)。</summary>
+        [JsonIgnore]
+        public ObservableCollection<double> AxialForceSeparatedSumLevel2s => _axialForceSeparatedSumLevel2s;
+
+        /// <summary>分離入力の絶対軸力の一覧 (レベル 1 / 2)。</summary>
+        internal ObservableCollection<double> AxialForceSeparatedSumOf(int level) =>
+            level == 1 ? _axialForceSeparatedSumLevel1s : _axialForceSeparatedSumLevel2s;
+
+        /// <summary>
+        /// 分離入力のコレクションを差し替える。<b>差し替えたら、足した値も作り直す。</b>
+        ///
+        /// <para>入れ替えの購読も張り直す——要素の書き換え (欄での編集) でも足した値は変わる。</para>
+        ///
+        /// <para><b>プロパティの名前は呼び出し側から受け取る。</b><c>SetProperty</c> の
+        /// <c>CallerMemberName</c> はこのメソッドの名前になってしまうので、ここで既定に任せると
+        /// 「SetSeparated が変わった」と知らせることになり、欄が追いつかない。</para>
+        /// </summary>
+        private void SetSeparated(
+            ref ObservableCollection<double> field, ObservableCollection<double>? value, int level,
+            [System.Runtime.CompilerServices.CallerMemberName] string? propertyName = null)
+        {
+            if (field != null) field.CollectionChanged -= OnSeparatedChanged;
+            if (SetProperty(ref field!, value ?? [], propertyName))
+            {
+                if (field != null) field.CollectionChanged += OnSeparatedChanged;
+                SyncSeparatedSum(level);
+            }
+        }
+
+        private void OnSeparatedChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            // どのレベルのものか分からないので両方作り直す (要素は 4 つずつ)。
+            SyncSeparatedSum(1);
+            SyncSeparatedSum(2);
+        }
+
+        /// <summary>そのレベルの「βU = βL = 1 の和」を作り直す。</summary>
+        private void SyncSeparatedSum(int level)
+        {
+            var upper = level == 1 ? _axialForceUpperLevel1s : _axialForceUpperLevel2s;
+            var foundation = level == 1 ? _axialForceFoundationLevel1s : _axialForceFoundationLevel2s;
+            var sum = AxialForceSeparatedSumOf(level);
+            if (upper == null || foundation == null || sum == null) return;
+
+            double vl = AxialForceVL;
+            int n = Math.Min(upper.Count, foundation.Count);
+
+            while (sum.Count > n) sum.RemoveAt(sum.Count - 1);
+            while (sum.Count < n) sum.Add(0.0);
+            for (int i = 0; i < n; i++) sum[i] = vl + foundation[i] + upper[i];
+        }
+
+        /// <summary>VL が動いたときに、分離入力の和を作り直す (変動の同期と同じところから呼ぶ)。</summary>
+        private void SyncSeparatedSums()
+        {
+            SyncSeparatedSum(1);
+            SyncSeparatedSum(2);
+        }
 
         /// <summary>
         /// 分離入力の地震時軸力 [kN] = VL + βL·ΔL(L) + βU·ΔL(U)。<paramref name="loadCaseNo"/> は 1 始まり。
@@ -478,6 +552,9 @@ namespace PileDesign.Models.InputData
                     SyncVariationL1FromAbsolute();
                     SyncVariationL2FromAbsolute();
                 }
+
+                // 分離入力の和は VL を含むので、どちらのモードでも作り直す。
+                SyncSeparatedSums();
             }
             finally { _isSyncingAxial = false; }
         }
@@ -812,12 +889,19 @@ namespace PileDesign.Models.InputData
             // 変動軸力コレクションを初期化 (絶対値が全て 0、VL も 0 なので変動も全て 0)
             _axialForceVariationLevel1s.CollectionChanged += OnVariationL1Changed;
             _axialForceVariationLevel2s.CollectionChanged += OnVariationL2Changed;
+            // 分離入力のコレクションは初期化子で入るので、購読はここで張る (setter を通らない)。
+            _axialForceUpperLevel1s.CollectionChanged += OnSeparatedChanged;
+            _axialForceFoundationLevel1s.CollectionChanged += OnSeparatedChanged;
+            _axialForceUpperLevel2s.CollectionChanged += OnSeparatedChanged;
+            _axialForceFoundationLevel2s.CollectionChanged += OnSeparatedChanged;
+
             // 変動コレクションのサイズを絶対値に合わせる
             _isSyncingAxial = true;
             try
             {
                 SyncVariationL1FromAbsolute();
                 SyncVariationL2FromAbsolute();
+                SyncSeparatedSums();
             }
             finally { _isSyncingAxial = false; }
 
@@ -918,6 +1002,9 @@ namespace PileDesign.Models.InputData
             {
                 SyncVariationL1FromAbsolute();
                 SyncVariationL2FromAbsolute();
+
+                // 分離入力の和も同じ理由で作り直す (VL と ΔL(U)・ΔL(L) の入る順が不定)。
+                SyncSeparatedSums();
             }
             finally { _isSyncingAxial = false; }
         }

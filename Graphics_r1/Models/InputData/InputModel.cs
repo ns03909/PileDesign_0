@@ -155,7 +155,8 @@ namespace PileDesign.Models.InputData
 
         // 地震時軸力の分離入力: true のとき、地震時軸力を荷重組合せごとに
         //     N = VL + βL·ΔL(L) + βU·ΔL(U)
-        // で求める (PileLayoutDataItem.AxialForceUpperLevel1s など)。入力は変動のみ (軸力モードは「変動」に固定)。
+        // で求める (PileLayoutDataItem.AxialForceUpperLevel1s など)。入力は変動 (ΔL(U)・ΔL(L)) で行い、
+        // 「絶対」では βU = βL = 1 の和を読み取り専用で出す (PileLayoutDataItem.AxialForceSeparatedSumLevel1s)。
         // false (既定) では従来どおり、荷重ケースごとに 1 つの軸力 (AxialForceLevel1s/2s) を組合せによらず使う。
         // 軸力の引き方は SeismicAxialForces にまとめている。ファイル別に永続化。
         private bool _isAxialForceSeparated = false;

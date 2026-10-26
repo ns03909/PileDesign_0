@@ -357,6 +357,23 @@ namespace PileDesign.ViewModels
             // 地震時軸力の分離入力: ΔL(U)・ΔL(L) (レベル1 緑・レベル2 桃赤)
             if (CurrentInputModel?.IsAxialForceSeparated == true)
             {
+                // 絶対モードでは、βU = βL = 1 の和も読み取り専用で添える。**何の和かを description で言う。**
+                // 打てないのは、組合せごとに値が変わるので打った値の戻し先が決まらないため。
+                if (!Common.AxialForceModeContext.IsVariationMode)
+                {
+                    foreach (int level in new[] { 1, 2 })
+                    {
+                        var sum = pile.AxialForceSeparatedSumOf(level);
+                        for (int i = 0; i < sum.Count; i++)
+                        {
+                            SelectedItemProperties.Add(new($"軸力 {level}-{i + 1}", $"{sum[i]:F1}", "kN",
+                                PropertyInputType.ReadOnly, nameColor: level == 1 ? "#238966" : "#E95541",
+                                description: "βU = βL = 1.0 の和 (VL + ΔL(L) + ΔL(U)) です。"
+                                    + "値を変えるには下の ΔL(U)・ΔL(L) を入力してください。"));
+                        }
+                    }
+                }
+
                 foreach (int level in new[] { 1, 2 })
                 {
                     string color = level == 1 ? "#238966" : "#E95541";

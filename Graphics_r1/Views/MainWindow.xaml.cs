@@ -164,6 +164,9 @@ namespace PileDesign.Views
                 Application.Current?.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive) ?? this, items);
             viewModel.AskDisplayPresetName = initial => TextPromptWindow.Ask(this, "表示プリセットを保存",
                 "今の表示 (リボン「表示」タブの項目すべて) を、この名前で保存します。同じ名前のプリセットがあれば置き換えます。", initial);
+            // 分離入力にするとき、入力済みの変動軸力を ΔL(U) と ΔL(L) に配る割合
+            viewModel.AskUpperSharePercent = initial => TextPromptWindow.Ask(this, "変動軸力の比例配分",
+                PileDesign.Services.GuardMessages.UpperSharePrompt, initial);
             viewModel.HideTransientOverlaysAction = HideBeamResultTooltip;
             viewModel.ShowToastAction = (msg, type) => ShowToast(msg, (ToastType)type);
 
