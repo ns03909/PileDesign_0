@@ -40,6 +40,22 @@
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
 
+  <!-- 配布に要らないファイルを発行から外す (2026-10-25)。
+       - 参照パッケージの説明書き (Microsoft.Web.WebView2.*.xml)。開発用で、実行には使わない
+       - ネイティブ DLL のデバッグ情報 (libSkiaSharp.pdb 96 MB・libHarfBuzzSharp.pdb 23 MB)。パッケージが
+         ネイティブの資産として配るので、DebugType=none では止まらない
+       - App.config から作られる PileDesign.dll.config。中身は .NET Framework 用のアセンブリのリダイレクトだけで、
+         .NET の実行時は読まない (読むコードも無い) -->
+  <PropertyGroup>
+    <PublishReferencesDocumentationFiles>false</PublishReferencesDocumentationFiles>
+  </PropertyGroup>
+  <Target Name="ExcludeNonDistributableFilesFromPublish" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb'" />
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(RelativePath)' == '$(TargetFileName).config'" />
+    </ItemGroup>
+  </Target>
+
   <!-- Release時のPDB除外（publish時のサイズ削減） -->
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <DebugType>none</DebugType>

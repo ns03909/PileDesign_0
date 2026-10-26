@@ -11,6 +11,7 @@
          [Unreleased] に未リリースの変更が残っていないか (版の節へ移したか)
       3. 単一ファイル発行 (PublishSingleFile + SelfContained)。IL3000 系など発行のときだけ出るエラーがある
          (CLAUDE.md の「ビルドとテストで守れない領域」)
+         発行先は先に空にし、発行のあとに配布に要らないファイルが無いこと・ネイティブ DLL が exe の横にあることを見る
       4. 発行した exe の版が csproj の版と一致するか
       5. 計算書のレイアウト (tools/report-layout-check.ps1)。1 で作った代表の計算書を Word で描画して PDF にし、
          見出しだけのページ・図と図の題 / 表題と表の泣き別れ・はみ出し・省いた図を調べる。Word が要る
@@ -77,6 +78,17 @@ if ($SkipReportLayout) {
     Ok "計算書のレイアウト (見出し・図・表の配置とはみ出し)"
 }
 
+# ── 7. 代表モデルの性能 ──
+# 発行の前に行う。性能の確認は Debug でビルドし直すが、自己完結の発行 (Release・win-x64) の直後だと
+# WPF の一時プロジェクト (_wpftmp) が CS2001 (.g.cs が見つからない) で落ちることが続いた (2026-10-25 に 2 回)
+if ($SkipPerformance) {
+    Write-Host "注意: 代表モデルの性能の確認を行いません (-SkipPerformance)" -ForegroundColor Yellow
+} else {
+    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "perf-check.ps1")
+    if ($LASTEXITCODE -ne 0) { Fail "代表モデルの性能が基準を超えました。上の一覧を見てください (意図した変化なら tools/perf-check.ps1 -Update)。" }
+    Ok "代表モデルの性能 (水平解析・計算書の出力・保存の時間と最大メモリ)"
+}
+
 # ── 2. [Unreleased] が空か ──
 $changelog = Get-Content (Join-Path $root "CHANGELOG.md") -Encoding UTF8
 $start = [Array]::IndexOf($changelog, "## [Unreleased]")
@@ -94,16 +106,30 @@ if ($pending.Count -gt 0) {
 }
 
 # ── 3. 単一ファイル発行 ──
+$pubxml = [xml](Get-Content (Join-Path $root "Graphics_r1\Properties\PublishProfiles\FolderProfile.pubxml") -Encoding UTF8)
+$publishDir = $pubxml.Project.PropertyGroup.PublishDir
+# 発行先はプロジェクトからの相対で書いてある (MSBuild と同じく、プロジェクトの場所から数える)
+if (-not [System.IO.Path]::IsPathRooted($publishDir)) { $publishDir = Join-Path (Join-Path $root "Graphics_r1") $publishDir }
+# 発行は先にあるファイルを消さない。前の発行の残り (設定を変える前の .pdb など) が配布物に混ざらないよう空にしてから出す
+if (Test-Path $publishDir) { Remove-Item -Recurse -Force $publishDir }
 Write-Host "単一ファイル発行を行っています..." -ForegroundColor Cyan
 & dotnet publish $app -p:PublishProfile=FolderProfile
 if ($LASTEXITCODE -ne 0) { Fail "発行に失敗しました。発行のときだけ出るエラー (IL3000 など) を上の出力で見てください。" }
 Ok "単一ファイル発行"
 
+# ── 3b. 発行物の中身 ──
+# 配布に要らないファイル (PileDesign.csproj の ExcludeNonDistributableFilesFromPublish で外している) が無いか。
+$unneeded = @(Get-ChildItem $publishDir -File | Where-Object { $_.Extension -in ".pdb", ".xml", ".config" } | ForEach-Object { $_.Name })
+if ($unneeded.Count -gt 0) { Fail ("配布に要らないファイルが発行物に入っています: " + ($unneeded -join ", ")) }
+# ネイティブ DLL と WebView2 のインストーラーは exe の横に置く (FolderProfile.pubxml の IncludeNativeLibrariesForSelfExtract)。
+# exe に入ると版ごとに %TEMP% へ取り出し、WebView2RuntimeChecker がインストーラーを見つけられない
+$besideExe = @("wpfgfx_cor3.dll", "PresentationNative_cor3.dll", "libSkiaSharp.dll", "WebView2Loader.dll")
+if (Test-Path (Join-Path $root "Graphics_r1\MicrosoftEdgeWebview2Setup.exe")) { $besideExe += "MicrosoftEdgeWebview2Setup.exe" }
+$missing = @($besideExe | Where-Object { -not (Test-Path (Join-Path $publishDir $_)) })
+if ($missing.Count -gt 0) { Fail ("exe の横にあるはずのファイルがありません (exe の中に入った?): " + ($missing -join ", ")) }
+Ok "発行物の中身 (要らないファイルが無い・ネイティブ DLL と WebView2 のインストーラーが exe の横にある)"
+
 # ── 4. 発行した exe の版 ──
-$pubxml = [xml](Get-Content (Join-Path $root "Graphics_r1\Properties\PublishProfiles\FolderProfile.pubxml") -Encoding UTF8)
-$publishDir = $pubxml.Project.PropertyGroup.PublishDir
-# 発行先はプロジェクトからの相対で書いてある (MSBuild と同じく、プロジェクトの場所から数える)
-if (-not [System.IO.Path]::IsPathRooted($publishDir)) { $publishDir = Join-Path (Join-Path $root "Graphics_r1") $publishDir }
 $exe = Join-Path $publishDir "PileDesign.exe"
 if (-not (Test-Path $exe)) { Fail "発行した exe が見つかりません: $exe" }
 $product = (Get-Item $exe).VersionInfo.ProductVersion
@@ -124,15 +150,6 @@ $selfCheckResult = Join-Path $selfCheckDir "self-check-result.txt"
 if (Test-Path $selfCheckResult) { Get-Content $selfCheckResult -Encoding UTF8 | ForEach-Object { Write-Host "    $_" } }
 if ($proc.ExitCode -ne 0) { Fail "発行した exe の起動の確認が通りません (終了コード $($proc.ExitCode))。上の結果とログを見てください。" }
 Ok "発行した exe の起動の確認 (例題を開く・解析する・検定する・計算書を出す)"
-
-# ── 7. 代表モデルの性能 ──
-if ($SkipPerformance) {
-    Write-Host "注意: 代表モデルの性能の確認を行いません (-SkipPerformance)" -ForegroundColor Yellow
-} else {
-    & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "perf-check.ps1")
-    if ($LASTEXITCODE -ne 0) { Fail "代表モデルの性能が基準を超えました。上の一覧を見てください (意図した変化なら tools/perf-check.ps1 -Update)。" }
-    Ok "代表モデルの性能 (水平解析・計算書の出力・保存の時間と最大メモリ)"
-}
 
 Write-Host ""
 Write-Host "リリースの確認がすべて通りました (版 $version)。発行先: $publishDir" -ForegroundColor Green
