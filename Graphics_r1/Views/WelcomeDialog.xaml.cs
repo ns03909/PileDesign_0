@@ -23,6 +23,8 @@ namespace PileDesign.Views
             DataContext = ViewModel;
 
             Loaded += WelcomeDialog_Loaded;
+            // Esc (EscapeKeyBehavior) はコマンドを通らずに閉じる。どの閉じ方でも「次回から表示しない」を効かせる
+            Closing += (_, _) => ViewModel.SavePreference();
         }
 
         private void WelcomeDialog_Loaded(object sender, RoutedEventArgs e)

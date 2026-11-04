@@ -73,8 +73,8 @@ namespace TestProject1
             if (captured != null)
                 Assert.Fail($"案内ダイアログの生成に失敗: {captured.GetType().Name}: {captured.Message}\n{captured.StackTrace}");
 
-            Assert.AreEqual(4, buttonCount,
-                "コマンド付きボタンが 4 つ (新規 / ファイルを開く / 計算例 / 使い方) ではない");
+            Assert.AreEqual(5, buttonCount,
+                "コマンド付きボタンが 5 つ (新規 / ファイルを開く / 計算例 / 使い方 / 右上の閉じる) ではない");
             Assert.AreEqual(0, unresolved.Count,
                 "Command が解決しないボタンがあります (押しても何も起きない):\n  " +
                 string.Join("\n  ", unresolved));
@@ -115,6 +115,41 @@ namespace TestProject1
                 .ToList();
             Assert.AreEqual(0, missing.Count,
                 "入口の無い WelcomeDialogResult があります: " + string.Join(", ", missing));
+        }
+
+        /// <summary>
+        /// 右上の × は何も選ばずに閉じる (起動直後の空プロジェクトのまま)。
+        /// 枠なしの画面で題名欄の × が無く、以前は Esc を知らないと「新規プロジェクト」を押すしかなかった。
+        /// </summary>
+        [TestMethod]
+        public void CloseButton_ClosesWithoutChoosingAnything()
+        {
+            var vm = new WelcomeDialogViewModel();
+            bool closeRequested = false;
+            vm.RequestClose += (_, _) => closeRequested = true;
+            vm.CloseCommand.Execute(null);
+            Assert.AreEqual(WelcomeDialogResult.None, vm.Result);
+            Assert.IsTrue(closeRequested, "閉じるで RequestClose が発火していない");
+
+            string xaml = TestSource.Read("Graphics_r1", "Views", "WelcomeDialog.xaml");
+            StringAssert.Contains(xaml, "Command=\"{Binding CloseCommand}\"", "右上の閉じるボタンが無い");
+            StringAssert.Contains(xaml, "ToolTip=\"閉じる (Esc)\"");
+            // 「次回から表示しない」は Esc (コマンドを通らない) でも効かせる
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "Views", "WelcomeDialog.xaml.cs"), "Closing += (_, _) => ViewModel.SavePreference();");
+        }
+
+        /// <summary>
+        /// 題名はメイン画面と見分けられること (UI Automation の名前になる)。同じ「杭基礎検討プログラム」だと、
+        /// 実機の自動確認でようこそ画面とメイン画面を取り違え、メイン画面を閉じようとした (2026-10-27)。
+        /// </summary>
+        [TestMethod]
+        public void Title_IsDistinctFromTheMainWindow()
+        {
+            string xaml = TestSource.Read("Graphics_r1", "Views", "WelcomeDialog.xaml");
+            var m = System.Text.RegularExpressions.Regex.Match(xaml, @"\bTitle=""([^""]*)""");
+            Assert.IsTrue(m.Success);
+            Assert.AreNotEqual("杭基礎検討プログラム", m.Groups[1].Value, "題名がメイン画面と同じ");
+            StringAssert.StartsWith(m.Groups[1].Value, "ようこそ");
         }
 
         private static readonly DependencyProperty ButtonBase_CommandProperty =

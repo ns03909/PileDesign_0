@@ -51,6 +51,17 @@ namespace PileDesign.ViewModels
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
+        /// <summary>
+        /// 右上の × (と Esc)。何も選ばずに閉じる (起動直後の空プロジェクトのまま。「新規プロジェクト」と同じ動き)。
+        /// </summary>
+        [RelayCommand]
+        private void Close()
+        {
+            Result = WelcomeDialogResult.None;
+            SavePreference();
+            RequestClose?.Invoke(this, EventArgs.Empty);
+        }
+
         [RelayCommand]
         private void ShowQuickStart()
         {
@@ -59,8 +70,17 @@ namespace PileDesign.ViewModels
             RequestClose?.Invoke(this, EventArgs.Empty);
         }
 
-        private void SavePreference()
+        private bool _preferenceSaved;
+
+        /// <summary>
+        /// 「次回から表示しない」を設定に書く (チェックしたときだけ)。どの閉じ方でも 1 回だけ。
+        /// 以前はボタンを押したときだけ書いていて、Esc で閉じるとチェックが効かなかった。
+        /// 画面は閉じるとき (Closing) にも呼ぶ。
+        /// </summary>
+        internal void SavePreference()
         {
+            if (_preferenceSaved) return;
+            _preferenceSaved = true;
             if (DoNotShowAgain)
             {
                 Properties.Settings.Default.ShowWelcomeDialog = false;
