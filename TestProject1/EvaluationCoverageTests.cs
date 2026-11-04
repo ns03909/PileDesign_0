@@ -258,6 +258,53 @@ namespace TestProject1
             }
         }
 
+        /// <summary>
+        /// 杭と解析の要素のつながりが無い杭は、「検定不能」として理由を残し、別の杭の軸力で代えないこと (2026-11-04)。
+        /// 以前は杭体番号でその杭体を使う最初の杭を引き、その杭の軸力で黙って検定していた
+        /// (解析結果の控えを取り直すとつながりが空になる不具合で、実際にこの保険が使われていた)。
+        /// </summary>
+        [TestMethod]
+        public void APileWithoutElementLinksIsUnavailableInsteadOfBorrowingAnotherPile()
+        {
+            var vm = Analyzed();
+            var piles = vm.ResultInputModel.PileLayoutItems!;
+            // 同じ杭体を前の杭が使っている杭を選ぶ (以前の保険はその前の杭へ取り違えた)
+            var target = piles.Where((p, i) => p.Beams?.Count > 0 && piles.Take(i).Any(q => q.PileBodyNo == p.PileBodyNo)).FirstOrDefault();
+            Assert.IsNotNull(target, "(前提) 杭体を共有する杭が無い例題では、取り違えを確かめられない");
+
+            static bool IsPileCheck(EvaluationItem i) => i.Kind is EvaluationKind.PileSectionMoment or EvaluationKind.PileSectionShear or EvaluationKind.PileHeadRotation;
+            var baseline = EvaluationService.BuildEvaluationResult(vm, factored: true);
+            Assert.IsTrue(baseline.Items.Any(i => IsPileCheck(i) && i.PileNo == target!.PileNo), "(前提) 選んだ杭の検定項目が無い");
+
+            var savedBeams = target!.Beams;
+            var savedSpring = target.PileTopRotationalSpring;
+            try
+            {
+                target.Beams = [];
+                target.PileTopRotationalSpring = null;
+                var result = EvaluationService.BuildEvaluationResult(vm, factored: true);
+
+                var unlinked = result.Items.Where(i => i.NotJudgedReason == EvaluationService.UnlinkedPileReason).ToList();
+                Assert.IsTrue(unlinked.Count > 0, "つながりの無い杭の検定が「検定不能」になっていない (黙って別の杭で検定している?)");
+                Assert.IsTrue(unlinked.All(i => i.IsUnavailable && !i.IsJudged && i.PileNo == null));
+                Assert.IsTrue(unlinked.Any(i => i.Kind == EvaluationKind.PileSectionMoment), "曲げ");
+                Assert.IsTrue(unlinked.Any(i => i.Kind == EvaluationKind.PileSectionShear), "せん断");
+
+                // 他の杭の検定は変わらない (以前は取り違えた先の杭に行が増えていた)
+                foreach (var p in piles.Where(p => !ReferenceEquals(p, target)))
+                    Assert.AreEqual(
+                        baseline.Items.Count(i => IsPileCheck(i) && i.PileNo == p.PileNo),
+                        result.Items.Count(i => IsPileCheck(i) && i.PileNo == p.PileNo),
+                        $"杭 No.{p.PileNo} の検定項目の数が変わった (つながりの無い杭の要素を、この杭として検定している)");
+                Assert.IsFalse(result.Items.Any(i => IsPileCheck(i) && i.PileNo == target.PileNo), "つながりの無い杭の番号で検定している");
+            }
+            finally
+            {
+                target.Beams = savedBeams;
+                target.PileTopRotationalSpring = savedSpring;
+            }
+        }
+
         [TestMethod]
         public void TheDashboardDoesNotSayAllOkWhenSomethingWasNotEvaluated()
         {

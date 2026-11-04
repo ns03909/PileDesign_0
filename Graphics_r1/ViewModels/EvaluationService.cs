@@ -121,17 +121,6 @@ namespace PileDesign.ViewModels
                 }
             }
 
-            // PileLayoutDataItemをPileBodyNoでキャッシュ（軸力取得用）
-            var pileByPileBodyNo = new Dictionary<int, PileLayoutDataItem>();
-            if (inputModel.PileLayoutItems != null)
-            {
-                foreach (var pile in inputModel.PileLayoutItems)
-                {
-                    if (pile.PileBodyNo > 0 && !pileByPileBodyNo.ContainsKey(pile.PileBodyNo))
-                        pileByPileBodyNo[pile.PileBodyNo] = pile;
-                }
-            }
-
             // 梁 → 杭 の対応表。
             // 杭体番号 (PileBodyNo) は<b>断面と区間の仕様</b>の番号で、同じ杭体を複数の杭が使う。
             // 杭体番号で杭を引くと最初の 1 本しか当たらず、その杭の軸力で全部の杭を検定してしまう
@@ -175,15 +164,15 @@ namespace PileDesign.ViewModels
 
             // ── 検定を実行して項目を集める (テキストはこの後で組む) ──
             var longTermItems = longTermResults.Count > 0
-                ? EvaluateLongTerm(model, soilPileByPileBodyNo, pileByPileBodyNo, pileByBeam,
+                ? EvaluateLongTerm(model, soilPileByPileBodyNo, pileByBeam,
                     maxForcesByPileCase, nmCache, nqCache, longTermResults, factored, seismicGrade)
                 : [];
             var level1Items = level1Results.Count > 0
-                ? EvaluateLevel1(model, soilPileByPileBodyNo, pileByPileBodyNo, pileByBeam,
+                ? EvaluateLevel1(model, soilPileByPileBodyNo, pileByBeam,
                     maxForcesByPileCase, nmCache, nqCache, level1Results, factored, seismicGrade)
                 : [];
             var level2Items = level2Results.Count > 0
-                ? EvaluateLevel2(model, soilPileByPileBodyNo, pileByPileBodyNo, pileByBeam,
+                ? EvaluateLevel2(model, soilPileByPileBodyNo, pileByBeam,
                     maxForcesByPileCase, nmCache, nqCache, level2Results, factored, seismicGrade)
                 : [];
 
@@ -369,7 +358,6 @@ namespace PileDesign.ViewModels
         /// </summary>
         private List<EvaluationItem> EvaluateLongTerm(AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
-            Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
             Dictionary<Beam, PileLayoutDataItem> pileByBeam,
             Dictionary<(PileLayoutDataItem Pile, string LoadCase), (double MaxM, double MaxQ)> maxForcesByPileCase,
             ConcurrentDictionary<(int, int, bool, LimitState, int), (List<double> Ns, List<double> Ms)> nmCache,
@@ -388,13 +376,13 @@ namespace PileDesign.ViewModels
 
                 // 曲げチェック: 使用限界
                 items.AddRange(CheckMPhiLimitForBeams(model, soilPileByPileBodyNo,
-                    pileByPileBodyNo, pileByBeam, nmCache,
+                    pileByBeam, nmCache,
                     stepResult, factored, limit,
                     lcName, combName));
 
                 // せん断チェック: 使用限界
                 items.AddRange(CheckShearLimitForBeams(model, soilPileByPileBodyNo,
-                    pileByPileBodyNo, pileByBeam, maxForcesByPileCase, nqCache,
+                    pileByBeam, maxForcesByPileCase, nqCache,
                     stepResult, factored, limit,
                     lcName, combName));
 
@@ -414,7 +402,6 @@ namespace PileDesign.ViewModels
         /// </summary>
         private List<EvaluationItem> EvaluateLevel1(AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
-            Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
             Dictionary<Beam, PileLayoutDataItem> pileByBeam,
             Dictionary<(PileLayoutDataItem Pile, string LoadCase), (double MaxM, double MaxQ)> maxForcesByPileCase,
             ConcurrentDictionary<(int, int, bool, LimitState, int), (List<double> Ns, List<double> Ms)> nmCache,
@@ -433,13 +420,13 @@ namespace PileDesign.ViewModels
 
                 // M-φ チェック: 損傷限界
                 items.AddRange(CheckMPhiLimitForBeams(model, soilPileByPileBodyNo,
-                    pileByPileBodyNo, pileByBeam, nmCache,
+                    pileByBeam, nmCache,
                     stepResult, factored, limit,
                     lcName, combName));
 
                 // せん断チェック: 損傷限界
                 items.AddRange(CheckShearLimitForBeams(model, soilPileByPileBodyNo,
-                    pileByPileBodyNo, pileByBeam, maxForcesByPileCase, nqCache,
+                    pileByBeam, maxForcesByPileCase, nqCache,
                     stepResult, factored, limit,
                     lcName, combName));
 
@@ -462,7 +449,6 @@ namespace PileDesign.ViewModels
         /// </summary>
         private List<EvaluationItem> EvaluateLevel2(AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
-            Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
             Dictionary<Beam, PileLayoutDataItem> pileByBeam,
             Dictionary<(PileLayoutDataItem Pile, string LoadCase), (double MaxM, double MaxQ)> maxForcesByPileCase,
             ConcurrentDictionary<(int, int, bool, LimitState, int), (List<double> Ns, List<double> Ms)> nmCache,
@@ -480,13 +466,13 @@ namespace PileDesign.ViewModels
                 string combName = stepResult.LoadCombination?.Name ?? "?";
 
                 items.AddRange(CheckMPhiLimitForBeams(model, soilPileByPileBodyNo,
-                    pileByPileBodyNo, pileByBeam, nmCache,
+                    pileByBeam, nmCache,
                     stepResult, factored, limit,
                     lcName, combName));
 
                 // せん断も曲げと同じ限界状態に揃える (グレードS→損傷限界、A→安全限界)
                 items.AddRange(CheckShearLimitForBeams(model, soilPileByPileBodyNo,
-                    pileByPileBodyNo, pileByBeam, maxForcesByPileCase, nqCache,
+                    pileByBeam, maxForcesByPileCase, nqCache,
                     stepResult, factored, limit,
                     lcName, combName));
 
@@ -516,7 +502,6 @@ namespace PileDesign.ViewModels
 
         private List<EvaluationItem> CheckMPhiLimitForBeams(AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
-            Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
             Dictionary<Beam, PileLayoutDataItem> pileByBeam,
             ConcurrentDictionary<(int, int, bool, LimitState, int), (List<double> Ns, List<double> Ms)> nmCache,
             AnalysisStepResult stepResult, bool factored, LimitState momentLimit,
@@ -543,7 +528,7 @@ namespace PileDesign.ViewModels
 
                 // 杭は梁から引く。杭体番号で引くとその杭体を使う最初の 1 本しか当たらず、
                 // 同じ杭体を共有する他の杭まで同じ軸力で検定してしまう。
-                var pileItem = ResolvePile(beam, pb, pileByBeam, pileByPileBodyNo);
+                var pileItem = ResolvePile(beam, pileByBeam);
 
                 // ここから先で検定できないのは、対象なのにデータが欠けているとき。項目を作らずに進めると
                 // 一覧に出ない理由が分からないので、「検定不能」の項目として理由を残す
@@ -553,6 +538,7 @@ namespace PileDesign.ViewModels
                         beam.Name, pb, pileItem, seg, stepResult, lcName, combName, "kN·m", reason));
                     perBeamResults[idx] = found;
                 }
+                if (pileItem == null) { Unavailable(UnlinkedPileReason); return; }
 
                 // BeamResultを検索
                 var result = beam.ResultLookup.AtStepOf(stepResult);
@@ -574,10 +560,8 @@ namespace PileDesign.ViewModels
 
                 // 軸力: 解析と同じ規則 (ResolveCheckAxialForce)。グラフ・計算書の点と限界線も同じ軸力を使う
                 // (食い違うと判定が一致しない)
-                var (axialN_kN, axialSource) = pileItem != null
-                    ? ResolveCheckAxialForce(_mainVm.ResultInputModel, pileItem, stepResult.LoadCase?.No ?? 0, stepResult.LoadCase?.Level ?? 1,
-                        stepResult.LoadCombination, HeadFxi(pileItem, stepResult))
-                    : (0.0, "杭を特定できないため 0");
+                var (axialN_kN, axialSource) = ResolveCheckAxialForce(_mainVm.ResultInputModel, pileItem, stepResult.LoadCase?.No ?? 0,
+                    stepResult.LoadCase?.Level ?? 1, stepResult.LoadCombination, HeadFxi(pileItem, stepResult));
 
                 // NM相関曲線をキャッシュから取得 (ConcurrentDictionary、初回のみ計算)
                 int loadCaseLevel = stepResult.LoadCase?.Level ?? 1;
@@ -751,6 +735,12 @@ namespace PileDesign.ViewModels
         // ── 検定できなかった項目 ─────────────────────────────
 
         /// <summary>その荷重条件の解析結果が見つからないときの理由。</summary>
+        /// <summary>
+        /// 杭の要素 (または杭頭の回転ばね) がどの杭のものか分からないときの理由。解析結果と入力のつながりが崩れている。
+        /// 杭が分からないと軸力 (限界値が軸力で変わる) を決められないので、別の杭や 0 で代えずに検定不能にする。
+        /// </summary>
+        internal const string UnlinkedPileReason = "どの杭の結果か分からないため検定できません (解析結果と入力の対応が崩れています。水平解析をやり直してください)";
+
         internal const string NoResultReason = "この荷重条件の解析結果がありません (再解析してください)";
 
         /// <summary>断面が引けないときの理由。</summary>
@@ -848,20 +838,15 @@ namespace PileDesign.ViewModels
             => $"{(loadCase == null ? "" : $"L{loadCase.Level}-{loadCase.No}")}|{(isLiquefaction ? "液状化考慮" : "液状化非考慮")}";
 
         /// <summary>
-        /// 梁が属する杭を返す。
+        /// 梁が属する杭を返す。分からなければ null (呼び出し側で「検定不能」にする)。
         ///
-        /// 正は<b>梁 → 杭</b>の対応 (杭が自分の梁を持っている)。
-        /// 杭体番号での引き当ては、対応表に無い梁 (古い結果など) のための保険で、
-        /// 同じ杭体を共有する杭が複数あると最初の 1 本しか当たらない。
+        /// 引くのは<b>梁 → 杭</b>の対応 (杭が自分の梁を持っている) だけ。以前は対応表に無い梁を杭体番号で引いていたが、
+        /// 同じ杭体を共有する杭が複数あると最初の 1 本しか当たらず、<b>別の杭の軸力で黙って検定</b>していた。
+        /// 2026-11-04 に、解析結果の控えを取り直すと杭と要素のつながりが空になる不具合があり、この保険が
+        /// 誤った判定を出していた (つながりが正しければ対応表に必ずある)。
         /// </summary>
-        private static PileLayoutDataItem? ResolvePile(
-            Beam beam, int pileBodyNo,
-            Dictionary<Beam, PileLayoutDataItem> pileByBeam,
-            Dictionary<int, PileLayoutDataItem> pileByPileBodyNo)
-        {
-            if (pileByBeam.TryGetValue(beam, out var pile)) return pile;
-            return pileByPileBodyNo.TryGetValue(pileBodyNo, out var fallback) ? fallback : null;
-        }
+        private static PileLayoutDataItem? ResolvePile(Beam beam, Dictionary<Beam, PileLayoutDataItem> pileByBeam)
+            => pileByBeam.TryGetValue(beam, out var pile) ? pile : null;
 
         /// <summary>
         /// 検定で使う限界状態。曲げとせん断で同じ割り当てにする。
@@ -891,7 +876,6 @@ namespace PileDesign.ViewModels
         /// </summary>
         private List<EvaluationItem> CheckShearLimitForBeams(AnaModel model,
             Dictionary<int, SoilPile> soilPileByPileBodyNo,
-            Dictionary<int, PileLayoutDataItem> pileByPileBodyNo,
             Dictionary<Beam, PileLayoutDataItem> pileByBeam,
             Dictionary<(PileLayoutDataItem Pile, string LoadCase), (double MaxM, double MaxQ)> maxForcesByPileCase,
             ConcurrentDictionary<(int, int, bool, LimitState, int, double), (List<double> Ns, List<double> Qs)> nqCache,
@@ -915,13 +899,14 @@ namespace PileDesign.ViewModels
                 }
 
                 // 曲げと同じく、対象なのにデータが欠けて検定できないときは「検定不能」の項目として理由を残す
-                var pileItem = ResolvePile(beam, pb, pileByBeam, pileByPileBodyNo);
+                var pileItem = ResolvePile(beam, pileByBeam);
                 void Unavailable(string reason)
                 {
                     found.Add(UnavailableItem(EvaluationKind.PileSectionShear, $"杭体せん断 ({limitName})", limitName,
                         beam.Name, pb, pileItem, seg, stepResult, lcName, combName, "kN", reason));
                     perBeamResults[idx] = found;
                 }
+                if (pileItem == null) { Unavailable(UnlinkedPileReason); return; }
 
                 var result = beam.ResultLookup.AtStepOf(stepResult);
 
@@ -940,10 +925,8 @@ namespace PileDesign.ViewModels
                 var section = soilPile.PileBodySegments[seg].PileSection;
 
                 // 軸力: 曲げと同じ値を使う (食い違うと同じ断面で限界線の前提が 2 通りになる)
-                var (axialN_kN, axialSource) = pileItem != null
-                    ? ResolveCheckAxialForce(_mainVm.ResultInputModel, pileItem, stepResult.LoadCase?.No ?? 0, stepResult.LoadCase?.Level ?? 1,
-                        stepResult.LoadCombination, HeadFxi(pileItem, stepResult))
-                    : (0.0, "杭を特定できないため 0");
+                var (axialN_kN, axialSource) = ResolveCheckAxialForce(_mainVm.ResultInputModel, pileItem, stepResult.LoadCase?.No ?? 0,
+                    stepResult.LoadCase?.Level ?? 1, stepResult.LoadCombination, HeadFxi(pileItem, stepResult));
 
                 // 損傷限界はレベルで低減係数が変わる (レベル1: β2 なし / レベル2: β1×β2)。
                 // グラフ・計算書と同じ規則 (LimitStateRule) で曲線を選ぶ。損傷限界以外では曲線に効かない (2 のまま)
@@ -1372,6 +1355,14 @@ namespace PileDesign.ViewModels
                 var criterion = ResolveRotationCriterion(
                     soilPile.PileBodyInput, section, level, axialN_kN, fundamental);
                 if (criterion == null) { perItem[idx] = found; return; }
+                // 杭が分からないと軸力が決まらない (限界値 θa は軸力で変わる)。以前は軸力 0 で黙って検定していた。
+                // 上の criterion は照査の対象か・名前を決めるためだけに使う
+                if (pileItem == null)
+                {
+                    found.Add(UnavailableItem(EvaluationKind.PileHeadRotation, $"杭頭回転角 ({criterion.MethodName})", criterion.LimitName,
+                        rs.Name, pb, null, null, stepResult, lcName, combName, "rad", UnlinkedPileReason));
+                    perItem[idx] = found; return;
+                }
                 if (criterion.UnavailableReason != null)
                 {
                     found.Add(UnavailableItem(EvaluationKind.PileHeadRotation, $"杭頭回転角 ({criterion.MethodName})", criterion.LimitName,
