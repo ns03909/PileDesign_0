@@ -163,6 +163,24 @@ namespace PileDesign.Services
         /// </summary>
         public IReadOnlyDictionary<int, PileEvaluationEntry> ByPileHead { get; }
 
+        /// <summary>
+        /// 杭ごとのまとめ (<see cref="ByPile"/>) に入らない検定不能の項目の数。杭を特定できない項目
+        /// (<see cref="UnlinkedPileCount"/>) と、杭に属さない項目 (基礎梁の傾斜角など) が入る。
+        /// </summary>
+        public int UnavailableWithoutPileCount { get; private init; }
+
+        /// <summary>うち、どの杭の結果か分からない項目 (解析結果と入力の対応が崩れている。水平解析のやり直しで直る)。</summary>
+        public int UnlinkedPileCount { get; private init; }
+
+        /// <summary>杭に属さない項目 (基礎梁の傾斜角など) のうち NG の数。</summary>
+        public int NgWithoutPileCount { get; private init; }
+
+        /// <summary>杭に属さない項目のうち、収束しなかったケースの数。</summary>
+        public int UnconvergedWithoutPileCount { get; private init; }
+
+        /// <summary>杭に属さない項目のうち、算定式の適用範囲の外の数。</summary>
+        public int OutOfScopeWithoutPileCount { get; private init; }
+
         /// <summary>NG の杭を先頭に、検定比の降順。</summary>
         public IReadOnlyList<PileEvaluationEntry> ByRatioDescending { get; }
 
@@ -305,9 +323,19 @@ namespace PileDesign.Services
 
             var withPile = items.Where(i => i.PileNo is int).ToList();
 
+            // 杭ごとのまとめに入らない検定不能の項目 (杭を特定できない・杭に属さない)。杭ごとに数える確認
+            // (計算書を作る前の確認) から漏れないよう、別枠で数えておく (2026-11-04 外部レビュー)
+            var withoutPile = items.Where(i => i.PileNo is null).ToList();
+            var unavailableWithoutPile = withoutPile.Where(i => i.IsUnavailable).ToList();
+
+            // 杭ごとに数える項目。2 本の杭の間の検定 (杭頭変形角) は両方の杭に数える (OtherPileNo)
+            var perPile = withPile.SelectMany(i => i.OtherPileNo is int other && other != i.PileNo
+                    ? new[] { (Pile: i.PileNo!.Value, Item: i), (Pile: other, Item: i) }
+                    : new[] { (Pile: i.PileNo!.Value, Item: i) }).ToList();
+
             var byPile = new Dictionary<int, PileEvaluationEntry>();
-            foreach (var group in withPile.GroupBy(i => i.PileNo!.Value))
-                byPile[group.Key] = Fold(group, group.Key, elementIndex: null);
+            foreach (var group in perPile.GroupBy(x => x.Pile))
+                byPile[group.Key] = Fold(group.Select(x => x.Item), group.Key, elementIndex: null);
 
             // 要素ごと (杭体の曲げ・せん断)。画面ではこの色を要素に塗る。
             var byPileElement = new Dictionary<(int, int), PileEvaluationEntry>();
@@ -317,11 +345,19 @@ namespace PileDesign.Services
 
             // 部位を持たない検定 (杭頭回転角・変形角・支持力)。画面では杭頭の印に使う。
             var byPileHead = new Dictionary<int, PileEvaluationEntry>();
-            foreach (var group in withPile.Where(i => i.SegmentIndex is null).GroupBy(i => i.PileNo!.Value))
-                byPileHead[group.Key] = Fold(group, group.Key, elementIndex: null);
+            foreach (var group in perPile.Where(x => x.Item.SegmentIndex is null).GroupBy(x => x.Pile))
+                byPileHead[group.Key] = Fold(group.Select(x => x.Item), group.Key, elementIndex: null);
 
             return new PileEvaluationSummary(horizontal, horizontalUnfactored, bearing, seismicGrade,
-                byPile, byPileElement, byPileHead, failures ?? []);
+                byPile, byPileElement, byPileHead, failures ?? [])
+            {
+                UnavailableWithoutPileCount = unavailableWithoutPile.Count,
+                UnlinkedPileCount = unavailableWithoutPile.Count(i => i.NotJudgedReason == ViewModels.EvaluationService.UnlinkedPileReason),
+                // 杭に属さない項目 (基礎梁の傾斜角など) の NG・未収束・適用範囲外。杭ごとの数え方では出ない (2026-11-04 外部レビュー)
+                NgWithoutPileCount = withoutPile.Count(i => i.IsJudged && !i.IsOk),
+                UnconvergedWithoutPileCount = withoutPile.Count(i => i.IsFromUnconvergedCase),
+                OutOfScopeWithoutPileCount = withoutPile.Count(i => !i.IsFromUnconvergedCase && i.IsOutOfScope),
+            };
         }
 
         /// <summary>検定の項目をまとめて 1 件の帯に畳む。</summary>

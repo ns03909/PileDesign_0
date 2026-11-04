@@ -183,8 +183,10 @@ namespace TestProject1
             string summary = TestSource.Read("Graphics_r1", "Output", "WordDocument.SummaryTables.cs");
             Assert.IsFalse(summary.Contains("int ng = items.Count(i => !i.IsOk);"), "検定できなかった項目を NG に数えています");
             string eval = TestSource.Read("Graphics_r1", "ViewModels", "EvaluationService.cs");
-            Assert.AreEqual(2, System.Text.RegularExpressions.Regex.Matches(eval, System.Text.RegularExpressions.Regex.Escape("SoilPileForBeam(pileItem, pb, soilPileByPileBodyNo)")).Count,
+            // その杭のセットだけを引く (引けなければ検定不能。同じ杭体の別のセットで代えない。2026-11-04)
+            Assert.AreEqual(2, System.Text.RegularExpressions.Regex.Matches(eval, System.Text.RegularExpressions.Regex.Escape("SoilPileForBeam(pileItem)")).Count,
                 "杭体の曲げ・せん断の検定が、その杭の土層-杭セットの断面を引いていません");
+            StringAssert.Contains(eval, "Unavailable(MissingSoilPileReason(pileItem.PileNo))", "その杭のセットが無いときに検定不能にしていません");
             StringAssert.Contains(eval, "SectionOwnerKey(soilPile, pb)", "曲線のキャッシュの鍵が杭体番号のままです (別のセットの曲線と取り違える)");
         }
     }

@@ -112,6 +112,15 @@ namespace PileDesign.Services
                 };
             }
 
+            // 常時 (VL) ケースが収束していない・杭の反力が欠けていれば止める (2026-11-04 外部レビュー)。
+            // 以前は収束を確かめずに釣り合っていない反力で群杭沈下を求め、反力の無い杭は荷重 0 として続けて
+            // (沈下が過小になる)、どちらも通常の常時の結果として沈下量の検定に使われた
+            if (pileGroupSettlement.LoadingType == BeamReactionLoadingType
+                && DescribeBeamReactionProblem(FindVBLongTermCase(verticalBeamCaseResults)!, pileLayoutItems) is { } reactionProblem)
+            {
+                return new SettlementAnalysisResult { Success = false, ErrorMessage = reactionProblem };
+            }
+
             var duplicateLoadProblem = DescribeDuplicateLinkedLoads(pileGroupSettlement);
             if (duplicateLoadProblem != null)
                 return new SettlementAnalysisResult { Success = false, ErrorMessage = duplicateLoadProblem };
@@ -384,6 +393,26 @@ namespace PileDesign.Services
         /// 以前は見つからないと先頭のケースを返していたので、選んだ荷重条件 (常時) と違うケースの反力で
         /// 沈下を求め得た。無ければ解析の入口で理由を返して止める。
         /// </summary>
+        /// <summary>
+        /// 「杭十字（基礎梁反力）」の荷重にする常時ケースの杭反力が使えない理由 (使えるなら null)。
+        /// ケースが収束していない、または反力が無い・数でない杭がある。
+        /// </summary>
+        internal static string? DescribeBeamReactionProblem(VerticalBeamCaseResult vbCase, IEnumerable<PileLayoutDataItem>? piles)
+        {
+            if (!vbCase.IsConverged)
+                return $"単杭沈下解析（基礎梁考慮）の {vbCase.LoadCaseName} ケースが収束していません。釣り合っていない杭反力で群杭沈下を求めないよう、止めました。"
+                    + "単杭沈下解析（基礎梁考慮）が収束することを確かめてから、群杭沈下解析をやり直してください。";
+
+            var reactions = (vbCase.PileResults ?? []).GroupBy(r => r.PileNo).ToDictionary(g => g.Key, g => g.First().Reaction_kN);
+            var missing = (piles ?? []).Where(p => p != null && !(reactions.TryGetValue(p.PileNo, out double r) && double.IsFinite(r)))
+                .Select(p => p.No).ToList();
+            if (missing.Count == 0) return null;
+            return $"単杭沈下解析（基礎梁考慮）の {vbCase.LoadCaseName} ケースに、杭 No.{string.Join(", ", missing.Take(10))}"
+                + (missing.Count > 10 ? $" ほか {missing.Count - 10} 本" : "")
+                + " の反力がありません (または数ではありません)。荷重を 0 として群杭沈下を求めると過小になるので、止めました。"
+                + "単杭沈下解析（基礎梁考慮）をやり直してから、群杭沈下解析をやり直してください。";
+        }
+
         internal static VerticalBeamCaseResult? FindVBLongTermCase(
             ObservableCollection<VerticalBeamCaseResult>? verticalBeamCaseResults)
         {

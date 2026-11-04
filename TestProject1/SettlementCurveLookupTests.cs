@@ -138,6 +138,26 @@ namespace TestProject1
             Assert.IsTrue(below, "最小荷重より小さい軸力を範囲外としていません");
         }
 
+        /// <summary>
+        /// 沈下量を引けなかったら、杭に前回の値を残さず NaN を書くこと (2026-11-04 外部レビュー)。
+        /// 結果の有無は荷重-沈下曲線で見るので、前回値が残ると今回の結果として検定に使われた。
+        /// </summary>
+        [TestMethod]
+        public void AnUnresolvedSettlementDoesNotKeepThePreviousValue()
+        {
+            var vtm = BuildWithCurve();
+            if (vtm == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+
+            var pile = new PileLayoutDataItem { AxialForceVL0 = double.NaN, SinglePileSettlementVL = 0.123 };   // 前回の値
+            pile.AxialForceLevel1s[0] = double.NaN;
+            pile.SinglePileSettlementLevel1s[0] = 0.456;
+
+            PileDesign.Services.SingleSettlementSession.WriteSinglePileSettlements(null, pile, vtm);
+
+            Assert.IsTrue(double.IsNaN(pile.SinglePileSettlementVL), $"前回の値 {pile.SinglePileSettlementVL} が残っています");
+            Assert.IsTrue(double.IsNaN(pile.SinglePileSettlementLevel1s[0]), $"レベル1 に前回の値 {pile.SinglePileSettlementLevel1s[0]} が残っています");
+        }
+
         /// <summary>杭へ書く単杭沈下量に、範囲外の印も一緒に残すこと (常時・レベル1・レベル2)。</summary>
         [TestMethod]
         public void TheOutOfRangeStateIsStoredWithThePileSettlement()

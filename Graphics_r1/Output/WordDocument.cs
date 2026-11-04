@@ -1499,9 +1499,11 @@ namespace PileDesign.Output
                 {
                     double[] xs = [.. seriesList[s]];
                     double[] ys = [.. (s < ysPerSeries.Count ? ysPerSeries[s] : ysPerSeries[^1])];
-                    var scatter = plot.Add.ScatterLine(xs, ys);
+                    // 結果の無い点 (NaN) で線を区切る (欠けた区間は描かない)
+                    var runs = AddFiniteRuns(plot, xs, ys);
+                    if (runs.Count == 0) continue;
                     if (legends != null && s < legends.Count)
-                        scatter.LegendText = legends[s];
+                        runs[0].LegendText = legends[s];
 
                     // 変位パネル（0 番）: 対応する地盤変位を同色破線で重ねる
                     if (p == 0 && soilDispsPerSeries != null && s < soilDispsPerSeries.Count)
@@ -1509,9 +1511,11 @@ namespace PileDesign.Output
                         double[] soilXs = [.. soilDispsPerSeries[s]];
                         if (soilXs.Length == ys.Length)
                         {
-                            var soilScatter = plot.Add.ScatterLine(soilXs, ys);
-                            soilScatter.LineStyle.Color = scatter.LineStyle.Color;
-                            soilScatter.LineStyle.Pattern = LinePattern.Dashed;
+                            foreach (var soilScatter in AddFiniteRuns(plot, soilXs, ys))
+                            {
+                                soilScatter.LineStyle.Color = runs[0].LineStyle.Color;
+                                soilScatter.LineStyle.Pattern = LinePattern.Dashed;
+                            }
                         }
                     }
                 }
@@ -1559,6 +1563,29 @@ namespace PileDesign.Output
             WordDrawingBuilder.AddPngBytesToBody(mainPart, body, pngBytes, widthMm, heightMm);
         }
 
+        /// <summary>
+        /// 値が数である点の続く区間ごとに線を足す (NaN・∞ の点で区切る)。色は最初の区間にそろえる。
+        /// 値がそろっていれば線は 1 本で、以前と同じ図になる。
+        /// </summary>
+        internal static List<ScottPlot.Plottables.Scatter> AddFiniteRuns(Plot plot, double[] xs, double[] ys)
+        {
+            var runs = new List<ScottPlot.Plottables.Scatter>();
+            int n = Math.Min(xs.Length, ys.Length);
+            int start = 0;
+            for (int k = 0; k <= n; k++)
+            {
+                if (k < n && double.IsFinite(xs[k]) && double.IsFinite(ys[k])) continue;
+                if (k > start)
+                {
+                    var run = plot.Add.ScatterLine(xs[start..k], ys[start..k]);
+                    if (runs.Count > 0) run.LineStyle.Color = runs[0].LineStyle.Color;
+                    runs.Add(run);
+                }
+                start = k + 1;
+            }
+            return runs;
+        }
+
         // 杭応力ダイアグラム (変位/せん断/曲げ) の Multiplot を PNG バイト列として返す。
         // Word body を一切触らないため、Parallel.For などで並列実行できる。
         public static byte[]? RenderPileElevResultToPngBytes(
@@ -1582,22 +1609,26 @@ namespace PileDesign.Output
 
                 double[] xsArray = [.. xsLists[i]];
                 double[] ysArray = [.. ysLists[i]];
-                var scatter = plots[i].Add.ScatterLine(xsArray, ysArray);
-                var pileColor = scatter.LineStyle.Color;
+                // 結果の無い点 (NaN) で線を区切る (欠けた区間は描かない。0 として描くと応力・変位 0 に読める)
+                var pileRuns = AddFiniteRuns(plots[i], xsArray, ysArray);
+                var pileColor = pileRuns.Count > 0 ? pileRuns[0].LineStyle.Color : ScottPlot.Colors.Black;
 
                 // 変位図（先頭パネル）に地盤変位を重ねるのは xsLists にcount+1個の要素があるときのみ
                 if (i == 0 && xsLists.Count > count)
                 {
-                    scatter.LegendText = "杭変位";
+                    if (pileRuns.Count > 0) pileRuns[0].LegendText = "杭変位";
 
                     double[] xsArrayS = [.. xsLists[count]];
                     if (xsArrayS.Length == ysArray.Length)
                     {
-                        var soilScatter = plots[i].Add.ScatterLine(xsArrayS, ysArray);
+                        var soilRuns = AddFiniteRuns(plots[i], xsArrayS, ysArray);
                         // 杭変位と同じ色で破線にする
-                        soilScatter.LineStyle.Color = pileColor;
-                        soilScatter.LineStyle.Pattern = LinePattern.Dashed;
-                        soilScatter.LegendText = "地盤変位";
+                        foreach (var soilScatter in soilRuns)
+                        {
+                            soilScatter.LineStyle.Color = pileColor;
+                            soilScatter.LineStyle.Pattern = LinePattern.Dashed;
+                        }
+                        if (soilRuns.Count > 0) soilRuns[0].LegendText = "地盤変位";
                     }
 
                     plots[i].ShowLegend();

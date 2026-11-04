@@ -2702,7 +2702,8 @@ namespace PileDesign.ViewModels
                 {
                     foreach (var pile in CurrentInputModel.PileLayoutItems)
                     {
-                        rec.PileSettlements_mm.TryGetValue(pile.PileNo, out double settlement);
+                        // 記録に無い杭は入れない (描かない)。以前は沈下 0 として入れ、沈下していない杭に見えた
+                        if (!rec.PileSettlements_mm.TryGetValue(pile.PileNo, out double settlement)) continue;
                         rec.PileReactions_kN.TryGetValue(pile.PileNo, out double reaction);
                         synth.PileResults.Add(new FEM.VerticalBeamPileResult(
                             pile.No, pile.X, pile.Y, reaction, reaction, settlement));
@@ -2711,9 +2712,9 @@ namespace PileDesign.ViewModels
                 return synth;
             }
 
-            // フォールバック: 既存 VerticalBeamCaseResults
-            if (VerticalBeamCaseResults == null || VerticalBeamCaseResults.Count == 0) return null;
-            return SelectedVerticalBeamCaseResult() ?? VerticalBeamCaseResults[0];
+            // 既存 VerticalBeamCaseResults から、選んでいるケース (と組合せ) のもの。無ければ null (描かない)。
+            // 以前は先頭 (常時) の結果に戻り、地震時のケースを選んでいても常時の沈下を描いていた
+            return SelectedVerticalBeamCaseResult();
         }
 
         /// <summary>

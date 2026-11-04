@@ -124,11 +124,20 @@ namespace PileDesign.Models.Results
         /// <summary>
         /// 常時 (VL) の記録か。基礎梁なしの記録は "VL"、基礎梁ありの記録は「矩形荷重 (VL)」「杭軸力 VL」という名前で持つ。
         /// 以前は沈下量の検定が "VL" との完全一致で探しており、基礎梁ありの記録を拾えずに群杭ぶんを 0 として判定していた。
+        ///
+        /// <para>地震時の記録 (見出しが「L1-1: 」で始まる) は、ケース名の末尾が「 VL」でも常時としない。
+        /// 以前は末尾だけを見ていたので、地震時の荷重ケース名を「地震 VL」とすると「L1-1: 地震 VL」が常時と読まれ、
+        /// 常時の単杭沈下に地震時の群杭沈下を足して検定していた (2026-11-04 外部レビュー)。</para>
         /// </summary>
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
-        public bool IsLongTerm => LoadCaseName == "VL" || LoadCaseName.EndsWith("(VL)", System.StringComparison.Ordinal)
-                                  || LoadCaseName.EndsWith(" VL", System.StringComparison.Ordinal);
+        public bool IsLongTerm => !SeismicCasePrefix.IsMatch(LoadCaseName)
+                                  && (LoadCaseName == "VL" || LoadCaseName.EndsWith("(VL)", System.StringComparison.Ordinal)
+                                      || LoadCaseName.EndsWith(" VL", System.StringComparison.Ordinal));
+
+        /// <summary>地震時の記録の見出しの前置き ("L1-1: " / "1-1: ")。</summary>
+        private static readonly System.Text.RegularExpressions.Regex SeismicCasePrefix =
+            new(@"^L?\d+-\d+: ", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
         /// <summary>このレコードを生成した解析タイプ ("任意矩形" / "個別矩形" / "個別十字" / "個別十字（基礎梁反力）" / "個別矩形（基礎梁考慮）")。空文字 = 旧データ。</summary>
         public string LoadingType { get; set; } = "";

@@ -75,8 +75,13 @@ namespace PileDesign.ViewModels
         Refused,
     }
 
-    /// <summary>杭ごとの検定の件数 (確認に使う分)。</summary>
-    public readonly record struct ReportEvaluationCounts(int Evaluated, int Ng, int Unconverged, int OutOfScope, int Unavailable)
+    /// <summary>
+    /// 杭ごとの検定の件数 (確認に使う分)。<paramref name="UnavailableWithoutPile"/> は杭ごとに数えられない検定不能の項目の数、
+    /// <paramref name="UnlinkedPile"/> はそのうちどの杭の結果か分からないもの (杭ごとの件数だけでは 0 に見える)。
+    /// </summary>
+    public readonly record struct ReportEvaluationCounts(int Evaluated, int Ng, int Unconverged, int OutOfScope, int Unavailable,
+        int UnavailableWithoutPile = 0, int UnlinkedPile = 0,
+        int NgWithoutPile = 0, int UnconvergedWithoutPile = 0, int OutOfScopeWithoutPile = 0)
     {
         public static ReportEvaluationCounts From(PileEvaluationSummary summary)
         {
@@ -85,7 +90,12 @@ namespace PileDesign.ViewModels
                 piles.Count(e => e.Band == PileRatioBand.Ng),
                 piles.Count(e => e.HasUnconverged),
                 piles.Count(e => e.HasOutOfScope),
-                piles.Count(e => e.HasUnavailable));
+                piles.Count(e => e.HasUnavailable),
+                summary.UnavailableWithoutPileCount,
+                summary.UnlinkedPileCount,
+                summary.NgWithoutPileCount,
+                summary.UnconvergedWithoutPileCount,
+                summary.OutOfScopeWithoutPileCount);
         }
     }
 
@@ -148,6 +158,23 @@ namespace PileDesign.ViewModels
                         ReportPreflightSeverity.Warning, ReportPreflightTarget.Dashboard));
                 if (c.Unavailable > 0)
                     items.Add(new($"データが欠けて検定できなかった項目がある杭が {c.Unavailable} 本あります。",
+                        ReportPreflightSeverity.Warning, ReportPreflightTarget.Dashboard));
+                // 杭ごとに数えられない検定不能の項目。杭の本数だけを数えると 0 に見えて、確認に出なかった (2026-11-04 外部レビュー)
+                if (c.UnlinkedPile > 0)
+                    items.Add(new($"どの杭の結果か分からず検定できなかった項目が {c.UnlinkedPile} 件あります。解析結果と入力の対応が崩れているので、水平解析をやり直してください。",
+                        ReportPreflightSeverity.Warning, ReportPreflightTarget.HorizontalAnalysis));
+                // 杭に属さない項目 (基礎梁の傾斜角など) の NG・未収束・適用範囲外。杭の本数だけを数えると出なかった (2026-11-04 外部レビュー)
+                if (c.NgWithoutPile > 0)
+                    items.Add(new($"杭に属さない項目 (基礎梁の傾斜角など) に NG が {c.NgWithoutPile} 件あります。",
+                        ReportPreflightSeverity.Caution, ReportPreflightTarget.Dashboard));
+                if (c.UnconvergedWithoutPile > 0)
+                    items.Add(new($"杭に属さない項目 (基礎梁の傾斜角など) に、収束しなかったケースのものが {c.UnconvergedWithoutPile} 件あります。その検定は判定できません。",
+                        ReportPreflightSeverity.Warning, ReportPreflightTarget.Dashboard));
+                if (c.OutOfScopeWithoutPile > 0)
+                    items.Add(new($"杭に属さない項目 (基礎梁の傾斜角など) に、算定式の適用範囲の外のものが {c.OutOfScopeWithoutPile} 件あります。",
+                        ReportPreflightSeverity.Warning, ReportPreflightTarget.Dashboard));
+                if (c.UnavailableWithoutPile - c.UnlinkedPile > 0)
+                    items.Add(new($"杭に属さない項目 (基礎梁の傾斜角など) で、データが欠けて検定できなかったものが {c.UnavailableWithoutPile - c.UnlinkedPile} 件あります。",
                         ReportPreflightSeverity.Warning, ReportPreflightTarget.Dashboard));
             }
             return items;

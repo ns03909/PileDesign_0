@@ -618,8 +618,10 @@ namespace PileDesign.Views
             var caseResults = viewModel.VerticalBeamCaseResults;
             if (caseResults == null || caseResults.Count == 0) return;
 
-            // 選択中の荷重ケース (と分離入力では組合せ) に対応する VB 結果。選び方は ViewModel の 1 か所 (なければ先頭)
-            var caseResult = viewModel.SelectedVerticalBeamCaseResult() ?? caseResults[0];
+            // 選択中の荷重ケース (と分離入力では組合せ) に対応する VB 結果。選び方は ViewModel の 1 か所。
+            // 無ければ描かない (以前は先頭 (常時) に戻り、選んでいないケースの沈下を描いていた)
+            var caseResult = viewModel.SelectedVerticalBeamCaseResult();
+            if (caseResult == null) return;
             string content = viewModel.EffectiveSettlementContent;
 
             ObservableCollection<Point3D> points = [];

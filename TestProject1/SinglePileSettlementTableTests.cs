@@ -43,6 +43,7 @@ namespace TestProject1
                     AxialForceVL0 = 800.0 * no,
                     AxialForceVLAdditional = 0.0,
                     SinglePileSettlementVL = 0.0036 * no,   // m
+                    SoilPileAltNo = 1,   // 杭と土層-杭セットの対応 (表は杭ごとに結果の有無を見る)
                 });
             }
 
@@ -155,10 +156,36 @@ namespace TestProject1
                 .ToList();
 
             Assert.AreEqual(2, rows.Count, "杭の数だけ VL の行が出ること");
-            Assert.AreEqual(0.0036 * ToMm, rows[0].Settlement_mm, 1e-9, "mm に直していない");
-            Assert.AreEqual(0.0072 * ToMm, rows[1].Settlement_mm, 1e-9);
+            Assert.AreEqual(0.0036 * ToMm, rows[0].Settlement_mm!.Value, 1e-9, "mm に直していない");
+            Assert.AreEqual(0.0072 * ToMm, rows[1].Settlement_mm!.Value, 1e-9);
             Assert.AreEqual(800.0, rows[0].AxialForce_kN, 1e-9, "VL の軸力が違う");
             Assert.AreEqual(1600.0, rows[1].AxialForce_kN, 1e-9);
+        }
+
+        /// <summary>
+        /// 結果の無い杭・沈下量を求められなかった値は 0 mm と出さず、空欄にして備考に理由を書くこと (2026-11-04 外部レビュー)。
+        /// 以前はどれかの土層-杭セットに結果があれば全杭の行を作り、未計算の杭の初期値 0 を 0 mm と出していた。
+        /// </summary>
+        [TestMethod]
+        public void MissingOrUnresolvedSettlementsAreNotShownAsZero()
+        {
+            var (vm, input) = Build();
+            input.PileLayoutItems![1].SoilPileAltNo = 0;                          // 杭 2 は結果のあるセットと結び付いていない
+            input.PileLayoutItems[0].SinglePileSettlementLevel1s = [double.NaN];  // 杭 1 のレベル1 は求められなかった
+            input.LoadCasesInput = new LoadCasesInput { LoadCasesLevel1 = [new LoadCase { Level = 1, No = 1, LoadName = "U1" }], LoadCasesLevel2 = [] };
+
+            var rows = vm.BuildSinglePileSettlementTables().Single(t => t.Name.Contains("各杭の沈下量")).Rows
+                .Cast<MainWindowViewModel.SinglePileSettlementPileRow>().ToList();
+
+            var pile2 = rows.Where(r => r.PileNo == 2).ToList();
+            Assert.AreEqual(1, pile2.Count, "結果の無い杭に荷重ケースごとの行を作っています");
+            Assert.IsNull(pile2[0].Settlement_mm, "結果の無い杭を " + pile2[0].Settlement_mm + " mm と出しています");
+            Assert.AreEqual(MainWindowViewModel.NoSingleSettlementNote, pile2[0].Note);
+
+            var unresolved = rows.Single(r => r.PileNo == 1 && r.LoadCaseName == "U1");
+            Assert.IsNull(unresolved.Settlement_mm, "求められなかった沈下量を数として出しています");
+            Assert.AreEqual(MainWindowViewModel.UnresolvedSettlementNote, unresolved.Note);
+            Assert.AreEqual(3.6, rows.Single(r => r.PileNo == 1 && r.LoadCaseName == "VL").Settlement_mm!.Value, 1e-9, "(前提) 結果のある値は出す");
         }
 
         /// <summary>

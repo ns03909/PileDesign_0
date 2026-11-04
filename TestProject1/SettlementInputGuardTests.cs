@@ -28,7 +28,7 @@ namespace TestProject1
         }
 
         private static VerticalBeamCaseResult Case(string name, double reaction)
-            => new() { LoadCaseName = name, PileResults = [new VerticalBeamPileResult { PileNo = 1, Reaction_kN = reaction }, new VerticalBeamPileResult { PileNo = 2, Reaction_kN = reaction }] };
+            => new() { LoadCaseName = name, IsConverged = true, PileResults = [new VerticalBeamPileResult { PileNo = 1, Reaction_kN = reaction }, new VerticalBeamPileResult { PileNo = 2, Reaction_kN = reaction }] };
 
         [TestMethod]
         public void DuplicatePileNumbersDoNotOverwriteSettlementResults()
@@ -125,14 +125,37 @@ namespace TestProject1
             StringAssert.Contains(arbitrary.ErrorMessage, "矩形荷重が 1 つもありません");
         }
 
+        /// <summary>
+        /// 杭の反力が欠けていれば、荷重 0 として続けずに止めること (2026-11-04 外部レビュー。以前は警告を付けて
+        /// 荷重 0 で群杭沈下を求め、過小な沈下が通常の結果として検定に使われた)。
+        /// </summary>
         [TestMethod]
-        public void MissingReactionsAreReportedAsWarnings()
+        public void MissingReactionsStopTheAnalysis()
         {
             var piles = new ObservableCollection<PileLayoutDataItem> { Pile(1, 0), Pile(2, 3), Pile(3, 6) };
             var result = Run(new PileGroupSettlement { LoadingType = "個別十字（基礎梁反力）" }, piles, 1.0, [Case("VL", 800)]);
-            Assert.IsTrue(result.Success);
-            Assert.IsTrue(result.Warnings.Any(w => w.Contains("反力の無い杭 No.3", System.StringComparison.Ordinal)),
-                "反力の無い杭を荷重 0 として扱ったことを知らせていません");
+            Assert.IsFalse(result.Success, "反力の無い杭を荷重 0 として群杭沈下を求めています");
+            StringAssert.Contains(result.ErrorMessage, "杭 No.3 の反力がありません");
+
+            var nan = Case("VL", 800);
+            nan.PileResults[1].Reaction_kN = double.NaN;
+            Assert.IsFalse(Run(new PileGroupSettlement { LoadingType = "個別十字（基礎梁反力）" },
+                new ObservableCollection<PileLayoutDataItem> { Pile(1, 0), Pile(2, 3) }, 1.0, [nan]).Success,
+                "数でない反力で群杭沈下を求めています");
+        }
+
+        /// <summary>
+        /// 常時ケースが収束していなければ、釣り合っていない杭反力で群杭沈下を求めずに止めること (2026-11-04 外部レビュー)。
+        /// </summary>
+        [TestMethod]
+        public void AnUnconvergedLongTermCaseStopsTheAnalysis()
+        {
+            var piles = new ObservableCollection<PileLayoutDataItem> { Pile(1, 0), Pile(2, 3) };
+            var unconverged = Case("VL", 800);
+            unconverged.IsConverged = false;
+            var result = Run(new PileGroupSettlement { LoadingType = "個別十字（基礎梁反力）" }, piles, 1.0, [unconverged]);
+            Assert.IsFalse(result.Success, "収束していないケースの反力で群杭沈下を求めています");
+            StringAssert.Contains(result.ErrorMessage, "収束していません");
         }
 
         /// <summary>

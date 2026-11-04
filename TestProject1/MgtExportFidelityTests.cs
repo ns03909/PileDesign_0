@@ -447,6 +447,33 @@ namespace TestProject1
 
         // ── 書けないばね ─────────────────────────────
 
+        /// <summary>
+        /// 杭の軸力が数でなければ、その杭の軸力を省いて書かずに、杭とケースを示して出力を止めること (2026-11-04 外部レビュー)。
+        /// </summary>
+        [TestMethod]
+        public void ANonFiniteAxialForce_StopsTheExport()
+        {
+            // 杭の軸力を書くのは杭の鉛直ばねを使うとき (VerticalSprings_AreWrittenInZ_... と同じ組み立て)
+            var (input, model) = Example("Example3_4", "PileExample3_4");
+            var pile = input.PileLayoutItems[0];
+            var tip = pile.PileNodes[^1];
+            var ground = new Node { Name = "VZ", Coord = tip.Coord, Boundary = new Boundary(true, true, true, true, true, true) };
+            model.Nodes.Add(ground);
+            var spring = new HorizontalSoilSpring("鉛直ばね", tip, ground);
+            spring.SetKe(0, 0, 1000, 0, 0, 0, true);
+            model.HorizontalSoilSprings.Add(spring);
+            pile.VerticalNodeSprings.Add(spring);
+            pile.VerticalNodeSpringCurves.Add(new VerticalPileSpringCurve([(-0.1, -100.0), (0.0, 0.0), (0.1, 100.0)]));
+            var lc = input.LoadCasesInput.LoadCasesLevel1[0];
+            model.AnalysisStepResults.Add(new AnalysisStepResult(lc, Comb(), false, 1, 1, 0));
+            pile.AxialForceLevel1s[lc.No - 1] = double.NaN;
+
+            var ex = Assert.ThrowsException<InvalidOperationException>(() => Export(model),
+                "数でない軸力を省いて出力しています");
+            StringAssert.Contains(ex.Message, $"杭 No.{pile.No}");
+            StringAssert.Contains(ex.Message, "数ではありません");
+        }
+
         /// <summary>杭・土圧合力の区間のどれにも属さないばねは、向きと荷重-変形関係が決まらないので、理由を示して出力を止める。</summary>
         [TestMethod]
         public void SpringsOfUnknownKind_StopTheExport()

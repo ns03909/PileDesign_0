@@ -1945,12 +1945,14 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// 基礎梁考慮鉛直解析結果から指定杭の沈下量を取得する
+        /// 基礎梁考慮鉛直解析結果から指定杭の沈下量を取得する。結果が無ければ NaN (グラフは描かずに凡例に理由を書く)。
+        /// 以前は、ケースが見つからなければ先頭 (常時) の結果を、杭が見つからなければ 0 を返していた
+        /// (地震時のケースに常時の沈下を描く・沈下していない杭に見える。2026-11-04 外部レビュー)。
         /// </summary>
         private double GetVBSettlement(int pileNo, string loadCaseName)
         {
             var vbResults = _mainWindowViewModel.VerticalBeamCaseResults;
-            if (vbResults == null || vbResults.Count == 0) return 0;
+            if (vbResults == null || vbResults.Count == 0) return double.NaN;
 
             // 荷重ケース名で結果を探す。結果の見出しは "1-1: U1" "VL (常時+追加)" (分離入力では組合せを添える) なので、
             // 見出しのケース名で照合し、分離入力では選んでいる組合せのものを選ぶ (SeismicCaseLabels)。
@@ -1958,30 +1960,30 @@ namespace PileDesign.ViewModels
             var labels = vbResults.Select(c => c.LoadCaseName).ToList();
             int picked = SeismicCaseLabels.Pick(labels, i => SeismicCaseLabels.BaseCaseName(labels[i]) == loadCaseName,
                 _mainWindowViewModel.SelectedCombinationSuffix());
-            // マッチしなければ最初のケースを使用
-            FEM.VerticalBeamCaseResult caseResult = picked >= 0 ? vbResults[picked] : vbResults[0];
+            if (picked < 0) return double.NaN;
+            var caseResult = vbResults[picked];
 
-            if (caseResult.PileResults == null) return 0;
+            if (caseResult.PileResults == null) return double.NaN;
             foreach (var pr in caseResult.PileResults)
             {
                 if (pr.PileNo == pileNo)
                     return pr.Settlement_mm;
             }
-            return 0;
+            return double.NaN;
         }
 
         /// <summary>
         /// 個別矩形（基礎梁考慮）反復解析の CaseRecord から指定杭の沈下量 (mm) を取得。
-        /// 荷重ケース名で CaseRecord を選び、なければアクティブケース、それも無ければ 0。
+        /// 荷重ケース名で CaseRecord を選ぶ。記録が無い・記録にその杭が無ければ NaN (描かない。以前は 0)。
         /// </summary>
         private double GetBeamAwareCaseSettlement(PileLayoutDataItem pile, string loadCaseName)
         {
             var rec = ResolveBeamAwareCaseRecord(loadCaseName);
-            if (rec == null) return 0;
+            if (rec == null) return double.NaN;
             if (rec.PileSettlements_mm != null
                 && rec.PileSettlements_mm.TryGetValue(pile.PileNo, out double v))
                 return v;
-            return 0;
+            return double.NaN;
         }
 
         /// <summary>
@@ -1992,16 +1994,17 @@ namespace PileDesign.ViewModels
         {
             if (SelectedGraphOption == "沈下 杭矩形(基礎梁考慮)")
             {
+                // 選んでいるケースの記録が無ければ地盤の線も描かない (以前はアクティブなケースの地盤沈下に戻っていた)
                 var rec = ResolveBeamAwareCaseRecord(SelectedLoadCaseOption);
-                if (rec?.SettlementGridData != null && rec.SettlementGridData.Count > 0)
-                    return rec.SettlementGridData;
+                return rec?.SettlementGridData ?? [];
             }
             return InputModel.PileGroupSettlement.ActiveSettlementGridData;
         }
 
         /// <summary>
-        /// 荷重ケース名から基礎梁考慮 CaseRecord を解決する。
-        /// 完全一致 → 末尾一致 (": <name>") → アクティブケース (あれば) → 最初の beam-aware ケース。
+        /// 荷重ケース名から基礎梁考慮 CaseRecord を解決する。完全一致 → 末尾一致 (": <name>")。
+        /// ケース名を指定して見つからなければ null (結果なし)。以前はアクティブなケース → 最初のケースに戻り、
+        /// 選んでいないケースの沈下を黙って描いていた。ケース名が空のときだけアクティブなケース → 最初のケース。
         /// </summary>
         private GroupSettlementCaseRecord ResolveBeamAwareCaseRecord(string loadCaseName)
         {
@@ -2018,7 +2021,7 @@ namespace PileDesign.ViewModels
                 var labels = beamAware.Select(r => r.LoadCaseName).ToList();
                 int picked = SeismicCaseLabels.Pick(labels, i => SeismicCaseLabels.RefersToCase(labels[i], loadCaseName),
                     _mainWindowViewModel.SelectedCombinationSuffix());
-                if (picked >= 0) return beamAware[picked];
+                return picked >= 0 ? beamAware[picked] : null;
             }
 
             int idx = pgs.ActiveCaseIndex;

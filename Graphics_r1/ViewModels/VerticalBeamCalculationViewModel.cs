@@ -373,6 +373,10 @@ namespace PileDesign.ViewModels
             if (!AnalyzeVL && !AnalyzeLevel1 && !AnalyzeLevel2)
                 return "少なくとも1つの荷重ケースを選択してください。";
 
+            // 分離入力で適用する組合せが無いと、地震時の軸力を決められない (以前は分けない入力の古い値で解いた)
+            if ((AnalyzeLevel1 || AnalyzeLevel2) && SeismicAxialForces.NoApplicableCombinationMessage(InputModel) is { } noCombination)
+                return noCombination;
+
             if (AnalyzeLevel1)
             {
                 var level1Cases = InputModel.LoadCasesInput?.LoadCasesLevel1;
@@ -426,7 +430,7 @@ namespace PileDesign.ViewModels
             if (settings.AnalyzeVL || needVLBase)
             {
                 caseIndex++;
-                string caseName = "VL (常時+追加)";
+                string caseName = "VL" + SeismicCaseLabels.LongTermDecoration;
 
                 await AddLogAsync($"\n━━━ Phase 1: {caseName} ({caseIndex}/{totalCases}) ━━━");
 

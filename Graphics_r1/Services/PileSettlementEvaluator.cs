@@ -117,7 +117,10 @@ namespace PileDesign.Services
 
                     // 単杭沈下量が荷重-沈下曲線の範囲外の軸力で求めた値なら、それは下限 (実際はもっと沈む)。
                     // 下限で許容値を超えていれば NG と言えるが、超えていなければ OK とは言えない
+                    // 沈下量が数でない (NaN・∞) なら判定しない。以前は結果がある限り応答値にし、
+                    // OK にはならないが判定済みとして「NG」と出て、NG の件数にも入った (2026-11-04 外部レビュー)
                     string? unavailable = groupProblem
+                        ?? (!double.IsFinite(response) ? DescribeNonFiniteSettlement(pile.PileNo, parts) : null)
                         ?? (parts.SingleBeyondCurve && !(response > limit) ? DescribeBeyondCurve(pile.PileNo) : null);
 
                     items.Add(new EvaluationItem
@@ -130,7 +133,7 @@ namespace PileDesign.Services
                         PileNo = pile.PileNo,
                         PileBodyNo = pile.PileBodyNo,
                         LoadCaseName = "VL" + suffix,
-                        Response = groupProblem != null ? double.NaN : response,
+                        Response = unavailable != null && !double.IsFinite(response) || groupProblem != null ? double.NaN : response,
                         Limit = limit,
                         Unit = Unit,
                         UnavailableReason = unavailable,
@@ -142,6 +145,14 @@ namespace PileDesign.Services
             }
 
             return items;
+        }
+
+        /// <summary>沈下量が数でない (NaN・∞) ときの理由。どちらの沈下量かを示す。</summary>
+        internal static string DescribeNonFiniteSettlement(int pileNo, PileSettlementParts parts)
+        {
+            string which = !double.IsFinite(parts.Single_m) ? "単杭沈下量"
+                : parts.GroupIncluded && !double.IsFinite(parts.Group_mm) ? "群杭沈下量" : "沈下量";
+            return $"杭No.{pileNo} の{which}が数ではありません (沈下解析をやり直してください)";
         }
 
         /// <summary>許容沈下量が使えない値のときの理由 (入力箇所を示す)。</summary>

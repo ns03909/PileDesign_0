@@ -259,6 +259,135 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 要素の区間番号が負でも、検定全体を止めずに、その要素を「検定不能」にすること (2026-11-04 外部レビュー)。
+        /// 以前は上限だけを確かめていて、負の番号で範囲外の例外になり、水平解析の検定が組み立てられなかった。
+        /// </summary>
+        [TestMethod]
+        public void ANegativeSegmentIndexIsUnavailable_NotAnException()
+        {
+            var vm = Analyzed();
+            var pile = vm.ResultInputModel.PileLayoutItems!.First(p => p.Beams?.Count > 1);
+            var beam = pile.Beams[1];
+            int? saved = beam.SegmentIndex;
+            try
+            {
+                beam.SegmentIndex = -1;
+                var result = EvaluationService.BuildEvaluationResult(vm, factored: true);
+                var rows = result.Items.Where(i => i.PileNo == pile.PileNo && i.SegmentIndex == -1).ToList();
+                Assert.IsTrue(rows.Count > 0, "区間番号が負の要素の項目が消えています");
+                Assert.IsTrue(rows.All(i => i.IsUnavailable), "区間番号が負の要素を判定しています");
+            }
+            finally
+            {
+                beam.SegmentIndex = saved;
+            }
+        }
+
+        /// <summary>
+        /// 杭の土層-杭セットを引けないときは、同じ杭体の別のセットの断面で検定せず「検定不能」にし、
+        /// 杭頭回転角の項目も消さずに残すこと (2026-11-04 外部レビュー)。
+        /// </summary>
+        [TestMethod]
+        public void WithoutThePilesOwnSoilPileSet_ChecksAreUnavailable_NotBorrowed()
+        {
+            var vm = Analyzed();
+            var input = vm.ResultInputModel;
+            var pile = input.PileLayoutItems!.First(p => p.Beams?.Count > 0);
+            var baseline = EvaluationService.BuildEvaluationResult(vm, factored: true);
+            int baselineRotation = baseline.Items.Count(i => i.PileNo == pile.PileNo && i.Kind == EvaluationKind.PileHeadRotation);
+            int savedSet = pile.SoilPileAltNo;
+            try
+            {
+                pile.SoilPileAltNo = 999;   // 杭と土層-杭セットの対応が欠けた
+                var result = EvaluationService.BuildEvaluationResult(vm, factored: true);
+
+                var sections = result.Items.Where(i => i.PileNo == pile.PileNo
+                    && i.Kind is EvaluationKind.PileSectionMoment or EvaluationKind.PileSectionShear).ToList();
+                Assert.IsTrue(sections.Count > 0, "杭体の曲げ・せん断の項目が消えています");
+                Assert.IsTrue(sections.All(i => i.IsUnavailable && !i.IsJudged),
+                    "その杭のセットが無いのに、別のセットの断面で判定しています: "
+                    + string.Join(" / ", sections.Where(i => !i.IsUnavailable).Take(3).Select(i => $"{i.Category} {i.StatusLabel}")));
+                Assert.IsTrue(sections.Any(i => i.NotJudgedReason == EvaluationService.MissingSoilPileReason(pile.PileNo)));
+
+                var rotations = result.Items.Where(i => i.PileNo == pile.PileNo && i.Kind == EvaluationKind.PileHeadRotation).ToList();
+                Assert.IsTrue(rotations.Count >= baselineRotation && rotations.Count > 0, "杭頭回転角の項目が消えています");
+                Assert.IsTrue(rotations.All(i => i.IsUnavailable), "杭頭回転角を、その杭の断面なしで判定しています");
+            }
+            finally
+            {
+                pile.SoilPileAltNo = savedSet;
+            }
+        }
+
+        /// <summary>
+        /// 「入力値＋応力解析結果」の軸力で検定するのに杭頭の要素の結果が無ければ、ほかの要素を入力の軸力だけの限界値で
+        /// 判定せず「検定不能」にすること (2026-11-04 外部レビュー)。
+        /// </summary>
+        [TestMethod]
+        public void WithoutTheHeadAxialForce_AnalysisAxialForceChecksAreUnavailable()
+        {
+            var vm = Analyzed();
+            var input = vm.ResultInputModel;
+            var pile = input.PileLayoutItems!.First(p => p.Beams?.Count > 2);
+            var head = EvaluationService.PileHeadBeam(pile)!;
+            var savedResults = head.BeamResults.ToList();
+            bool savedMode = input.UseAnalysisAxialForce;
+            try
+            {
+                input.UseAnalysisAxialForce = true;
+                head.BeamResults.Clear();
+                var result = EvaluationService.BuildEvaluationResult(vm, factored: true);
+
+                var others = result.Items.Where(i => i.PileNo == pile.PileNo && i.SegmentIndex is int s && s != head.SegmentIndex
+                    && i.Kind is EvaluationKind.PileSectionMoment or EvaluationKind.PileSectionShear && i.Level is 1 or 2).ToList();
+                Assert.IsTrue(others.Count > 0, "(前提) 杭頭以外の要素の地震時の検定項目がある");
+                Assert.IsTrue(others.All(i => i.IsUnavailable && i.NotJudgedReason == EvaluationService.MissingHeadAxialForceReason),
+                    "杭頭の軸力が無いのに、入力の軸力だけで判定しています: "
+                    + string.Join(" / ", others.Where(i => !i.IsUnavailable).Take(3).Select(i => $"{i.Category} {i.StatusLabel}")));
+            }
+            finally
+            {
+                input.UseAnalysisAxialForce = savedMode;
+                foreach (var r in savedResults) head.BeamResults.Add(r);
+            }
+        }
+
+        /// <summary>
+        /// 杭頭回転角は、限界値が軸力に依らない工法 (FT-Pile 以外) なら、杭頭の軸力が欠けても判定すること
+        /// (2026-11-04 外部レビュー)。軸力が要るのは FT-Pile の θa だけ。
+        /// </summary>
+        [TestMethod]
+        public void RotationLimitsThatDoNotDependOnAxialForce_AreStillJudged()
+        {
+            var vm = Analyzed();
+            var input = vm.ResultInputModel;
+            var baseline = EvaluationService.BuildEvaluationResult(vm, factored: true);
+            var judged = baseline.Items.Where(i => i.Kind == EvaluationKind.PileHeadRotation && i.IsJudged && i.PileNo is int
+                && !i.Category.Contains("FT-Pile")).ToList();
+            if (judged.Count == 0) { Assert.Inconclusive("(前提) 例題に、軸力に依らない杭頭回転角の検定がない"); return; }
+
+            var pile = input.PileLayoutItems!.First(p => p.PileNo == judged[0].PileNo);
+            var head = EvaluationService.PileHeadBeam(pile)!;
+            var savedResults = head.BeamResults.ToList();
+            bool savedMode = input.UseAnalysisAxialForce;
+            try
+            {
+                input.UseAnalysisAxialForce = true;
+                head.BeamResults.Clear();
+                var rows = EvaluationService.BuildEvaluationResult(vm, factored: true).Items
+                    .Where(i => i.Kind == EvaluationKind.PileHeadRotation && i.PileNo == pile.PileNo && !i.Category.Contains("FT-Pile")).ToList();
+                Assert.IsTrue(rows.Count > 0);
+                Assert.IsFalse(rows.Any(i => i.NotJudgedReason == EvaluationService.MissingHeadAxialForceReason),
+                    "限界値が軸力に依らないのに、杭頭の軸力が無いことを理由に判定をやめています");
+            }
+            finally
+            {
+                input.UseAnalysisAxialForce = savedMode;
+                foreach (var r in savedResults) head.BeamResults.Add(r);
+            }
+        }
+
+        /// <summary>
         /// 杭と解析の要素のつながりが無い杭は、「検定不能」として理由を残し、別の杭の軸力で代えないこと (2026-11-04)。
         /// 以前は杭体番号でその杭体を使う最初の杭を引き、その杭の軸力で黙って検定していた
         /// (解析結果の控えを取り直すとつながりが空になる不具合で、実際にこの保険が使われていた)。

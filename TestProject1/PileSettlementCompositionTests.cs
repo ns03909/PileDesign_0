@@ -169,6 +169,99 @@ namespace TestProject1
             CollectionAssert.AreEquivalent(new[] { "13.000", "14.000" }, tables.Select(t => t["1"][2]).ToArray());
         }
 
+        /// <summary>
+        /// 群杭沈下の記録が組合せごと (地震時軸力の分離入力・基礎梁考慮) のとき、単杭沈下も<b>同じ組合せ</b>の結果を足すこと
+        /// (2026-11-04 外部レビュー)。以前はケースごとの欄 (組合せのうち軸力が最大のもの) を足していて、
+        /// 記録と別の組合せなら同じ荷重状態の沈下量にならなかった。同じ組合せの結果が無ければ単杭沈下の結果なし。
+        /// </summary>
+        [TestMethod]
+        public void SeparatedGroupRecord_AddsTheSingleSettlementOfTheSameCombination()
+        {
+            var input = Build();
+            input.LoadCasesInput = new LoadCasesInput { LoadCasesLevel1 = [new LoadCase { Level = 1, No = 1, LoadName = "U1" }], LoadCasesLevel2 = [] };
+            var pile = input.PileLayoutItems[0];
+            pile.SinglePileSettlementLevel1s = [0.012];   // ケースごとの欄 = 組合せのうち最大 (No.2)
+            pile.SinglePileSettlementsSeparated =
+            [
+                new SeparatedSettlementResult { Level = 1, CaseNo = 1, CombinationNo = 1, BetaU = 1.0, BetaL = 1.0, Settlement = 0.004 },
+                new SeparatedSettlementResult { Level = 1, CaseNo = 1, CombinationNo = 2, BetaU = 1.0, BetaL = -1.0, Settlement = 0.012 },
+            ];
+            var combo1 = Record("L1-1: U1" + SeismicAxialForces.CombinationSuffix(1, 1.0, 1.0), true, (1, 50.0));
+
+            var parts = PileSettlementComposition.Compose(input, pile, combo1, includeGroup: true, "U1");
+            Assert.IsTrue(parts.HasSingle);
+            Assert.AreEqual(0.004, parts.Single_m, 1e-12,
+                "群杭沈下は組合せ No.1 なのに、単杭沈下に別の組合せ (最大) の値を足しています");
+
+            // 同じ組合せの単杭沈下が無ければ、別の組合せで代えない
+            var combo3 = Record("L1-1: U1" + SeismicAxialForces.CombinationSuffix(3, 0.5, 1.0), true, (1, 50.0));
+            Assert.IsFalse(PileSettlementComposition.Compose(input, pile, combo3, includeGroup: true, "U1").HasSingle,
+                "同じ組合せの単杭沈下が無いのに、別の組合せの値を足しています");
+
+            // 番号が同じでも係数が違えば別の組合せ (係数を丸めて照合しない。1.001 と 1.004 は別)
+            pile.SinglePileSettlementsSeparated[0].BetaU = 1.001;
+            var combo1Changed = Record("L1-1: U1" + SeismicAxialForces.CombinationSuffix(1, 1.004, 1.0), true, (1, 50.0));
+            Assert.IsFalse(PileSettlementComposition.Compose(input, pile, combo1Changed, includeGroup: true, "U1").HasSingle,
+                "係数の違う単杭沈下と群杭沈下を、同じ組合せとして足しています");
+            pile.SinglePileSettlementsSeparated[0].BetaU = 1.0;
+
+            // 組合せの付かない記録・単杭沈下だけのときは、これまでどおりケースごとの欄
+            Assert.AreEqual(0.012, PileSettlementComposition.Compose(input, pile, Record("L1-1: U1", false, (1, 50.0)), includeGroup: true, "U1").Single_m, 1e-12);
+            Assert.AreEqual(0.012, PileSettlementComposition.Compose(input, pile, combo1, includeGroup: false, "U1").Single_m, 1e-12);
+        }
+
+        /// <summary>
+        /// 沈下量が数でない (NaN) ときは「NG」ではなく「検定不能」にすること (2026-11-04 外部レビュー)。
+        /// 以前は結果がある限り応答値にし、OK にはならないが判定済みとして NG と出て、NG の件数にも入った。
+        /// </summary>
+        [TestMethod]
+        public void ANonFiniteSettlementIsUnavailable_NotNg()
+        {
+            var input = Build();
+            input.FundamentalInput.EvaluateSettlement = true;
+            input.FundamentalInput.AllowableSettlement_mm = 100;
+            input.PileLayoutItems[0].SinglePileSettlementVL = double.NaN;                       // 単杭沈下が数でない
+            input.PileGroupSettlement.CaseRecords.Add(Record("VL", false, (1, 3.0), (2, double.NaN), (3, 3.0)));   // 杭 2 は群杭沈下が数でない
+
+            var items = PileSettlementEvaluator.Evaluate(input);
+            foreach (int pileNo in new[] { 1, 2 })
+            {
+                var item = items.Single(i => i.PileNo == pileNo);
+                Assert.AreEqual("検定不能", item.StatusLabel, $"杭No.{pileNo}: 数でない沈下量を {item.StatusLabel} と判定しています");
+                Assert.IsFalse(item.IsJudged);
+            }
+            StringAssert.Contains(items.Single(i => i.PileNo == 1).NotJudgedReason, "単杭沈下量");
+            StringAssert.Contains(items.Single(i => i.PileNo == 2).NotJudgedReason, "群杭沈下量");
+            Assert.AreEqual("OK", items.Single(i => i.PileNo == 3).StatusLabel, "(前提) 数のそろった杭は判定する");
+        }
+
+        /// <summary>
+        /// 単杭沈下と群杭沈下は同じ荷重ケースのものだけを足すこと (2026-11-04 外部レビュー)。
+        /// グラフは単杭沈下をグラフで選んだケース、群杭沈下を画面で表示中の記録で取るので、
+        /// 地震時のケースを選んでいて表示中が常時のままだと、別の荷重状態の値を足していた。
+        /// </summary>
+        [TestMethod]
+        public void SingleAndGroupSettlementsOfDifferentCasesAreNotAdded()
+        {
+            var input = Build();
+            input.LoadCasesInput = new LoadCasesInput { LoadCasesLevel1 = [new LoadCase { Level = 1, No = 1, LoadName = "U1" }], LoadCasesLevel2 = [] };
+            foreach (var p in input.PileLayoutItems) p.SinglePileSettlementLevel1s = [0.020];
+            var longTerm = Record("VL", false, (1, 3.0), (2, 3.0), (3, 3.0));
+            var seismic = Record("L1-1: U1", true, (1, 7.0), (2, 7.0), (3, 7.0));
+
+            var mismatched = Line(input, "沈下 単杭+群杭", "U1", longTerm);
+            Assert.IsTrue(mismatched.Ys.All(double.IsNaN), "地震時の単杭沈下に常時の群杭沈下を足して描いています");
+            Assert.IsTrue(mismatched.Notes.Any(n => n.Contains("別の荷重ケース")), "足さなかった理由が凡例にありません: " + string.Join(" / ", mismatched.Notes));
+            Assert.IsTrue(Line(input, "沈下 基礎梁考慮単杭+群杭", "U1", longTerm).Ys.All(double.IsNaN),
+                "基礎梁考慮単杭+群杭でも、別の荷重ケースの群杭沈下を足しています");
+
+            var matched = Line(input, "沈下 単杭+群杭", "U1", seismic);
+            Assert.AreEqual(20.0 + 7.0, matched.Ys[0], 1e-9, "同じ荷重ケースの群杭沈下は足す");
+            Assert.AreEqual(10.0 + 3.0, Line(input, "沈下 単杭+群杭", "VL", longTerm).Ys[0], 1e-9, "(前提) 常時どうしは足す");
+            Assert.IsFalse(PileSettlementComposition.Compose(input, input.PileLayoutItems[0], seismic, includeGroup: true).HasGroup,
+                "常時の単杭沈下に地震時の群杭沈下を足しています");
+        }
+
         // ===== 沈下グラフ =====
 
         private static GraphViewModel.SettlementLine Line(InputModel input, string option, string loadCase, GroupSettlementCaseRecord? rec)
@@ -204,7 +297,9 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// グラフはどの群杭沈下のケースを足したかを凡例に書くこと (表示中のケースが地震時なら、そう読める)。
+        /// グラフはどの群杭沈下のケースを使うかを凡例に書くこと (表示中のケースが地震時なら、そう読める)。
+        /// 単杭沈下 (常時) と荷重ケースが違うので足さず、その理由も凡例に書く (2026-11-04 外部レビュー。
+        /// 以前は常時の単杭沈下に地震時の群杭沈下を足して 60 mm と描いていた)。
         /// </summary>
         [TestMethod]
         public void TheGraphNamesTheGroupCaseItAdds()
@@ -214,9 +309,10 @@ namespace TestProject1
             Assert.AreEqual("L1-1: 杭軸力", displayed?.LoadCaseName, "(前提) 表示中のケース");
 
             var line = Line(input, "沈下 単杭+群杭", "VL", displayed);
-            StringAssert.Contains(line.Label, "L1-1: 杭軸力", "足した群杭沈下のケースを凡例に書いていません");
+            StringAssert.Contains(line.Label, "L1-1: 杭軸力", "群杭沈下のケースを凡例に書いていません");
             StringAssert.Contains(line.Label, "単杭 (VL)");
-            Assert.AreEqual(60.0, line.Ys[0], 1e-9, "表示中のケースを明示して選んだのに、その値を足していません");
+            Assert.IsTrue(line.Ys.All(double.IsNaN), "常時の単杭沈下に地震時の群杭沈下を足して描いています");
+            Assert.IsTrue(line.Notes.Any(n => n.Contains("別の荷重ケース")), "足さなかった理由を凡例に書いていません");
         }
 
         /// <summary>単杭沈下の結果 (荷重-沈下曲線) が無い杭も 0 として描かない。</summary>
@@ -242,7 +338,12 @@ namespace TestProject1
             var input = Build();
             input.PileGroupSettlement.CaseRecords.Add(Record("VL", false, (1, 3.0), (2, 3.0)));
             input.PileGroupSettlement.ActiveCaseIndex = 0;
+            input.LoadCasesInput ??= new LoadCasesInput { LoadCasesLevel1 = [], LoadCasesLevel2 = [], LoadCombinations = [] };
             var vm = new MainWindowViewModel { CurrentInputModel = input };
+            // 常時を表示 (単杭沈下も群杭沈下の記録と同じ荷重ケースのものを使うので、ケースをそろえる。
+            // 既定の選択は地震時のケース "VL+E1" で、常時の記録とは足さない)
+            vm.SelectedLoadCaseName = "VL";
+            input.PileGroupSettlement.ActiveCaseIndex = 0;
 
             var method = typeof(PileDesign.Views.MainWindow).GetMethod("BuildMemberAngleSettlementMap",
                 BindingFlags.Static | BindingFlags.NonPublic);

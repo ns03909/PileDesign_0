@@ -785,13 +785,27 @@ namespace PileDesign.ViewModels
             public double Y { get; set; }
             public string LoadCaseName { get; set; } = "";
             public double AxialForce_kN { get; set; }
-            public double Settlement_mm { get; set; }
-            /// <summary>荷重-沈下曲線の範囲外の軸力なら、その旨 (沈下量は曲線の端の値 = 下限)。</summary>
+            /// <summary>沈下量 [mm]。結果が無い・求められなかったときは null (空欄。理由は備考)。</summary>
+            public double? Settlement_mm { get; set; }
+            /// <summary>荷重-沈下曲線の範囲外の軸力なら、その旨 (沈下量は曲線の端の値 = 下限)。結果が無い・求められなかった理由も書く。</summary>
             public string Note { get; set; } = "";
         }
 
         /// <summary>曲線の範囲外で求めた沈下量の備考。</summary>
         internal const string BeyondCurveNote = "曲線の範囲外 (端の値 = 下限)";
+
+        /// <summary>この杭の土層-杭セットに単杭沈下の結果 (荷重-沈下曲線) が無いときの備考。</summary>
+        internal const string NoSingleSettlementNote = "単杭沈下の結果なし (この杭の土層-杭セットを解析していません)";
+
+        /// <summary>軸力から沈下量を求められなかったときの備考 (軸力が数でないなど)。</summary>
+        internal const string UnresolvedSettlementNote = "沈下量を求められませんでした (単杭沈下解析をやり直してください)";
+
+        /// <summary>沈下量 [m] を表の値 [mm] に (数でなければ null)。</summary>
+        private static double? SettlementCell_mm(double settlement_m) => double.IsFinite(settlement_m) ? settlement_m * 1000.0 : null;
+
+        /// <summary>沈下量の行の備考。数でなければ求められなかったこと、範囲外なら下限であること。</summary>
+        private static string SettlementNote(double settlement_m, bool beyondCurve)
+            => !double.IsFinite(settlement_m) ? UnresolvedSettlementNote : beyondCurve ? BeyondCurveNote : "";
 
         /// <summary>
         /// 単杭沈下解析の結果テーブル。
@@ -871,6 +885,23 @@ namespace PileDesign.ViewModels
                 {
                     if (pile == null) continue;
 
+                    // この杭の土層-杭セットに結果が無ければ、杭が持つ値 (初期値 0) を出さずに「結果なし」の 1 行だけ。
+                    // 以前はどれかのセットに結果があれば全杭の行を作り、未計算の杭を 0 mm と出していた (2026-11-04 外部レビュー)
+                    if (!Services.SettlementDeformationAngleEvaluator.HasSinglePileSettlement(ResultInputModel!, pile))
+                    {
+                        pileRows.Add(new SinglePileSettlementPileRow
+                        {
+                            PileNo = pile.PileNo,
+                            X = pile.Point3D.X,
+                            Y = pile.Point3D.Y,
+                            LoadCaseName = "VL",
+                            AxialForce_kN = pile.AxialForceVL0 + pile.AxialForceVLAdditional,
+                            Settlement_mm = null,
+                            Note = NoSingleSettlementNote,
+                        });
+                        continue;
+                    }
+
                     pileRows.Add(new SinglePileSettlementPileRow
                     {
                         PileNo = pile.PileNo,
@@ -878,8 +909,8 @@ namespace PileDesign.ViewModels
                         Y = pile.Point3D.Y,
                         LoadCaseName = "VL",
                         AxialForce_kN = pile.AxialForceVL0 + pile.AxialForceVLAdditional,
-                        Settlement_mm = pile.SinglePileSettlementVL * 1000.0,   // m → mm
-                        Note = pile.SinglePileSettlementVLBeyondCurve ? BeyondCurveNote : "",
+                        Settlement_mm = SettlementCell_mm(pile.SinglePileSettlementVL),   // m → mm
+                        Note = SettlementNote(pile.SinglePileSettlementVL, pile.SinglePileSettlementVLBeyondCurve),
                     });
 
                     if (Models.InputData.SeismicAxialForces.IsSeparated(ResultInputModel))
@@ -940,8 +971,8 @@ namespace PileDesign.ViewModels
                     Y = pile.Point3D.Y,
                     LoadCaseName = (cases[r.CaseNo - 1]?.LoadName ?? "") + Models.InputData.SeismicAxialForces.CombinationSuffix(r.CombinationNo, r.BetaU, r.BetaL),
                     AxialForce_kN = r.AxialLoad,
-                    Settlement_mm = r.Settlement * 1000.0,   // m → mm
-                    Note = r.BeyondCurve ? BeyondCurveNote : "",
+                    Settlement_mm = SettlementCell_mm(r.Settlement),   // m → mm
+                    Note = SettlementNote(r.Settlement, r.BeyondCurve),
                 });
             }
         }
@@ -965,8 +996,8 @@ namespace PileDesign.ViewModels
                     Y = pile.Point3D.Y,
                     LoadCaseName = cases[i]?.LoadName ?? "",
                     AxialForce_kN = (axialForces_kN != null && i < axialForces_kN.Count) ? axialForces_kN[i] : 0.0,
-                    Settlement_mm = settlements_m[i] * 1000.0,   // m → mm
-                    Note = Models.InputData.PileLayoutDataItem.BeyondAt(beyondCurve, i) ? BeyondCurveNote : "",
+                    Settlement_mm = SettlementCell_mm(settlements_m[i]),   // m → mm
+                    Note = SettlementNote(settlements_m[i], Models.InputData.PileLayoutDataItem.BeyondAt(beyondCurve, i)),
                 });
             }
         }

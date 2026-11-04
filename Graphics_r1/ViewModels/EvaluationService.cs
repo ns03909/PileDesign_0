@@ -492,10 +492,20 @@ namespace PileDesign.ViewModels
         /// 各梁要素のi端・j端のモーメントが限界状態のNM相関曲線を超えるかチェック
         /// 軸力は荷重ケースに応じたユーザー入力値（AxialForceLevel1s/AxialForceLevel2s）を使用
         /// </summary>
-        /// <summary>梁 (杭の要素) の断面を引く土層-杭セット。杭が分かればその杭のセット、分からなければ杭体番号の最初のセット。</summary>
-        private SoilPile? SoilPileForBeam(PileLayoutDataItem? pileItem, int pileBodyNo, Dictionary<int, SoilPile> soilPileByPileBodyNo)
-            => pileItem?.SoilPileAt(_mainVm.ResultInputModel)
-               ?? (soilPileByPileBodyNo.TryGetValue(pileBodyNo, out var first) ? first : null);
+        /// <summary>
+        /// 梁 (杭の要素) の断面を引く土層-杭セット。<b>その杭のセットだけ</b>。引けなければ null (呼び出し側で検定不能)。
+        /// 以前は引けないと同じ杭体番号の最初のセットに戻り、地盤や杭頭の高さが違う別のセットの区間・断面で
+        /// 曲げ・せん断を判定しえた (2026-11-04 外部レビュー)。
+        /// </summary>
+        private SoilPile? SoilPileForBeam(PileLayoutDataItem pileItem) => pileItem.SoilPileAt(_mainVm.ResultInputModel);
+
+        /// <summary>杭頭回転角の照査に要る、杭の土層-杭セットまたは杭頭の断面が無いときの理由。</summary>
+        internal static string MissingHeadSectionReason(int pileNo)
+            => $"杭 No.{pileNo} の土層-杭セット (杭頭の断面) が見つからず、杭頭回転角の照査の要否と限界値を決められません (杭要素分割をやり直してください)";
+
+        /// <summary>杭の土層-杭セットを引けないときの理由。</summary>
+        internal static string MissingSoilPileReason(int pileNo)
+            => $"杭 No.{pileNo} の土層-杭セットが見つからず、断面を決められません (杭要素分割をやり直してください)";
 
         /// <summary>曲線のキャッシュの鍵に使う、断面を引いたセットの識別 (番号が無ければ杭体番号を負で)。</summary>
         private static int SectionOwnerKey(SoilPile soilPile, int pileBodyNo) => soilPile.No > 0 ? soilPile.No : -pileBodyNo;
@@ -549,9 +559,10 @@ namespace PileDesign.ViewModels
                 // 断面は、その杭の土層-杭セットの要素から引く (解析の SegmentIndex はその杭自身のセットの要素番号)。
                 // 以前は杭体番号ごとに最初のセットで引いており、地盤や杭頭の高さが違う杭が同じ杭体を共有すると
                 // 要素の深さがずれ、断面の切り替わりの前後で別の配筋・鋼管厚の耐力で判定していた
-                var soilPile = SoilPileForBeam(pileItem, pb, soilPileByPileBodyNo);
+                var soilPile = SoilPileForBeam(pileItem);
+                if (soilPile == null) { Unavailable(MissingSoilPileReason(pileItem.PileNo)); return; }
                 if (soilPile == null
-                    || soilPile.PileBodySegments == null || seg >= soilPile.PileBodySegments.Count
+                    || soilPile.PileBodySegments == null || seg < 0 || seg >= soilPile.PileBodySegments.Count
                     || soilPile.PileBodySegments[seg].PileSection == null)
                 {
                     Unavailable(NoSectionReason(pb, seg)); return;
@@ -560,8 +571,13 @@ namespace PileDesign.ViewModels
 
                 // 軸力: 解析と同じ規則 (ResolveCheckAxialForce)。グラフ・計算書の点と限界線も同じ軸力を使う
                 // (食い違うと判定が一致しない)
+                double? headFxi = HeadFxi(pileItem, stepResult);
+                if (LacksHeadAxialForce(_mainVm.ResultInputModel, stepResult.LoadCase?.Level ?? 1, headFxi))
+                {
+                    Unavailable(MissingHeadAxialForceReason); return;
+                }
                 var (axialN_kN, axialSource) = ResolveCheckAxialForce(_mainVm.ResultInputModel, pileItem, stepResult.LoadCase?.No ?? 0,
-                    stepResult.LoadCase?.Level ?? 1, stepResult.LoadCombination, HeadFxi(pileItem, stepResult));
+                    stepResult.LoadCase?.Level ?? 1, stepResult.LoadCombination, headFxi);
 
                 // NM相関曲線をキャッシュから取得 (ConcurrentDictionary、初回のみ計算)
                 int loadCaseLevel = stepResult.LoadCase?.Level ?? 1;
@@ -820,6 +836,19 @@ namespace PileDesign.ViewModels
             return (total, detail);
         }
 
+        /// <summary>
+        /// 「入力値＋応力解析結果」の軸力で検定するのに、杭頭の要素の軸力が無い (または有限でない) か。
+        /// <see cref="ResolveCheckAxialForce"/> はそのとき入力の軸力だけを返すので、検定はその値で判定せず「検定不能」にする
+        /// (2026-11-04 外部レビュー。以前は杭頭の結果が欠けても、ほかの要素を解析の軸力なしの限界値で判定していた)。
+        /// 常時 (レベル 0) は解析の軸力を足さないので対象外。
+        /// </summary>
+        internal static bool LacksHeadAxialForce(InputModel? input, int level, double? headFxi)
+            => input?.UseAnalysisAxialForce == true && level != 0 && !(headFxi is double f && double.IsFinite(f));
+
+        /// <summary>杭頭の軸力が無くて「入力値＋応力解析結果」の軸力を求められないときの理由。</summary>
+        internal const string MissingHeadAxialForceReason =
+            "杭頭の要素にこの荷重条件の解析結果が無く、「入力値＋応力解析結果」の軸力を求められないため検定できません (再解析してください)";
+
         /// <summary>杭頭の要素の、指定したケース・組合せ・ステップの軸力 Fxi。無ければ null。</summary>
         private static double? HeadFxi(PileLayoutDataItem? pile, AnalysisStepResult stepResult)
         {
@@ -915,9 +944,10 @@ namespace PileDesign.ViewModels
                 // 断面は、その杭の土層-杭セットの要素から引く (解析の SegmentIndex はその杭自身のセットの要素番号)。
                 // 以前は杭体番号ごとに最初のセットで引いており、地盤や杭頭の高さが違う杭が同じ杭体を共有すると
                 // 要素の深さがずれ、断面の切り替わりの前後で別の配筋・鋼管厚の耐力で判定していた
-                var soilPile = SoilPileForBeam(pileItem, pb, soilPileByPileBodyNo);
+                var soilPile = SoilPileForBeam(pileItem);
+                if (soilPile == null) { Unavailable(MissingSoilPileReason(pileItem.PileNo)); return; }
                 if (soilPile == null
-                    || soilPile.PileBodySegments == null || seg >= soilPile.PileBodySegments.Count
+                    || soilPile.PileBodySegments == null || seg < 0 || seg >= soilPile.PileBodySegments.Count
                     || soilPile.PileBodySegments[seg].PileSection == null)
                 {
                     Unavailable(NoSectionReason(pb, seg)); return;
@@ -925,8 +955,13 @@ namespace PileDesign.ViewModels
                 var section = soilPile.PileBodySegments[seg].PileSection;
 
                 // 軸力: 曲げと同じ値を使う (食い違うと同じ断面で限界線の前提が 2 通りになる)
+                double? headFxi = HeadFxi(pileItem, stepResult);
+                if (LacksHeadAxialForce(_mainVm.ResultInputModel, stepResult.LoadCase?.Level ?? 1, headFxi))
+                {
+                    Unavailable(MissingHeadAxialForceReason); return;
+                }
                 var (axialN_kN, axialSource) = ResolveCheckAxialForce(_mainVm.ResultInputModel, pileItem, stepResult.LoadCase?.No ?? 0,
-                    stepResult.LoadCase?.Level ?? 1, stepResult.LoadCombination, HeadFxi(pileItem, stepResult));
+                    stepResult.LoadCase?.Level ?? 1, stepResult.LoadCombination, headFxi);
 
                 // 損傷限界はレベルで低減係数が変わる (レベル1: β2 なし / レベル2: β1×β2)。
                 // グラフ・計算書と同じ規則 (LimitStateRule) で曲線を選ぶ。損傷限界以外では曲線に効かない (2 のまま)
@@ -1176,6 +1211,7 @@ namespace PileDesign.ViewModels
                 LimitName = limitName,
                 TargetName = $"杭No.{max.Value.PileNoA} − 杭No.{max.Value.PileNoB}",
                 PileNo = max.Value.PileNoA,
+                OtherPileNo = max.Value.PileNoB,
                 LoadCaseName = lcName,
                 LoadCombinationName = combName,
                 IsLiquefaction = stepResult.IsLiquefaction,
@@ -1218,7 +1254,9 @@ namespace PileDesign.ViewModels
         /// <param name="LimitName">限界状態の名乗り</param>
         /// <param name="MethodName">工法の名乗り (対象の説明に出す)</param>
         /// <param name="UnavailableReason">規定はあるが限界値を決められないときの理由 (検定不能として出す。null なら検定する)。</param>
-        private sealed record RotationCriterion(double Limit, string LimitName, string MethodName, string? UnavailableReason = null);
+        /// <param name="UsesAxialForce">限界値が軸力で変わるか (FT-Pile)。変わらなければ、杭頭の軸力が欠けても判定できる。</param>
+        private sealed record RotationCriterion(double Limit, string LimitName, string MethodName, string? UnavailableReason = null,
+            bool UsesAxialForce = false);
 
         /// <summary>
         /// 杭頭回転角の照査条件を返す。該当する規定が無ければ null (検定しない)。
@@ -1277,15 +1315,18 @@ namespace PileDesign.ViewModels
                     return new RotationCriterion(double.NaN, limitName, "FT-Pile構法", "FT キャップの諸元がありません (杭頭部の画面で FT キャップを確かめてください)");
                 double thetaA = ftPile.GetAllowableRotationAngle(axialN_kN * 1000.0);
                 if (!double.IsFinite(thetaA))
-                    return new RotationCriterion(double.NaN, limitName, "FT-Pile構法", "許容回転角 θa が数値になりません (FT キャップ・鋼棒の諸元を確かめてください)");
+                    return new RotationCriterion(double.NaN, limitName, "FT-Pile構法", "許容回転角 θa が数値になりません (FT キャップ・鋼棒の諸元を確かめてください)",
+                        UsesAxialForce: true);
                 if (!(thetaA > 0))
                     return new RotationCriterion(double.NaN, limitName, "FT-Pile構法",
-                        $"軸力 {axialN_kN:N0} kN が FT キャップの圧縮の耐力 (0.6·φc·Fc·Ap) 以上のため、許容回転角 θa が 0 以下になります。FT キャップの選定を見直してください");
+                        $"軸力 {axialN_kN:N0} kN が FT キャップの圧縮の耐力 (0.6·φc·Fc·Ap) 以上のため、許容回転角 θa が 0 以下になります。FT キャップの選定を見直してください",
+                        UsesAxialForce: true);
 
                 return new RotationCriterion(
                     thetaA,
                     rotationLimitName,
-                    "FT-Pile構法");
+                    "FT-Pile構法",
+                    UsesAxialForce: true);
             }
 
             // ── 杭頭固定 ──
@@ -1334,22 +1375,34 @@ namespace PileDesign.ViewModels
                 int pb = (rs.PileBodyNo is int v && v > 0) ? v : 0;
                 if (pb <= 0) { perItem[idx] = found; return; }
 
-                if (!soilPileByPileBodyNo.TryGetValue(pb, out var soilPile)) { perItem[idx] = found; return; }
-                if (soilPile.PileBodySegments == null || soilPile.PileBodySegments.Count == 0) { perItem[idx] = found; return; }
-
-                var section = soilPile.PileBodySegments[0].PileSection;
-                if (section == null) { perItem[idx] = found; return; }
+                // 断面は、杭が分かればその杭の土層-杭セットから引く (曲げ・せん断と同じ。別のセットで代えない)。
+                // 杭が分からなければ杭体番号の最初のセット (照査の要否と名前を決めるためだけ。検定は下で検定不能にする)
+                pileBySpring.TryGetValue(rs, out var pileItem);
+                var soilPile = pileItem != null
+                    ? pileItem.SoilPileAt(inputModel)
+                    : (soilPileByPileBodyNo.TryGetValue(pb, out var firstSet) ? firstSet : null);
+                var section = soilPile?.PileBodySegments is { Count: > 0 } segments ? segments[0].PileSection : null;
+                if (soilPile == null || section == null)
+                {
+                    // 照査の要否 (杭頭工法) と限界値を決められない。項目を作らずに進めると一覧から消え、
+                    // 残りの項目だけで検定が終わったように見えるので、理由を残す (2026-11-04 外部レビュー)
+                    found.Add(UnavailableItem(EvaluationKind.PileHeadRotation, "杭頭回転角", "", rs.Name, pb, pileItem, null,
+                        stepResult, lcName, combName, "rad",
+                        pileItem == null ? UnlinkedPileReason : MissingHeadSectionReason(pileItem.PileNo)));
+                    perItem[idx] = found; return;
+                }
 
                 // 軸力は FT-Pile の θa (軸力依存) に要る。杭が特定できないときは 0 のまま。
                 // 曲げ・せん断と同じ規則 (ResolveCheckAxialForce)。以前は入力の軸力だけを使い、
                 // 「入力値＋応力解析結果」で同じ杭の曲げの行と回転角の行の軸力が食い違っていた
-                pileBySpring.TryGetValue(rs, out var pileItem);
                 double axialN_kN = 0.0;
-                if (pileItem != null)
+                double? headFxi = pileItem != null ? HeadFxi(pileItem, stepResult) : null;
+                bool lacksHeadAxialForce = pileItem != null && LacksHeadAxialForce(_mainVm.ResultInputModel, level, headFxi);
+                if (pileItem != null && !lacksHeadAxialForce)
                 {
                     int lcNo = stepResult.LoadCase?.No ?? 0;
                     axialN_kN = ResolveCheckAxialForce(_mainVm.ResultInputModel, pileItem, lcNo, level,
-                        stepResult.LoadCombination, HeadFxi(pileItem, stepResult)).N;
+                        stepResult.LoadCombination, headFxi).N;
                 }
 
                 var criterion = ResolveRotationCriterion(
@@ -1361,6 +1414,14 @@ namespace PileDesign.ViewModels
                 {
                     found.Add(UnavailableItem(EvaluationKind.PileHeadRotation, $"杭頭回転角 ({criterion.MethodName})", criterion.LimitName,
                         rs.Name, pb, null, null, stepResult, lcName, combName, "rad", UnlinkedPileReason));
+                    perItem[idx] = found; return;
+                }
+                // 「入力値＋応力解析結果」なのに杭頭の軸力が無い。入力の軸力だけの θa で判定しない。
+                // 限界値が軸力に依らない工法 (キャプリング・キャプテン・場所打ちRC の杭頭固定) は判定できる (2026-11-04 外部レビュー)
+                if (lacksHeadAxialForce && criterion.UsesAxialForce)
+                {
+                    found.Add(UnavailableItem(EvaluationKind.PileHeadRotation, $"杭頭回転角 ({criterion.MethodName})", criterion.LimitName,
+                        rs.Name, pb, pileItem, null, stepResult, lcName, combName, "rad", MissingHeadAxialForceReason));
                     perItem[idx] = found; return;
                 }
                 if (criterion.UnavailableReason != null)

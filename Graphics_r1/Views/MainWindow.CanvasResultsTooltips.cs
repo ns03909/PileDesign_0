@@ -666,10 +666,11 @@ namespace PileDesign.Views
             // SinglePile: m, 群杭沈下: mm, VB Settlement_mm: mm
             if (content is "基礎梁考慮沈下部材角" or "基礎梁考慮+群杭沈下部材角")
             {
-                var vbResults = viewModel.VerticalBeamCaseResults;
-                if (vbResults != null && vbResults.Count > 0 && vbResults[0].PileResults != null)
+                // 選んでいる荷重ケース (と組合せ) の結果。以前は選択に関係なくいつも先頭 (常時) の結果を使っていた
+                var vbResult = viewModel.SelectedVerticalBeamCaseResult();
+                if (vbResult?.PileResults != null)
                 {
-                    foreach (var pr in vbResults[0].PileResults)
+                    foreach (var pr in vbResult.PileResults)
                         settlementMap[pr.PileNo] = pr.Settlement_mm / 1000.0; // mm→m
                 }
                 if (content == "基礎梁考慮+群杭沈下部材角")
@@ -694,7 +695,11 @@ namespace PileDesign.Views
             {
                 foreach (var pile in inputModel.PileLayoutItems)
                 {
-                    var parts = PileSettlementComposition.Compose(inputModel, pile, groupRecord, includeGroup: true);
+                    // 単杭沈下も表示中の荷重ケースのもの (群杭沈下の記録と同じケース。沈下の表示の「単杭+群杭」と同じ)。
+                    // 以前は単杭沈下がいつも常時で、地震時のケースを表示中だと別のケースの群杭沈下を足していた
+                    // 荷重ケースを選んでいなければ常時 (以前と同じ)
+                    string? singleCase = string.IsNullOrEmpty(viewModel.SelectedLoadCaseName) ? null : viewModel.SelectedLoadCaseName;
+                    var parts = PileSettlementComposition.Compose(inputModel, pile, groupRecord, includeGroup: true, singleCase);
                     if (parts.Total_mm != null)
                         settlementMap[pile.No] = parts.Sum_m; // m + mm→m
                 }

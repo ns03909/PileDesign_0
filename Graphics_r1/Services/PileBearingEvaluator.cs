@@ -114,6 +114,14 @@ namespace PileDesign.Services
         private static void AddSeismicItems(List<EvaluationItem> items, PileLayoutDataItem pile, InputModel? inputModel, int no,
             int level, string limitName, string loadCaseName, double compressionLimit, double upliftLimit)
         {
+            // 分離入力で適用する組合せが無ければ地震時の軸力を決められない。包絡は常時軸力を返すが、それで地震時を
+            // 判定しない (2026-11-04 外部レビュー。以前は常時軸力で押込み・引抜きを OK / NG にしていた)
+            if (SeismicAxialForces.NoApplicableCombinationMessage(inputModel) != null)
+            {
+                AddIfAvailable(items, pile, level, limitName, loadCaseName, double.NaN, compressionLimit, upliftLimit,
+                    SeismicAxialForces.NoApplicableCombinationReason);
+                return;
+            }
             var e = SeismicAxialForces.Envelope(inputModel, pile, no, level);
             if (!SeismicAxialForces.IsSeparated(inputModel))
             {
@@ -168,7 +176,7 @@ namespace PileDesign.Services
         /// </summary>
         private static void AddIfAvailable(List<EvaluationItem> items, PileLayoutDataItem pile,
             int level, string limitName, string loadCaseName,
-            double axialForce, double compressionLimit, double upliftLimit)
+            double axialForce, double compressionLimit, double upliftLimit, string? unavailableReason = null)
         {
             // 軸力が数でない・限界値が 0 (引抜き抵抗を計算していない杭など) のときも、項目を消さずに「検定不能」として出す。
             // 以前は出さずに進め、その杭・ケースが抜けたまま「支持力はすべて OK」と表示されることがあった
@@ -176,9 +184,10 @@ namespace PileDesign.Services
 
             double response = Math.Abs(axialForce);
             double signedLimit = isCompression ? compressionLimit : upliftLimit;
-            string? unavailable = !double.IsFinite(axialForce)
+            string? unavailable = unavailableReason
+                ?? (!double.IsFinite(axialForce)
                 ? $"軸力が数値として求まっていません ({axialForce})。杭配置の軸力を確認してください"
-                : DescribeInvalidLimit(signedLimit, isCompression);
+                : DescribeInvalidLimit(signedLimit, isCompression));
             double limit = unavailable == null ? Math.Abs(signedLimit) : double.NaN;
 
             items.Add(new EvaluationItem

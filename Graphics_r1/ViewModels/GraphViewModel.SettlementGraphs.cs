@@ -260,6 +260,7 @@ namespace PileDesign.ViewModels
             List<double> ys = [];
             var missingSingle = new List<int>();
             var missingGroup = new List<int>();
+            var missingBeamAware = new List<int>();   // 基礎梁考慮 (単杭・杭矩形) の結果が無い杭
             string groupLabel = "群杭" + GroupSettlementCaseLabel.Describe(groupRecord);
             string label = graphOption switch
             {
@@ -271,6 +272,10 @@ namespace PileDesign.ViewModels
                 _ => "",
             };
             bool usesGroup = graphOption is "沈下 単杭+群杭" or "沈下 群杭" or "沈下 基礎梁考慮単杭+群杭";
+            // 足す群杭沈下の記録が単杭沈下と同じ荷重ケースか (群杭沈下だけのグラフは足さないので見ない)。
+            // 違えば合計を描かず、凡例に理由を書く (2026-11-04 外部レビュー。以前は別のケースどうしを足していた)
+            bool groupMatchesCase = PileSettlementComposition.SameLoadCase(input, groupRecord, loadCaseOption);
+            bool sumsTwoCases = graphOption is "沈下 単杭+群杭" or "沈下 基礎梁考慮単杭+群杭";
 
             foreach (var pile in piles)
             {
@@ -298,16 +303,21 @@ namespace PileDesign.ViewModels
                     }
                     case "沈下 基礎梁考慮単杭":
                         y = vbSettlement(pile);
+                        if (!double.IsFinite(y)) missingBeamAware.Add(pile.PileNo);
                         break;
                     case "沈下 基礎梁考慮単杭+群杭":
                     {
-                        double? g = PileSettlementComposition.GroupOnly_mm(groupRecord, pile.PileNo);
-                        if (g == null) missingGroup.Add(pile.PileNo);
-                        y = g.HasValue ? vbSettlement(pile) + g.Value : double.NaN;
+                        double vb = vbSettlement(pile);
+                        // 群杭沈下は単杭沈下 (基礎梁考慮) と同じ荷重ケースの記録だけを足す (Compose と同じ)
+                        double? g = groupMatchesCase ? PileSettlementComposition.GroupOnly_mm(groupRecord, pile.PileNo) : null;
+                        if (!double.IsFinite(vb)) missingBeamAware.Add(pile.PileNo);
+                        else if (g == null) missingGroup.Add(pile.PileNo);
+                        y = g.HasValue ? vb + g.Value : double.NaN;
                         break;
                     }
                     case "沈下 杭矩形(基礎梁考慮)":
                         y = beamAwareCaseSettlement(pile);
+                        if (!double.IsFinite(y)) missingBeamAware.Add(pile.PileNo);
                         break;
                     default:
                         y = double.NaN;
@@ -317,9 +327,13 @@ namespace PileDesign.ViewModels
             }
 
             var notes = new List<string>();
+            if (sumsTwoCases && groupRecord != null && !groupMatchesCase)
+                notes.Add(PileSettlementComposition.DescribeOtherLoadCase(groupRecord, loadCaseOption) + " (描かない)");
+            if (missingBeamAware.Count > 0)
+                notes.Add($"杭No.{string.Join(", ", missingBeamAware)}: 基礎梁考慮の沈下 ({loadCaseOption}) の結果なし (描かない。条件を変えたなら再解析してください)");
             if (missingSingle.Count > 0)
                 notes.Add($"杭No.{string.Join(", ", missingSingle)}: 単杭沈下 ({loadCaseOption}) の結果なし (描かない)");
-            if (missingGroup.Count > 0)
+            if (missingGroup.Count > 0 && (groupMatchesCase || !sumsTwoCases))
                 notes.Add(groupRecord == null
                     ? "群杭沈下の結果なし (描かない)"
                     : $"杭No.{string.Join(", ", missingGroup)}: 群杭沈下の結果なし (描かない)");

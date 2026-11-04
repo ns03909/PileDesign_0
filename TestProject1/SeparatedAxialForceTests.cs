@@ -125,6 +125,67 @@ namespace TestProject1
             Assert.AreSame(Plus, e.MinCombination);
         }
 
+        /// <summary>
+        /// 分離入力で適用する組合せが無ければ、鉛直に解く組合せは空で、解く前に止める理由を返すこと (2026-11-04 外部レビュー)。
+        /// 以前は null の 1 件を返し、null の組合せは分けない入力を読むので、画面で使っていない古い値を荷重にして解いた。
+        /// </summary>
+        [TestMethod]
+        public void WithNoApplicableCombination_TheVerticalAnalysisIsStopped()
+        {
+            // 共有の組合せ (Plus など) は書き換えない (ほかのテストが使う)
+            var input = MakeInput(true, new LoadCombination(1, 1.0, 1.0, 1.0), new LoadCombination(2, 1.0, 1.0, -1.0));
+            foreach (var c in input.LoadCasesInput.LoadCombinations) c.IsApplicable = false;
+
+            Assert.AreEqual(0, SeismicAxialForces.CombinationsForVerticalAnalysis(input).Count,
+                "適用する組合せが無いのに、分けない入力を読む組合せ (null) を返しています");
+            Assert.IsNotNull(SeismicAxialForces.NoApplicableCombinationMessage(input));
+            Assert.IsNull(SeismicAxialForces.NoApplicableCombinationMessage(MakeInput(true, Plus)), "適用する組合せがあれば止めない");
+            Assert.IsNull(SeismicAxialForces.NoApplicableCombinationMessage(MakeInput(false)), "分離入力でなければ止めない");
+        }
+
+        /// <summary>
+        /// 分離入力で適用する組合せが無いときは、地震時の支持力を常時軸力で判定せず「検定不能」にすること (2026-11-04 外部レビュー)。
+        /// </summary>
+        [TestMethod]
+        public void WithNoApplicableCombination_SeismicBearingIsUnavailable()
+        {
+            var pile = MakePile();
+            var input = MakeInput(true, new LoadCombination(1, 1.0, 1.0, 1.0));
+            foreach (var c in input.LoadCasesInput.LoadCombinations) c.IsApplicable = false;
+
+            var soilPile = new SoilPile { Rfu = 8000, Rt_DLS = -100, Rt_ULS = -150 };
+            var items = new List<PileDesign.Models.Results.EvaluationItem>();
+            PileBearingEvaluator.AddPileItems(items, pile, soilPile, [], [("L2-1", 1)], level2UsesDamageLimit: false, inputModel: input);
+
+            var seismic = items.Where(i => i.LoadCaseName?.StartsWith("L2-1") == true).ToList();
+            Assert.IsTrue(seismic.Count > 0, "(前提) 地震時の項目がある");
+            Assert.IsTrue(seismic.All(i => i.IsUnavailable && i.NotJudgedReason == SeismicAxialForces.NoApplicableCombinationReason),
+                "組合せが無いのに、地震時の支持力を判定しています: " + string.Join(" / ", seismic.Select(i => $"{i.StatusLabel} {i.NotJudgedReason}")));
+        }
+
+        /// <summary>
+        /// 途中の組合せの軸力が数でなければ、包絡は NaN になり (残りの組合せだけで決めない)、支持力は検定不能になること
+        /// (2026-11-04 外部レビュー)。以前は NaN との大小の比較がどちらも偽で、その組合せが包絡から消えていた。
+        /// </summary>
+        [TestMethod]
+        public void ANaNInALaterCombination_IsNotDroppedFromTheEnvelope()
+        {
+            var pile = MakePile();
+            var broken = new LoadCombination(2, 1.0, double.NaN, 1.0);
+            var input = MakeInput(true, Plus, broken);
+
+            var e = SeismicAxialForces.Envelope(input, pile, 1, 1);
+            Assert.IsTrue(double.IsNaN(e.Max) && double.IsNaN(e.Min), $"数でない組合せがあるのに包絡が {e.Max} / {e.Min}");
+            Assert.AreSame(broken, e.MaxCombination, "どの組合せが数でないかを示していない");
+
+            var soilPile = new SoilPile { Rfu = 8000, Rt_DLS = -100, Rt_ULS = -150 };
+            var items = new List<PileDesign.Models.Results.EvaluationItem>();
+            PileBearingEvaluator.AddPileItems(items, pile, soilPile, [], [("L2-1", 1)], level2UsesDamageLimit: false, inputModel: input);
+            var seismic = items.Where(i => i.LoadCaseName?.StartsWith("L2-1") == true).ToList();   // 常時 (VL) の行は対象外
+            Assert.IsTrue(seismic.Count > 0 && seismic.All(i => i.IsUnavailable), "数でない組合せがあるのに、残りの組合せだけで支持力を判定しています: "
+                + string.Join(" / ", items.Select(i => $"{i.LoadCaseName} {i.StatusLabel}")));
+        }
+
         [TestMethod]
         public void CombinationsForVerticalAnalysis_MergesSameBetas()
         {

@@ -157,7 +157,11 @@ namespace PileDesign.Services
 
         /// <summary>
         /// 杭の単杭沈下量 (常時・レベル1・レベル2) を荷重-沈下曲線から求めて杭に書き、曲線の範囲外だったかも残す。
-        /// 求めた (軸力, 沈下量 [m]) を返す (グラフの点)。引けなかった値は書かない (前回値が残る。理由は Warnings)。
+        /// 求めた (軸力, 沈下量 [m]) を返す (グラフの点)。引けなかった値は NaN を書く (理由は Warnings)。
+        ///
+        /// <para>以前は引けなかった値を書かず、前回の沈下量が残った。結果の有無は荷重-沈下曲線で見るので、
+        /// 曲線が得られていれば前回値が今回の結果として検定に使われた (2026-11-04 外部レビュー)。
+        /// NaN は検定で「検定不能」、表・図では「結果なし」になる。</para>
         ///
         /// <para>以前は解析後の書き込みとグラフの更新に同じ処理が 2 つあった (写し)。範囲外の印を片方にだけ
         /// 足すと取り残されるので 1 つにした。</para>
@@ -176,6 +180,11 @@ namespace PileDesign.Services
                 pile.SinglePileSettlementVL = v[0];
                 pile.SinglePileSettlementVLBeyondCurve = beyond;
                 vl.Add((force, v[0]));
+            }
+            else
+            {
+                pile.SinglePileSettlementVL = double.NaN;   // 前回値を残さない
+                pile.SinglePileSettlementVLBeyondCurve = false;
             }
 
             // 地震時軸力の分離入力では、各ケースの組合せのうち圧縮が最大の軸力 (SeismicAxialForces.PerCaseForSettlement)
@@ -223,7 +232,13 @@ namespace PileDesign.Services
                 for (int j = 0; j < forces.Count; j++)
                 {
                     var sv = vtm.GetDisplacementForGivenLoad(forces[j], out bool b);
-                    if (sv == null || j >= settlements.Count) continue;
+                    if (j >= settlements.Count) continue;
+                    if (sv == null)
+                    {
+                        settlements[j] = double.NaN;   // 前回値を残さない
+                        flags[j] = false;
+                        continue;
+                    }
                     settlements[j] = sv[0];
                     flags[j] = b;
                     points.Add((forces[j], sv[0]));

@@ -99,6 +99,13 @@ namespace PileDesign.Models.Results
         public int? PileNo { get; init; }
 
         /// <summary>
+        /// 2 本の杭の間の検定 (杭頭変形角) の、もう一方の杭の配置番号。杭ごとのまとめは <see cref="PileNo"/> と
+        /// この杭の両方に数える。1 本の杭の検定なら null。以前は片方の杭にしか数えず、変形角が NG でも
+        /// もう一方の杭の色や杭ごとの一覧に出なかった (2026-11-04 外部レビュー)。
+        /// </summary>
+        public int? OtherPileNo { get; init; }
+
+        /// <summary>
         /// 杭を要素に分けたときの<b>要素の番号</b> (0 が杭頭側の最上段)。
         /// <c>Beam.SegmentIndex</c> をそのまま持つ。杭体の曲げ・せん断だけが持ち、
         /// 部位を持たない検定 (杭頭回転角・変形角・支持力) では null。

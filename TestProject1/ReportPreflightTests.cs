@@ -168,5 +168,78 @@ namespace TestProject1
             if (captured != null) throw new AssertFailedException(captured.ToString());
             Assert.AreEqual(2, rows);
         }
+
+        /// <summary>
+        /// 2 本の杭の間の検定 (杭頭変形角) は、両方の杭のまとめに入ること (2026-11-04 外部レビュー)。
+        /// 以前は片方の杭にしか数えず、変形角が NG でももう一方の杭の色や杭ごとの一覧に出なかった。
+        /// </summary>
+        [TestMethod]
+        public void ADeformationAngleBetweenTwoPilesCountsForBoth()
+        {
+            var angle = new PileDesign.Models.Results.EvaluationItem
+            {
+                Kind = PileDesign.Models.Results.EvaluationKind.PileHeadDeformationAngle,
+                PileNo = 1, OtherPileNo = 2, Response = 3, Limit = 2, IsOk = false,
+            };
+            var summary = PileEvaluationSummary.FromResults(new PileDesign.Models.Results.EvaluationResult([angle]), null,
+                new PileDesign.Models.Results.EvaluationResult([]), "A");
+            Assert.IsTrue(summary.ByPile.TryGetValue(2, out var other) && other.HasNg,
+                "変形角が NG なのに、もう一方の杭 (No.2) のまとめに出ていません");
+            Assert.IsTrue(summary.ByPile[1].HasNg);
+            Assert.IsTrue(summary.ByPileHead.ContainsKey(2), "もう一方の杭の杭頭の印に出ていません");
+            Assert.AreEqual(1, summary.Horizontal!.NgCount, "項目の数は 1 件のまま (二重に数えない)");
+        }
+
+        /// <summary>
+        /// 杭に属さない項目 (基礎梁の傾斜角など) の NG・未収束・適用範囲外も、作る前の確認に出ること (2026-11-04 外部レビュー)。
+        /// 確認は杭の本数で数えるので、杭番号の無い項目は出なかった。
+        /// </summary>
+        [TestMethod]
+        public void NgAndUnconvergedItemsWithoutAPile_AreListed()
+        {
+            var beam = new PileDesign.Models.Results.EvaluationItem
+            {
+                Kind = PileDesign.Models.Results.EvaluationKind.FoundationBeamInclination, Response = 3, Limit = 2, IsOk = false,
+            };
+            var unconverged = beam with { Response = 1, IsOk = true, CaseConvergence = PileDesign.FEM.StepStatus.Unconverged };
+            var outOfScope = beam with { Response = 1, IsOk = true, OutOfScopeReason = "適用範囲外" };
+            var summary = PileEvaluationSummary.FromResults(new PileDesign.Models.Results.EvaluationResult([]), null,
+                new PileDesign.Models.Results.EvaluationResult([beam, unconverged, outOfScope]), "A");
+
+            var items = MainWindowViewModel.BuildReportPreflight(AllDone, null, false, ReportEvaluationCounts.From(summary));
+            Assert.IsTrue(items.Any(i => i.Text.Contains("杭に属さない項目") && i.Text.Contains("NG が 1 件")),
+                "杭に属さない NG が確認に出ていません: " + string.Join(" / ", items.Select(i => i.Text)));
+            Assert.IsTrue(items.Any(i => i.Text.Contains("杭に属さない項目") && i.Text.Contains("収束しなかった") && i.Text.Contains("1 件")));
+            Assert.IsTrue(items.Any(i => i.Text.Contains("杭に属さない項目") && i.Text.Contains("適用範囲の外") && i.Text.Contains("1 件")));
+        }
+
+        /// <summary>
+        /// どの杭の結果か分からない検定不能の項目 (杭番号なし) も、作る前の確認に出ること (2026-11-04 外部レビュー)。
+        /// 杭ごとのまとめは杭番号のある項目だけを畳むので、杭の本数だけを数えると 0 に見えて確認に出なかった。
+        /// </summary>
+        [TestMethod]
+        public void UnavailableItemsWithoutAPile_AreListed()
+        {
+            var ok = new PileDesign.Models.Results.EvaluationItem
+            {
+                Kind = PileDesign.Models.Results.EvaluationKind.PileSectionMoment, PileNo = 1, Response = 1, Limit = 2, IsOk = true,
+            };
+            var unlinked = ok with { PileNo = null, Response = double.NaN, UnavailableReason = EvaluationService.UnlinkedPileReason };
+            var noPile = ok with { PileNo = null, Response = double.NaN, UnavailableReason = "データが無い" };
+            var summary = PileEvaluationSummary.FromResults(
+                new PileDesign.Models.Results.EvaluationResult([ok, unlinked, unlinked, noPile]), null,
+                new PileDesign.Models.Results.EvaluationResult([]), "A");
+
+            Assert.AreEqual(3, summary.UnavailableWithoutPileCount);
+            Assert.AreEqual(2, summary.UnlinkedPileCount);
+            var counts = ReportEvaluationCounts.From(summary);
+            Assert.AreEqual(0, counts.Unavailable, "(前提) 杭ごとの件数には入らない");
+
+            var items = MainWindowViewModel.BuildReportPreflight(AllDone, null, false, counts);
+            var unlinkedItem = items.SingleOrDefault(i => i.Text.Contains("どの杭の結果か分からず検定できなかった項目が 2 件"));
+            Assert.IsNotNull(unlinkedItem, "どの杭か分からない検定不能の項目が確認に出ていません: " + string.Join(" / ", items.Select(i => i.Text)));
+            Assert.AreEqual(ReportPreflightTarget.HorizontalAnalysis, unlinkedItem!.Target, "水平解析のやり直しへ移れません");
+            Assert.IsTrue(items.Any(i => i.Text.Contains("杭に属さない項目") && i.Text.Contains("1 件")));
+        }
     }
 }

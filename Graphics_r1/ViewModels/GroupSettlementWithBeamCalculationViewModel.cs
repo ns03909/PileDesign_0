@@ -598,6 +598,9 @@ namespace PileDesign.ViewModels
                     return "レベル 1 に解析対象の荷重ケースがありません (荷重ケースの「解析対象」「適用」を確認してください)。";
                 if (AnalyzeLevel2 && !planned.Any(c => c.Level == 2))
                     return "レベル 2 に解析対象の荷重ケースがありません (荷重ケースの「解析対象」「適用」を確認してください)。";
+                // 分離入力で適用する組合せが無いと、地震時の軸力を決められない (以前は分けない入力の古い値で解いた)
+                if ((AnalyzeLevel1 || AnalyzeLevel2) && SeismicAxialForces.NoApplicableCombinationMessage(InputModel) is { } noCombination)
+                    return noCombination;
                 if (DescribeZeroAxialCases() is { } zero) return zero;
             }
             return null;

@@ -252,8 +252,8 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 検定の判定は <see cref="EvaluationItem"/> の歯止めを通ること。
-        /// 沈下量が NaN なら OK と読めてはいけない。
+        /// 沈下量が NaN なら OK と読めてはいけない。NG でもなく「検定不能」(2026-11-04 外部レビュー。以前は NG と出て
+        /// NG の件数にも入っていた)。
         /// </summary>
         [TestMethod]
         public void ANotANumberSettlementIsNotOk()
@@ -264,7 +264,8 @@ namespace TestProject1
             var item = PileSettlementEvaluator.Evaluate(input).First(i => i.PileNo == 1);
 
             Assert.IsFalse(item.IsOk, "沈下量が NaN の項目が OK と読めている");
-            Assert.AreEqual("NG", item.StatusLabel);
+            Assert.AreEqual("検定不能", item.StatusLabel, "数でない沈下量を判定しています");
+            Assert.IsFalse(item.IsJudged);
         }
 
         /// <summary>

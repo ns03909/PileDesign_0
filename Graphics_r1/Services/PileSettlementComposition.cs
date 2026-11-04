@@ -67,7 +67,19 @@ namespace PileDesign.Services
         public static PileSettlementParts Compose(InputModel input, PileLayoutDataItem pile,
             GroupSettlementCaseRecord? groupRecord, bool includeGroup, string? singleCase = null)
         {
-            var (found, single_m, beyond) = SingleOfCase(input, pile, singleCase);
+            var (found, single_m, beyond, level, caseIndex) = SingleOfCase(input, pile, singleCase);
+
+            // 群杭沈下の記録が組合せごと (地震時軸力の分離入力・基礎梁考慮) なら、単杭沈下も<b>同じ組合せ</b>の結果を足す。
+            // ケースごとの欄は組合せのうち軸力が最大のもので、記録と別の組合せなら同じ荷重状態の沈下量にならない
+            // (2026-11-04 外部レビュー)。同じ組合せの結果が無ければ「単杭沈下の結果なし」(別の組合せで代えない)
+            string combinationPart = includeGroup ? SeismicCaseLabels.CombinationPartOf(groupRecord?.LoadCaseName) : "";
+            if (found && level is 1 or 2 && combinationPart.Length > 0)
+            {
+                var separated = pile.SinglePileSettlementsSeparated?.FirstOrDefault(r => r.Level == level && r.CaseNo == caseIndex + 1
+                    && SeismicAxialForces.CombinationSuffix(r.CombinationNo, r.BetaU, r.BetaL) == combinationPart);
+                if (separated != null) (single_m, beyond) = (separated.Settlement, separated.BeyondCurve);
+                else (found, single_m, beyond) = (false, 0.0, false);
+            }
             // 単杭沈下量は解析していなくても 0 を持つ。値ではなく荷重-沈下曲線があるかで見る
             bool hasSingle = found && SettlementDeformationAngleEvaluator.HasSinglePileSettlement(input, pile);
 
@@ -78,6 +90,11 @@ namespace PileDesign.Services
             {
                 if (groupRecord == null)
                     groupReason = SettlementDeformationAngleEvaluator.NoGroupResultReason;
+                // 群杭沈下の記録が単杭沈下と別の荷重ケースなら足さない (同じ荷重状態の沈下量にならない)。
+                // 以前は確かめずに足し、グラフで地震時のケースを選んでいても、画面で表示中の常時の群杭沈下を足していた
+                // (2026-11-04 外部レビュー)
+                else if (found && !SameLoadCase(groupRecord, level, caseIndex))
+                    groupReason = DescribeOtherLoadCase(groupRecord, singleCase);
                 else
                 {
                     hasGroup = groupRecord.PileSettlements_mm?.TryGetValue(pile.PileNo, out group_mm) == true;
@@ -120,35 +137,68 @@ namespace PileDesign.Services
             => verticalBeam_mm is double vb && double.IsFinite(vb) && GroupOnly_mm(groupRecord, pileNo) is double g
                 ? vb + g : null;
 
+        /// <summary>
+        /// 群杭沈下の記録が、単杭沈下の荷重ケース (<paramref name="level"/> 0 は常時、1・2 は地震時で
+        /// <paramref name="caseIndex"/> はそのレベルの並びの位置) と同じ荷重ケースか。
+        /// 常時は常時の記録どうし、地震時は見出しの「L{レベル}-{番号}: 」が一致するもの。
+        /// </summary>
+        internal static bool SameLoadCase(GroupSettlementCaseRecord record, int level, int caseIndex)
+        {
+            if (level == 0) return record.IsLongTerm;
+            if (record.IsLongTerm) return false;
+            var m = CaseCode.Match(SeismicCaseLabels.WithoutCombination(record.LoadCaseName));
+            return m.Success && int.Parse(m.Groups[1].Value) == level && int.Parse(m.Groups[2].Value) == caseIndex + 1;
+        }
+
+        /// <summary>
+        /// 群杭沈下の記録が、荷重ケース名 <paramref name="singleCase"/> (null・"VL" は常時) と同じ荷重ケースか。
+        /// ケースが見つからなければ true (照合できないものは止めない。単杭沈下の側が「結果なし」になる)。
+        /// </summary>
+        public static bool SameLoadCase(InputModel input, GroupSettlementCaseRecord? record, string? singleCase)
+        {
+            if (record == null) return true;
+            var (found, _, _, level, caseIndex) = SingleOfCase(input, new PileLayoutDataItem(), singleCase);
+            return !found && level == 0 && singleCase is not (null or "VL") || SameLoadCase(record, level, caseIndex);
+        }
+
+        /// <summary>群杭沈下の記録が単杭沈下と別の荷重ケースのときの理由。</summary>
+        internal static string DescribeOtherLoadCase(GroupSettlementCaseRecord record, string? singleCase)
+            => $"群杭沈下 ({CaseNameOf(record)}) は単杭沈下 ({(singleCase is null or "VL" ? "常時" : singleCase)}) と別の荷重ケースなので足していません"
+               + " (同じ荷重ケースの群杭沈下を表示してください)";
+
+        /// <summary>地震時の記録の見出しの荷重ケースの符号 ("L1-1: " / "1-1: ")。</summary>
+        private static readonly System.Text.RegularExpressions.Regex CaseCode =
+            new(@"^L?(\d+)-(\d+): ", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
         /// <summary>記録の呼び名 (常時の記録は「常時」)。理由の文に使う。</summary>
         private static string CaseNameOf(GroupSettlementCaseRecord record)
             => record.IsLongTerm ? "常時"
              : string.IsNullOrWhiteSpace(record.LoadCaseName) ? "ケース名なし" : record.LoadCaseName.Trim();
 
         /// <summary>
-        /// 荷重ケースの単杭沈下量 [m] と、曲線の範囲外 (下限) の印。ケースが見つからなければ found = false。
-        /// レベル1 → レベル2 の順に、名前が最初に一致したものを使う。
+        /// 荷重ケースの単杭沈下量 [m] と、曲線の範囲外 (下限) の印、そのケースのレベル (常時は 0) と並びの位置。
+        /// ケースが見つからなければ found = false。レベル1 → レベル2 の順に、名前が最初に一致したものを使う。
         /// </summary>
-        private static (bool Found, double Value_m, bool BeyondCurve) SingleOfCase(InputModel input, PileLayoutDataItem pile, string? singleCase)
+        private static (bool Found, double Value_m, bool BeyondCurve, int Level, int Index) SingleOfCase(InputModel input, PileLayoutDataItem pile, string? singleCase)
         {
             if (singleCase == null || singleCase == "VL")
-                return (true, pile.SinglePileSettlementVL, pile.SinglePileSettlementVLBeyondCurve);
+                return (true, pile.SinglePileSettlementVL, pile.SinglePileSettlementVLBeyondCurve, 0, -1);
 
             var cases = input.LoadCasesInput;
             if (cases?.LoadCasesLevel1 != null)
                 for (int i = 0; i < cases.LoadCasesLevel1.Count; i++)
                     if (cases.LoadCasesLevel1[i].LoadName == singleCase)
-                        return At(pile.SinglePileSettlementLevel1s, pile.SinglePileSettlementLevel1sBeyondCurve, i);
+                        return At(pile.SinglePileSettlementLevel1s, pile.SinglePileSettlementLevel1sBeyondCurve, i, 1);
             if (cases?.LoadCasesLevel2 != null)
                 for (int i = 0; i < cases.LoadCasesLevel2.Count; i++)
                     if (cases.LoadCasesLevel2[i].LoadName == singleCase)
-                        return At(pile.SinglePileSettlementLevel2s, pile.SinglePileSettlementLevel2sBeyondCurve, i);
-            return (false, 0.0, false);
+                        return At(pile.SinglePileSettlementLevel2s, pile.SinglePileSettlementLevel2sBeyondCurve, i, 2);
+            return (false, 0.0, false, 0, -1);
 
-            static (bool, double, bool) At(IList<double>? values, IList<bool>? flags, int i)
+            static (bool, double, bool, int, int) At(IList<double>? values, IList<bool>? flags, int i, int level)
                 => values != null && i < values.Count
-                    ? (true, values[i], PileLayoutDataItem.BeyondAt(flags, i))
-                    : (false, 0.0, false);   // 以前は並びが短いと添字の範囲外で落ちた
+                    ? (true, values[i], PileLayoutDataItem.BeyondAt(flags, i), level, i)
+                    : (false, 0.0, false, level, i);   // 以前は並びが短いと添字の範囲外で落ちた
         }
     }
 

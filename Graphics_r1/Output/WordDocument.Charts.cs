@@ -298,6 +298,7 @@ namespace PileDesign.Output
                         List<double> disps = [];
                         List<double> zs = [];
                         List<double> soilDisps = [];
+                        int missingResults = 0;   // 結果の無い要素・節点の数 (描かない。図の題名に断る)
 
                         // Z 軸（節点列）と地盤変位
                         for (int i = 0; i < pli.PileNodes.Count; i++)
@@ -307,13 +308,15 @@ namespace PileDesign.Output
                             if (i != 0 && i != pli.PileNodes.Count - 1)
                                 zs.Add(z);
 
-                            double soilUh = 0.0;
+                            // 結果の無い節点は NaN (描かない)。以前は 0 として描き、変位 0 の位置に読めた
+                            double soilUh = double.NaN;
                             try
                             {
                                 soilUh = GetNodeResultCached(pli.SoilNodes[i], lc, comb, isLiq)
-                                    ?.CumulativeDisp?.Uh ?? 0.0;
+                                    ?.CumulativeDisp?.Uh ?? double.NaN;
                             }
-                            catch { soilUh = 0.0; }
+                            catch { soilUh = double.NaN; }
+                            if (!double.IsFinite(soilUh)) missingResults++;
 
                             soilDisps.Add(soilUh);
                             if (i != 0 && i != pli.PileNodes.Count - 1)
@@ -323,20 +326,23 @@ namespace PileDesign.Output
                         // 要素力・変位
                         for (int i = 0; i < pli.Beams.Count; i++)
                         {
+                            // 結果の無い要素・節点は NaN (描かない。図の題名に断る)。以前は 0 として描いていた
                             var res = GetBeamResultCached(pli.Beams[i], lc, comb, isLiq)?.CumulativeForce;
-                            moments.Add(res?.Mi ?? 0.0);
-                            moments.Add(res?.Mj ?? 0.0);
+                            if (res == null) missingResults++;
+                            moments.Add(res?.Mi ?? double.NaN);
+                            moments.Add(res?.Mj ?? double.NaN);
 
-                            shears.Add(res?.Fi ?? 0.0);
-                            shears.Add(res?.Fj ?? 0.0);
+                            shears.Add(res?.Fi ?? double.NaN);
+                            shears.Add(res?.Fj ?? double.NaN);
 
-                            double uhI = 0.0, uhJ = 0.0;
+                            double uhI = double.NaN, uhJ = double.NaN;
                             try
                             {
-                                uhI = GetNodeResultCached(pli.Beams[i].NodeI, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
-                                uhJ = GetNodeResultCached(pli.Beams[i].NodeJ, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
+                                uhI = GetNodeResultCached(pli.Beams[i].NodeI, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? double.NaN;
+                                uhJ = GetNodeResultCached(pli.Beams[i].NodeJ, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? double.NaN;
                             }
                             catch (Exception ex) { Log.Warning(ex, "[WordDoc] NodeResult取得失敗"); }
+                            if (!double.IsFinite(uhI) || !double.IsFinite(uhJ)) missingResults++;
                             disps.Add(uhI);
                             disps.Add(uhJ);
                         }
@@ -353,7 +359,8 @@ namespace PileDesign.Output
 
                         AddAutoFigureCaption(
                             body,
-                            $"杭の応力・変位　杭番号:{pli.No} | 荷重ケース:{lc.LoadName} | 荷重組合せ:{comb.Name} | 液状化: {(isLiq ? "考慮" : "非考慮")}",
+                            $"杭の応力・変位　杭番号:{pli.No} | 荷重ケース:{lc.LoadName} | 荷重組合せ:{comb.Name} | 液状化: {(isLiq ? "考慮" : "非考慮")}"
+                                + MissingResultsNote(missingResults),
                             "図");
                     }
                 }
@@ -1155,6 +1162,7 @@ namespace PileDesign.Output
             List<double> disps = [];
             List<double> zs = [];
             List<double> soilDisps = [];
+            int missingResults = 0;   // 結果の無い要素・節点の数 (描かない。図の題名に断る)
 
             bool hasData = false;
 
@@ -1166,13 +1174,15 @@ namespace PileDesign.Output
                 if (i != 0 && i != pli.PileNodes.Count - 1)
                     zs.Add(z);
 
-                double soilUh = 0.0;
+                // 結果の無い節点は NaN (描かない)。以前は 0 として描き、変位 0 の位置に読めた
+                double soilUh = double.NaN;
                 try
                 {
                     soilUh = GetNodeResultCached(pli.SoilNodes[i], lc, comb, isLiq)
-                        ?.CumulativeDisp?.Uh ?? 0.0;
+                        ?.CumulativeDisp?.Uh ?? double.NaN;
                 }
-                catch { soilUh = 0.0; }
+                catch { soilUh = double.NaN; }
+                if (!double.IsFinite(soilUh)) missingResults++;
                 soilDisps.Add(soilUh);
                 if (i != 0 && i != pli.PileNodes.Count - 1)
                     soilDisps.Add(soilUh);
@@ -1181,22 +1191,26 @@ namespace PileDesign.Output
             // 要素力・変位
             for (int i = 0; i < pli.Beams.Count; i++)
             {
+                // 結果の無い要素・節点は NaN (描かない。図の題名に断る)。以前は 1 要素でも結果があれば、
+                // 欠けた要素を 0 として描いていた (応力・変位 0 の位置に読めた)
                 var res = GetBeamResultCached(pli.Beams[i], lc, comb, isLiq)?.CumulativeForce;
                 if (res != null) hasData = true;
+                else missingResults++;
 
-                moments.Add(res?.Mi ?? 0.0);
-                moments.Add(res?.Mj ?? 0.0);
+                moments.Add(res?.Mi ?? double.NaN);
+                moments.Add(res?.Mj ?? double.NaN);
 
-                shears.Add(res?.Fi ?? 0.0);
-                shears.Add(res?.Fj ?? 0.0);
+                shears.Add(res?.Fi ?? double.NaN);
+                shears.Add(res?.Fj ?? double.NaN);
 
-                double uhI = 0.0, uhJ = 0.0;
+                double uhI = double.NaN, uhJ = double.NaN;
                 try
                 {
-                    uhI = GetNodeResultCached(pli.Beams[i].NodeI, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
-                    uhJ = GetNodeResultCached(pli.Beams[i].NodeJ, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
+                    uhI = GetNodeResultCached(pli.Beams[i].NodeI, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? double.NaN;
+                    uhJ = GetNodeResultCached(pli.Beams[i].NodeJ, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? double.NaN;
                 }
                 catch { /* NodeResult取得失敗 */ }
+                if (!double.IsFinite(uhI) || !double.IsFinite(uhJ)) missingResults++;
                 disps.Add(uhI);
                 disps.Add(uhJ);
             }
@@ -1268,9 +1282,13 @@ namespace PileDesign.Output
                 150, 100, limitXsByPanel, limitYsByPanel, limitLegend);
 
             string liqText = isLiq ? "液状化" : "非液状化";
-            string caption = $"杭No.{pli.No} | {lc.LoadName} | {comb.Name} | {liqText}";
+            string caption = $"杭No.{pli.No} | {lc.LoadName} | {comb.Name} | {liqText}" + MissingResultsNote(missingResults);
             return (png, caption);
         }
+
+        /// <summary>杭の応力・変位図の題名に添える、結果の無い区間の断り (無ければ空)。</summary>
+        internal static string MissingResultsNote(int missingResults)
+            => missingResults > 0 ? "（解析結果の無い区間は描いていません）" : "";
 
         /// <summary>
         /// (PileLayoutDataItem, LoadCase, LoadCombination, isLiq) の解析結果軸力に応じた
@@ -1420,6 +1438,7 @@ namespace PileDesign.Output
                             List<List<double>> zSeries = [];
                             List<string> legends = [];
                             bool anyData = false;
+                            int missingResults = 0;   // 結果の無い要素・節点の数 (描かない。図の題名に断る)
 
                             foreach (var pli in groupPiles)
                             {
@@ -1432,13 +1451,15 @@ namespace PileDesign.Output
                                     zs.Add(z);
                                     if (i != 0 && i != pli.PileNodes.Count - 1) zs.Add(z);
 
-                                    double soilUh = 0.0;
+                                    // 結果の無い節点・要素は NaN (描かない。図の題名に断る)。以前は 0 として描いていた
+                                    double soilUh = double.NaN;
                                     try
                                     {
                                         soilUh = GetNodeResultCached(pli.SoilNodes[i], lc, comb, isLiq)
-                                            ?.CumulativeDisp?.Uh ?? 0.0;
+                                            ?.CumulativeDisp?.Uh ?? double.NaN;
                                     }
                                     catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
+                                    if (!double.IsFinite(soilUh)) missingResults++;
                                     soilDisps.Add(soilUh);
                                     if (i != 0 && i != pli.PileNodes.Count - 1) soilDisps.Add(soilUh);
                                 }
@@ -1447,18 +1468,20 @@ namespace PileDesign.Output
                                 {
                                     var res = GetBeamResultCached(pli.Beams[i], lc, comb, isLiq)?.CumulativeForce;
                                     if (res != null) hasData = true;
-                                    moments.Add(res?.Mi ?? 0.0);
-                                    moments.Add(res?.Mj ?? 0.0);
-                                    shears.Add(res?.Fi ?? 0.0);
-                                    shears.Add(res?.Fj ?? 0.0);
+                                    else missingResults++;
+                                    moments.Add(res?.Mi ?? double.NaN);
+                                    moments.Add(res?.Mj ?? double.NaN);
+                                    shears.Add(res?.Fi ?? double.NaN);
+                                    shears.Add(res?.Fj ?? double.NaN);
 
-                                    double uhI = 0.0, uhJ = 0.0;
+                                    double uhI = double.NaN, uhJ = double.NaN;
                                     try
                                     {
-                                        uhI = GetNodeResultCached(pli.Beams[i].NodeI, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
-                                        uhJ = GetNodeResultCached(pli.Beams[i].NodeJ, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? 0.0;
+                                        uhI = GetNodeResultCached(pli.Beams[i].NodeI, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? double.NaN;
+                                        uhJ = GetNodeResultCached(pli.Beams[i].NodeJ, lc, comb, isLiq)?.CumulativeDisp?.Uh ?? double.NaN;
                                     }
                                     catch (System.Exception ex) { Serilog.Log.Debug(ex, "[WordDocument.Charts] グラフ要素（軸力/マーカー）の抽出に失敗、該当要素をスキップ"); }
+                                    if (!double.IsFinite(uhI) || !double.IsFinite(uhJ)) missingResults++;
                                     disps.Add(uhI);
                                     disps.Add(uhJ);
                                 }
@@ -1507,7 +1530,8 @@ namespace PileDesign.Output
 
                             string liqText = isLiq ? "液状化" : "非液状化";
                             AddAutoFigureCaption(body,
-                                $"杭地盤セット 杭体:{pileRef}|地盤:{soilRef}|杭頭Z={headZ:N1}m | {lc.LoadName} | {comb.Name} | {liqText}",
+                                $"杭地盤セット 杭体:{pileRef}|地盤:{soilRef}|杭頭Z={headZ:N1}m | {lc.LoadName} | {comb.Name} | {liqText}"
+                                    + MissingResultsNote(missingResults),
                                 "図");
                         }
                     }

@@ -313,13 +313,26 @@ namespace PileDesign.Output
                     : lc.Level == 1 ? (pile.AxialForceLevel1s != null && iLC >= 0 && iLC < pile.AxialForceLevel1s.Count ? pile.AxialForceLevel1s[iLC] : pile.AxialForceVL)
                     : (pile.AxialForceLevel2s != null && iLC >= 0 && iLC < pile.AxialForceLevel2s.Count ? pile.AxialForceLevel2s[iLC] : pile.AxialForceVL);
                 var joint = _anaModel.PileJointNodeOf(pile.No);
-                if (double.IsFinite(n) && Math.Abs(n) >= 1e-12) Add(joint, -n, pile);
+                // 軸力が数でないときは省かずに出力を止める (2026-11-04 外部レビュー。以前は黙って省き、その杭の軸力が
+                // 欠けたモデルを書いた。分離入力では組合せのどれかの軸力が数でないと包絡が NaN になる)。
+                // 分離入力で適用する組合せが無いと地震時の軸力を決められない (包絡は常時軸力を返す) ので、それも止める
+                if (!IsVL(lc) && SeismicAxialForces.NoApplicableCombinationMessage(_anaModel.InputModel) != null)
+                    problems.Add($"・杭 No.{pile.No} ({AXName(lc)}): {SeismicAxialForces.NoApplicableCombinationReason}");
+                else if (!double.IsFinite(n))
+                    problems.Add($"・杭 No.{pile.No} ({AXName(lc)}): 軸力が数ではありません ({n})");
+                else if (Math.Abs(n) >= 1e-12) Add(joint, -n, pile);
                 var models = pile.VerticalNodeSpringModels;
                 int nw = Math.Min(pile.PileNodes.Count, models.Count);
                 for (int k = 0; k < nw; k++)
                 {
                     var md = models[k];
-                    if (md == null || md.Weight <= 0.0) continue;
+                    if (md == null) continue;
+                    if (!double.IsFinite(md.Weight))
+                    {
+                        problems.Add($"・杭 No.{pile.No}: 杭体の自重 (節点 {k + 1}) が数ではありません ({md.Weight})");
+                        continue;
+                    }
+                    if (md.Weight <= 0.0) continue;
                     Add(k == 0 ? joint : pile.PileNodes[k], -md.Weight, pile);
                 }
             }

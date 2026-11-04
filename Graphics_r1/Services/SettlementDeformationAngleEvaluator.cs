@@ -156,6 +156,7 @@ namespace PileDesign.Services
                     LimitName = "使用限界",
                     TargetName = $"杭No.{max.Value.PileNoA} − 杭No.{max.Value.PileNoB}{typeName}",
                     PileNo = max.Value.PileNoA,
+                    OtherPileNo = max.Value.PileNoB,
                     LoadCaseName = caseName,
                     // 沈下解析に液状化の区別は無い (null のまま)
                     Response = max.Value.Angle,
