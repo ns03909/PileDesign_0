@@ -44,6 +44,7 @@ namespace PileDesign.ViewModels
             foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
             {
                 var beams = pileLayoutDataItem.Beams;
+                if (!HasAnalysisElements(pileLayoutDataItem)) continue;
                 // 限界線は要素番号 (beam.SegmentIndex) で断面を引くので、解析と同じセット (杭に対応付けた番号) を使う。
                 // 組み立て直した代わりのセットは杭頭部の節点が無く、要素番号がずれて隣の断面の限界値を描いた (2026-10-24)
                 var soilPile = pileLayoutDataItem.SoilPileAt(InputModel);

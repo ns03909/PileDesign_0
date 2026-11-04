@@ -99,7 +99,8 @@ namespace PileDesign.Models
             bool hasVerticalBeam,
             bool isElementSplit,
             out Exception? failure,
-            List<AnalysisRunMetadata>? runRecords = null)
+            List<AnalysisRunMetadata>? runRecords = null,
+            InputModel? associationSource = null)
         {
             failure = null;
             if (liveInput == null) return null;
@@ -163,8 +164,11 @@ namespace PileDesign.Models
                 // JSON に載らない表示用の揮発状態を引き継ぐ（ばねはインデックス整合）
                 CopyVolatileDisplayState(anaModel, set.AnaModel);
 
-                // 杭 → FEM 要素の関連も JSON に載らないので張り直す
-                RelinkPileFemAssociations(liveInput, anaModel, set.InputSnapshot, set.AnaModel);
+                // 杭 → FEM 要素の関連も JSON に載らないので張り直す。写し元は anaModel の要素を指している杭
+                // (associationSource。省略時は liveInput)。水平解析をやり直さずに組を取り直すときは、anaModel は
+                // 前回の控えの複製で、編集中の入力の杭は元の解析モデルを指したまま。編集中の入力から写すと
+                // 1 つも見つからず、控えの杭の要素が全部空になっていた (2026-11-04、グラフが Beams[0] で範囲外)
+                RelinkPileFemAssociations(associationSource ?? liveInput, anaModel, set.InputSnapshot, set.AnaModel);
 
                 return set;
             }
@@ -215,6 +219,9 @@ namespace PileDesign.Models
                 // 表示したときに杭Zばねの反力が消える (可視セットに入らないため)。
                 dst.VerticalNodeSprings =
                     [.. MapCollection(src.VerticalNodeSprings, springIndex, snapshotModel.HorizontalSoilSprings)];
+
+                if (src.Beams is { Count: > 0 } && dst.Beams is not { Count: > 0 })
+                    Log.Warning("[AnalysisResultSet] 杭 No.{PileNo} の要素を控えへ写せませんでした (写し元の杭が別の解析モデルを指しています)", src.No);
 
                 dst.PileTopRotationalSpring = src.PileTopRotationalSpring != null
                     && rotIndex.TryGetValue(src.PileTopRotationalSpring, out int ri)

@@ -114,6 +114,28 @@ namespace PileDesign.ViewModels
         // MainWindowViewModelからAnaModelを取得
         public AnaModel AnaModel => _mainWindowViewModel?.CurrentModel;
 
+        /// <summary>
+        /// 杭が解析の要素 (Beams) とつながっているか。つながっていなければ描かずに記録する。
+        ///
+        /// <para>解析結果があるのに杭の要素が空なのは、グラフが見る入力 (<see cref="InputModel"/>) と解析結果
+        /// (<see cref="AnaModel"/>) が 1 組になっていないとき。以前は杭の先頭の要素 (Beams[0]) を確かめずに読み、
+        /// 範囲外の例外でグラフが止まった (2026-11-04 に杭応力の深さ分布で実際に)。そのときの原因は、水平解析を
+        /// やり直さずに解析結果の控えを取り直すとつながりが空になること (沈下解析の保存など。AnalysisResultSet.Capture で
+        /// 直した)。ほかの道で崩れても止まらないよう、ここでも確かめ、そのときの状態をログに残す。</para>
+        /// </summary>
+        private bool HasAnalysisElements(PileLayoutDataItem pile)
+        {
+            if (pile?.Beams is { Count: > 0 }) return true;
+            var main = _mainWindowViewModel;
+            Serilog.Log.Warning(
+                "[グラフ] 杭 No.{PileNo} は解析の要素とつながっていないので描きません "
+                + "(見ている入力: {Basis}、解析結果の組: {HasSet}、控えの失敗: {SnapshotFailed}、解析後の編集: {Edited})",
+                pile?.No,
+                ReferenceEquals(InputModel, main?.CurrentInputModel) ? "編集中の入力" : "解析時の控え",
+                main?.HasAnalysisResultSet, main?.ResultSnapshotFailed, main?.InputChangedSinceAnalysis);
+            return false;
+        }
+
         public ObservableCollection<string> GraphOptions { get; } = [];
 
         private string _selectedGraphOption;
@@ -838,6 +860,7 @@ namespace PileDesign.ViewModels
                 foreach (PileLayoutDataItem pileLayoutDataItem in GetSelectedPileLayouts())
                 {
                     var beams = pileLayoutDataItem.Beams;
+                    if (!HasAnalysisElements(pileLayoutDataItem)) continue;
 
                     foreach (LoadCase loadCase in GetSelectedLoadCases())
                     {

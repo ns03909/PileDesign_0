@@ -757,7 +757,10 @@ namespace PileDesign.ViewModels
                 IsVerticalBeamAnalysisDone,
                 IsElementSplit,
                 out var failure,
-                runRecords);
+                runRecords,
+                // 水平解析をやり直していない (表示中の解析結果が前回の控えのもの) なら、杭と要素のつながりは
+                // 前回の控えの杭から写す。編集中の入力の杭は元の解析モデルを指したままで、控えの複製には見つからない
+                associationSource: horizontalIsStillTheCapturedOne ? _currentResultSet!.InputSnapshot : null);
 
             if (set == null)
             {
