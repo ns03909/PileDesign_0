@@ -2095,6 +2095,10 @@ namespace PileDesign.ViewModels
         /// <para>オンにするとき: 変動軸力 ΔL を比例配分するか、ΔL(U)・ΔL(L) を 0 にするかを訊く。
         /// 比例配分なら ΔL(U) の割合 (0〜100%) も訊く。オフにするとき: 変動軸力 ΔL を ΔL(L) + ΔL(U) に
         /// することを伝える。<b>入っていなければ訊かない</b>——新しいファイルで毎回出るのは邪魔なだけ。</para>
+        ///
+        /// <para><b>訊かないときも、切り替え先には 0 を書く。</b>以前は訊かないときに切り替え先を書き換えず、
+        /// 前に使っていた値 (分離入力の ΔL(U) = 100 kN など) がそのまま現れて、計算に使う軸力が
+        /// 切り替える直前の入力と違っていた (2026-11-04 外部レビュー)。訊くかどうかと引き継ぐかどうかは別。</para>
         /// </summary>
         /// <param name="toSeparated">これから分離入力にするか (false なら、やめる)。</param>
         /// <param name="takeOver">引き継ぎの処理。引き継がないときは null。</param>
@@ -2107,7 +2111,12 @@ namespace PileDesign.ViewModels
 
             if (toSeparated)
             {
-                if (!AxialForceSeparation.HasVariation(piles)) return true;
+                // 変動が無ければ訊かずに、ΔL(U)・ΔL(L) を 0 にする (前に分離入力で使っていた値を残さない)
+                if (!AxialForceSeparation.HasVariation(piles))
+                {
+                    takeOver = () => AxialForceSeparation.Clear(piles);
+                    return true;
+                }
 
                 var answer = MessageService.ConfirmWithCancel(
                     GuardMessages.SeparateAxialForceTakeOver, "地震時軸力の分離入力");
@@ -2126,7 +2135,12 @@ namespace PileDesign.ViewModels
                 return true;
             }
 
-            if (!AxialForceSeparation.HasSeparated(piles)) return true;
+            // ΔL(U)・ΔL(L) がすべて 0 なら訊かずに、変動軸力を 0 (絶対値 = VL) にする (分けない入力の古い値を残さない)
+            if (!AxialForceSeparation.HasSeparated(piles))
+            {
+                takeOver = () => AxialForceSeparation.Merge(piles);
+                return true;
+            }
 
             if (MessageService.Show(
                     GuardMessages.MergeAxialForceTakeOver, "地震時軸力の分離入力",

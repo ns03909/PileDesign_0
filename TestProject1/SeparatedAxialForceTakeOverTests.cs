@@ -311,6 +311,68 @@ namespace TestProject1
             CollectionAssert.AreEqual(new[] { 1600.0, 800.0, 1200.0, 1260.0 }, pile.AxialForceLevel1s.ToArray());
         }
 
+        // ── 訊かないときも、切り替え先へ 0 を書く (2026-11-04 外部レビュー) ──
+
+        /// <summary>
+        /// 変動軸力が 0 のまま分離入力にすると、前に分離入力で使っていた ΔL(U)・ΔL(L) が残らないこと。
+        /// 以前は訊かないときに分離入力の側を書き換えず、前の ΔL(U) = 100 kN が計算に使われた。
+        /// </summary>
+        [TestMethod]
+        public void TurningItOn_WithNoVariation_DoesNotBringBackOldSeparatedValues()
+        {
+            var pile = new PileLayoutDataItem { No = 1, PileNo = 1, AxialForceVL0 = 1000.0, AxialForceVLAdditional = 200.0 };
+            pile.AxialForceLevel1s = [1200.0, 1200.0, 1200.0, 1200.0];   // 変動 0
+            pile.AxialForceLevel2s = [1200.0, 1200.0, 1200.0, 1200.0];
+            pile.AxialForceUpperLevel1s = [100.0, 0.0, 0.0, 0.0];         // 前に分離入力で使っていた値
+            pile.AxialForceFoundationLevel2s = [0.0, 40.0, 0.0, 0.0];
+
+            var vm = new MainWindowViewModel { CurrentInputModel = MakeInput(false, pile) };
+            bool asked = false;
+            MessageService.UnattendedAnswer = (text, button) =>
+            {
+                if (text.Contains("変動軸力", StringComparison.Ordinal)) asked = true;
+                return button == MessageBoxButton.OKCancel ? MessageBoxResult.OK : MessageBoxResult.Yes;
+            };
+
+            vm.IsAxialForceSeparated = true;
+
+            Assert.IsTrue(vm.IsAxialForceSeparated);
+            Assert.IsFalse(asked, "変動軸力が入っていないのに引き継ぎを訊いた");
+            Assert.IsFalse(AxialForceSeparation.HasSeparated([pile]),
+                "切り替える前の変動軸力は 0 なのに、前の ΔL(U)・ΔL(L) が残っています: L1 U = "
+                + string.Join(", ", pile.AxialForceUpperLevel1s) + " / L2 L = " + string.Join(", ", pile.AxialForceFoundationLevel2s));
+        }
+
+        /// <summary>
+        /// ΔL(U)・ΔL(L) がすべて 0 のまま分離入力をやめると、分けない入力の古い変動軸力が残らないこと (絶対値 = VL)。
+        /// ΔL(U)・ΔL(L) の欄が無いレベルも同じ (計算では欄の無いケースは VL)。
+        /// </summary>
+        [TestMethod]
+        public void TurningItOff_WithBothSidesZero_DoesNotBringBackOldUnseparatedValues()
+        {
+            var pile = MakePile();   // 分けない入力に古い変動軸力 (L1 [300, -300, 0, 50]、L2 [800, 0, 0, 0])
+            pile.AxialForceUpperLevel1s = [0.0, 0.0, 0.0, 0.0];
+            pile.AxialForceFoundationLevel1s = [0.0, 0.0, 0.0, 0.0];
+            // レベル2 は ΔL(U)・ΔL(L) の欄が無い
+
+            var vm = new MainWindowViewModel { CurrentInputModel = MakeInput(true, pile) };
+            bool asked = false;
+            MessageService.UnattendedAnswer = (text, button) =>
+            {
+                if (text.Contains("分離入力をやめると", StringComparison.Ordinal)) asked = true;
+                return button == MessageBoxButton.OKCancel ? MessageBoxResult.OK : MessageBoxResult.Yes;
+            };
+
+            vm.IsAxialForceSeparated = false;
+
+            Assert.IsFalse(vm.IsAxialForceSeparated);
+            Assert.IsFalse(asked, "ΔL(U)・ΔL(L) が入っていないのに引き継ぎを伝えた");
+            CollectionAssert.AreEqual(new[] { 1200.0, 1200.0, 1200.0, 1200.0 }, pile.AxialForceLevel1s.ToArray(),
+                "分離入力の変動軸力は 0 なのに、分けない入力の古い値が残っています");
+            CollectionAssert.AreEqual(new[] { 1200.0, 1200.0, 1200.0, 1200.0 }, pile.AxialForceLevel2s.ToArray(),
+                "ΔL(U)・ΔL(L) の欄が無いレベルに、分けない入力の古い値が残っています");
+        }
+
         /// <summary>やめるのをキャンセルしたら、分離入力のまま。分けない入力も書き換えない。</summary>
         [TestMethod]
         public void TurningItOff_AndCancelling_KeepsTheSeparatedInput()

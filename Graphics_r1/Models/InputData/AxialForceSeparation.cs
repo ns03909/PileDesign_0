@@ -102,6 +102,10 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 分離入力をやめる。変動軸力 ΔL を ΔL(L) と ΔL(U) の和にする
         /// (絶対値は VL + 和)。
+        ///
+        /// <para>絶対値の欄は<b>すべて</b>書く。ΔL(U)・ΔL(L) の欄が無いケースは和 0 (絶対値 = VL)。
+        /// 分離入力の計算でも欄の無いケースは VL を使う (<see cref="SeismicAxialForces.ForVerticalAnalysis"/>)。
+        /// 以前は ΔL(U)・ΔL(L) の欄の数までしか書かず、余った欄に分離入力の前の古い値が残った。</para>
         /// </summary>
         public static void Merge(IEnumerable<PileLayoutDataItem>? piles)
         {
@@ -118,15 +122,16 @@ namespace PileDesign.Models.InputData
                     var absolute = Absolute(pile, level);
                     if (absolute == null) continue;
 
-                    int n = Math.Min(upper.Count, foundation.Count);
-                    Fit(absolute, Math.Max(absolute.Count, n));
+                    Fit(absolute, Math.Max(absolute.Count, Math.Max(upper.Count, foundation.Count)));
 
                     // **絶対値へ書く。**保存するのは絶対値で、変動はそこから出る派生値。
                     // 変動のコレクションへ書いても絶対値は追いつくが、VL を足し引きする
                     // 向きが二重に掛かることがあるので、元の側へ書く。
-                    for (int i = 0; i < n && i < absolute.Count; i++)
+                    for (int i = 0; i < absolute.Count; i++)
                     {
-                        absolute[i] = pile.AxialForceVL + foundation[i] + upper[i];
+                        double u = i < upper.Count ? upper[i] : 0.0;
+                        double l = i < foundation.Count ? foundation[i] : 0.0;
+                        absolute[i] = pile.AxialForceVL + l + u;
                     }
                 }
             }
