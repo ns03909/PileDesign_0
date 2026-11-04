@@ -242,26 +242,14 @@ namespace PileDesign.Models.InputData
     /// </summary>
     public static class SeismicCaseLabels
     {
-        /// <summary>
-        /// 見出しの末尾の組合せの部分 (<see cref="SeismicAxialForces.CombinationSuffix(int, double, double)"/> の形そのもの)。
-        /// 以前は最初の「 / 組合せ」から後ろを組合せとしていたので、荷重ケース名にその文字があると名前の途中で切れ、
-        /// 結果を正しいケースと照合できなかった (2026-11-04 外部レビュー)。末尾にある決まった形だけを組合せとする。
-        /// </summary>
-        private static readonly System.Text.RegularExpressions.Regex CombinationAtEnd =
-            new(@" / 組合せNo\.\d+ \(βU=[^,()]*, βL=[^,()]*\)$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-
         /// <summary>常時の鉛直の結果の見出しに付ける補足 ("VL (常時+追加)")。見出しを作る側もこれを使う。</summary>
         public const string LongTermDecoration = " (常時+追加)";
 
-        /// <summary>地震時の結果の見出しの前置き ("1-1: " / "L1-1: ")。後ろが荷重ケース名そのもの。</summary>
-        private static readonly System.Text.RegularExpressions.Regex CasePrefix =
-            new(@"^L?\d+-\d+: ", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-
-        /// <summary>見出しの組合せの部分 (" / 組合せNo.…")。無ければ空。</summary>
+        /// <summary>見出しの組合せの部分 (" / 組合せNo.…")。末尾にある決まった形 (<see cref="SeismicAxialForces.CombinationSuffix(int, double, double)"/>) だけ。無ければ空。</summary>
         public static string CombinationPartOf(string? label)
         {
             if (string.IsNullOrEmpty(label)) return "";
-            var m = CombinationAtEnd.Match(label);
+            var m = CombinationParts.Match(label);
             return m.Success ? label[m.Index..] : "";
         }
 
@@ -269,58 +257,125 @@ namespace PileDesign.Models.InputData
         public static string WithoutCombination(string? label)
         {
             if (string.IsNullOrEmpty(label)) return label ?? "";
-            var m = CombinationAtEnd.Match(label);
+            var m = CombinationParts.Match(label);
             return m.Success ? label[..m.Index] : label;
         }
 
-        /// <summary>
-        /// 見出しのケース名 ("1-1: U1 / 組合せ…" → "U1"、"VL (常時+追加)" → "VL")。
-        ///
-        /// <para>前置きの後ろはケース名を丸ごと返す。括弧は常時の補足 (<see cref="LongTermDecoration"/>) だけを外す。
-        /// 以前は最初の " (" から後ろを捨てていたので、重複を直したケース名 "U1 (L2-1)" (<c>LoadCasesInput</c>) が
-        /// "U1" になり、選んでいるケースの結果を見つけられなかった (2026-11-04 外部レビュー)。</para>
-        /// </summary>
-        public static string BaseCaseName(string? label)
-        {
-            string s = WithoutCombination(label);
-            var prefix = CasePrefix.Match(s);
-            if (prefix.Success) return s[prefix.Length..];
-            return s.EndsWith(LongTermDecoration, StringComparison.Ordinal) ? s[..^LongTermDecoration.Length] : s;
-        }
+        /// <summary>見出しのケース名 ("1-1: U1 / 組合せ…" → "U1"、"VL (常時+追加)" → "VL")。読み方は <see cref="KeyOf"/> と同じ。</summary>
+        public static string BaseCaseName(string? label) => KeyOf(label, null).CaseName;
 
-        /// <summary>見出しがこの荷重ケース名の結果か (厳密一致か、組合せを外して末尾が ": ケース名")。</summary>
+        /// <summary>見出しがこの荷重ケース名の結果か (見出しだけで、入力の荷重ケースとは突き合わせない)。読み方は <see cref="KeyOf"/> と同じ。</summary>
         public static bool RefersToCase(string? label, string? caseName)
-        {
-            if (string.IsNullOrEmpty(label) || string.IsNullOrEmpty(caseName)) return false;
-            if (label == caseName) return true;
-            return WithoutCombination(label).EndsWith(": " + caseName, StringComparison.Ordinal);
-        }
+            => !string.IsNullOrEmpty(label) && !string.IsNullOrEmpty(caseName) && RefersTo(KeyOf(label, null), null, caseName);
 
         /// <summary>
-        /// 選んでいる組合せの結果の見出しに付く組合せの部分。分離入力でない・組合せを選んでいないときは空。
-        /// βU・βL の同じ組合せは代表 (<see cref="SeismicAxialForces.CombinationsForVerticalAnalysis"/> の先頭) に読み替える。
+        /// 選んでいる組合せの代表 (βU・βL の同じ組合せは <see cref="SeismicAxialForces.CombinationsForVerticalAnalysis"/> の先頭に
+        /// 読み替える。結果は代表の番号で持つ)。分離入力でない・組合せを選んでいないときは null (組合せで絞らない)。
         /// </summary>
-        public static string SuffixFor(InputModel? input, LoadCombination? selected)
+        public static LoadCombination? RepresentativeFor(InputModel? input, LoadCombination? selected)
         {
-            if (selected == null || !SeismicAxialForces.IsSeparated(input)) return "";
-            var representative = SeismicAxialForces.CombinationsForVerticalAnalysis(input)
-                .FirstOrDefault(c => c != null && c.Beta1 == selected.Beta1 && c.Beta2 == selected.Beta2);
-            return SeismicAxialForces.CombinationSuffix(representative ?? selected);
+            if (selected == null || !SeismicAxialForces.IsSeparated(input)) return null;
+            return SeismicAxialForces.CombinationsForVerticalAnalysis(input)
+                .FirstOrDefault(c => c != null && c.Beta1 == selected.Beta1 && c.Beta2 == selected.Beta2) ?? selected;
+        }
+
+        /// <summary>選んでいる組合せの結果の見出しに付く組合せの部分 (表示用)。分離入力でない・組合せを選んでいないときは空。</summary>
+        public static string SuffixFor(InputModel? input, LoadCombination? selected)
+            => RepresentativeFor(input, selected) is { } representative ? SeismicAxialForces.CombinationSuffix(representative) : "";
+
+        // ── 結果の荷重ケース・組合せ (ResultCaseIdentity) ──
+
+        /// <summary>地震時の見出しの前置きと荷重ケース名 ("L1-1: U1" → レベル 1・番号 1・"U1")。</summary>
+        private static readonly System.Text.RegularExpressions.Regex CaseLabel =
+            new(@"^L?(\d+)-(\d+): (.*)$", System.Text.RegularExpressions.RegexOptions.CultureInvariant | System.Text.RegularExpressions.RegexOptions.Singleline);
+
+        /// <summary>見出しの末尾の組合せの番号と係数。</summary>
+        private static readonly System.Text.RegularExpressions.Regex CombinationParts =
+            new(@" / 組合せNo\.(\d+) \(βU=([^,()]*), βL=([^,()]*)\)$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+        /// <summary>
+        /// 結果の荷重ケースと組合せ。結果が持つ値 (<paramref name="stored"/>) があればそれ。無ければ (2026-11-05 より前に保存した結果)
+        /// 見出しから読む: 「L1-1: 」「1-1: 」で始まれば地震時、そうでなく常時の形 ("VL"・"VL (常時+追加)"・"杭軸力 VL"・
+        /// "矩形荷重 (VL)") なら常時、どちらでもなければレベル -1 (どのケースとも一致しない)。
+        /// </summary>
+        public static ResultCaseIdentity KeyOf(string? label, ResultCaseIdentity? stored)
+        {
+            if (stored != null) return stored;
+            string text = label ?? "";
+            var key = new ResultCaseIdentity();
+            var combination = CombinationParts.Match(text);
+            if (combination.Success)
+            {
+                key.CombinationNo = int.Parse(combination.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+                key.BetaU = ParseBeta(combination.Groups[2].Value);
+                key.BetaL = ParseBeta(combination.Groups[3].Value);
+                text = text[..combination.Index];
+            }
+            var seismic = CaseLabel.Match(text);
+            if (seismic.Success)
+            {
+                key.Level = int.Parse(seismic.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
+                key.CaseNo = int.Parse(seismic.Groups[2].Value, System.Globalization.CultureInfo.InvariantCulture);
+                key.CaseName = seismic.Groups[3].Value;
+            }
+            else if (text.StartsWith("VL", StringComparison.Ordinal) || text.EndsWith("(VL)", StringComparison.Ordinal)
+                     || text.EndsWith(" VL", StringComparison.Ordinal))
+            {
+                key.Level = 0;
+                key.CaseName = "VL";
+            }
+            else
+            {
+                key.Level = -1;
+                key.CaseName = text;
+            }
+            return key;
+
+            static double? ParseBeta(string value)
+                => double.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double v)
+                    ? v : null;
         }
 
         /// <summary>
-        /// 同じケースの結果のうち、組合せの部分が <paramref name="suffix"/> のものを選ぶ (空なら最初)。
-        /// <paramref name="isCandidate"/> を満たすものだけが候補。無ければ -1。
+        /// 結果が、画面で選んでいる荷重ケース (名前。null・"VL" は常時) のものか。
+        /// <para>入力にその名前の荷重ケースがあれば、<b>レベル・番号・名前</b>がすべて一致するときだけ。解析のあとに荷重ケースを
+        /// 並べ替えた・消したときに、番号の同じ別のケースの結果と照合しない。入力に無い名前なら名前だけで見る。</para>
+        /// </summary>
+        public static bool RefersTo(ResultCaseIdentity key, InputModel? input, string? caseName)
+        {
+            if (string.IsNullOrEmpty(caseName) || caseName == "VL") return key.IsLongTerm;
+            if (key.Level <= 0) return false;
+            var cases = input?.LoadCasesInput;
+            var lc = cases?.LoadCasesLevel1?.FirstOrDefault(c => c?.LoadName == caseName)
+                  ?? cases?.LoadCasesLevel2?.FirstOrDefault(c => c?.LoadName == caseName);
+            return lc != null
+                ? key.Level == lc.Level && key.CaseNo == lc.No && key.CaseName == caseName
+                : key.CaseName == caseName;
+        }
+
+        /// <summary>
+        /// 結果が、選んでいる組合せの代表 (<see cref="RepresentativeFor"/>) のものか。代表が null (組合せで絞らない) なら常に true。
+        /// 番号と係数 (丸めない値) がすべて一致するときだけ。常時の結果は組合せを持たないので、組合せを選んでいても一致とする
+        /// (以前は分離入力で組合せを選んでいると、常時を選んでも常時の結果と一致せず「結果なし」になった)。
+        /// </summary>
+        public static bool SameCombination(ResultCaseIdentity key, LoadCombination? representative)
+            => representative == null
+               || key.IsLongTerm
+               || (key.CombinationNo == representative.No && key.BetaU == representative.Beta1 && key.BetaL == representative.Beta2);
+
+        /// <summary>
+        /// 同じケースの結果のうち、選んでいる組合せの代表のものを選ぶ (代表が null なら最初)。
+        /// <paramref name="isCandidate"/> を満たすものだけが候補。無ければ -1 (結果なし)。
         ///
-        /// <para>組合せを指定したのにその組合せの結果が無ければ -1 (結果なし)。以前は同じケースの最初の結果を返し、
+        /// <para>組合せを指定したのにその組合せの結果が無ければ -1。以前は同じケースの最初の結果を返し、
         /// 解析後に組合せを変えたときなどに、選んでいない組合せの沈下を黙って表示していた (2026-11-04 外部レビュー)。</para>
         /// </summary>
-        public static int Pick(IReadOnlyList<string> labels, Func<int, bool> isCandidate, string suffix)
+        public static int Pick(IReadOnlyList<ResultCaseIdentity> keys, Func<int, bool> isCandidate, LoadCombination? representative)
         {
-            for (int i = 0; i < labels.Count; i++)
+            for (int i = 0; i < keys.Count; i++)
             {
                 if (!isCandidate(i)) continue;
-                if (suffix.Length == 0 || CombinationPartOf(labels[i]) == suffix) return i;
+                if (SameCombination(keys[i], representative)) return i;
             }
             return -1;
         }

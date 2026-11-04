@@ -370,16 +370,16 @@ namespace TestProject1
             var c2 = new LoadCombination(2, 1.0, 1.0, -1.0);
             var c3 = new LoadCombination(3, 0.5, 1.0, -1.0);
             var input = MakeInput(true, c1, c2, c3);
-            var labels = new List<string>
+            var keys = new List<ResultCaseIdentity>
             {
-                "VL (常時+追加)",
-                "1-1: U1" + SeismicAxialForces.CombinationSuffix(c1),
-                "1-1: U1" + SeismicAxialForces.CombinationSuffix(c2),
+                ResultCaseIdentity.LongTerm(),
+                ResultCaseIdentity.Seismic(1, 1, "U1", c1),
+                ResultCaseIdentity.Seismic(1, 1, "U1", c2),
             };
-            bool SameCase(int i) => SeismicCaseLabels.BaseCaseName(labels[i]) == "U1";
-            Assert.AreEqual(2, SeismicCaseLabels.Pick(labels, SameCase, SeismicCaseLabels.SuffixFor(input, c3)),
+            bool SameCase(int i) => keys[i].CaseName == "U1";
+            Assert.AreEqual(2, SeismicCaseLabels.Pick(keys, SameCase, SeismicCaseLabels.RepresentativeFor(input, c3)),
                 "No.3 を選んだのに代表 (No.2) の結果を選ばない (別の組合せの沈下量が出る)");
-            Assert.AreEqual(1, SeismicCaseLabels.Pick(labels, SameCase, SeismicCaseLabels.SuffixFor(input, c1)));
+            Assert.AreEqual(1, SeismicCaseLabels.Pick(keys, SameCase, SeismicCaseLabels.RepresentativeFor(input, c1)));
             // 分離入力でなければ組合せは見ない (従来どおり同じケースの最初)
             Assert.AreEqual("", SeismicCaseLabels.SuffixFor(MakeInput(false, c1, c2, c3), c3));
         }

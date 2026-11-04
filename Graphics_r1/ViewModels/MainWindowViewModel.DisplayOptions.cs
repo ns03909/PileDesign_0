@@ -557,7 +557,7 @@ namespace PileDesign.ViewModels
             var pgs = CurrentInputModel?.PileGroupSettlement;
             if (pgs?.CaseRecords == null || pgs.CaseRecords.Count == 0) return;
 
-            int idx = FindMatchingCaseRecordIndex(pgs.CaseRecords, loadCaseName, pgs.ActiveLoadingType, SelectedCombinationSuffix());
+            int idx = FindMatchingCaseRecordIndex(pgs.CaseRecords, CurrentInputModel, loadCaseName, pgs.ActiveLoadingType, SelectedCombinationRepresentative());
             if (idx == pgs.ActiveCaseIndex) return;
 
             if (idx < 0)
@@ -581,42 +581,22 @@ namespace PileDesign.ViewModels
         }
 
         /// <summary>
-        /// LoadCase 名 (例: "VL", "U1") から CaseRecord の index を見つける。
+        /// 荷重ケース名 (例: "VL", "U1") から CaseRecord の index を見つける。
         /// activeLoadingType が指定された場合、その LoadingType の record だけを対象とする。
-        /// 一致順位: 厳密一致 → 末尾 ": <name>" 一致 → 完全一致 "VL" のみ VL ケースへフォールバック。
-        /// VL0 / VLadd など部分一致は無視する (一致なし → -1 で結果非表示)。
+        /// 照合は記録が持つ荷重ケース・組合せ (ResultCaseIdentity。以前の記録は見出しから読む) で行い、入力にあるケースなら
+        /// レベル・番号・名前のすべてが一致するものだけ。"VL" は常時の記録。VL0 / VLadd などは一致しない (一致なし → -1 で結果非表示)。
+        /// 分離入力では組合せごとに並ぶので、選んでいる組合せ (代表に読み替え) のもの。
         /// </summary>
         private static int FindMatchingCaseRecordIndex(
-            ObservableCollection<Models.Results.GroupSettlementCaseRecord> records,
-            string loadCaseName, string activeLoadingType = null, string combinationSuffix = null)
+            ObservableCollection<Models.Results.GroupSettlementCaseRecord> records, InputModel? input,
+            string loadCaseName, string activeLoadingType = null, LoadCombination? representative = null)
         {
             if (records == null || records.Count == 0 || string.IsNullOrEmpty(loadCaseName)) return -1;
             bool TypeMatch(int i) =>
                 string.IsNullOrEmpty(activeLoadingType) || records[i].LoadingType == activeLoadingType;
 
-            // 1. 厳密一致
-            for (int i = 0; i < records.Count; i++)
-                if (TypeMatch(i) && records[i].LoadCaseName == loadCaseName) return i;
-
-            // 2. 末尾一致 (例: "L1-1: U1" の "U1")。分離入力では "L1-1: U1 / 組合せNo.2 (…)" と組合せごとに並ぶので、
-            //    選んでいる組合せ (代表に読み替え) のものを優先する。照合は SeismicCaseLabels
-            var labels = records.Select(r => r.LoadCaseName).ToList();
-            int picked = SeismicCaseLabels.Pick(labels, i => TypeMatch(i) && SeismicCaseLabels.RefersToCase(labels[i], loadCaseName),
-                combinationSuffix ?? "");
-            if (picked >= 0) return picked;
-
-            // 3. "VL" の厳密一致のみ VL ケースへフォールバック (VL0/VLadd は対象外)
-            if (loadCaseName == "VL")
-            {
-                for (int i = 0; i < records.Count; i++)
-                {
-                    if (!TypeMatch(i)) continue;
-                    var name = records[i].LoadCaseName;
-                    // "矩形荷重 (VL)" / "杭軸力 VL" など VL ケースを示すラベル
-                    if (name == "VL" || name.EndsWith(" VL") || name.EndsWith("(VL)")) return i;
-                }
-            }
-            return -1;
+            var keys = records.Select(r => SeismicCaseLabels.KeyOf(r.LoadCaseName, r.CaseKey)).ToList();
+            return SeismicCaseLabels.Pick(keys, i => TypeMatch(i) && SeismicCaseLabels.RefersTo(keys[i], input, loadCaseName), representative);
         }
 
         /// <summary>
@@ -2650,7 +2630,7 @@ namespace PileDesign.ViewModels
                 // 一致するケースが無ければコンタを消去 (1回解析の結果を地震時ケースに誤って表示しないため)。
                 if (pgs.CaseRecords != null && pgs.CaseRecords.Count > 0)
                 {
-                    int idx = FindMatchingCaseRecordIndex(pgs.CaseRecords, SelectedLoadCaseName, pgs.ActiveLoadingType, SelectedCombinationSuffix());
+                    int idx = FindMatchingCaseRecordIndex(pgs.CaseRecords, CurrentInputModel, SelectedLoadCaseName, pgs.ActiveLoadingType, SelectedCombinationRepresentative());
                     if (idx >= 0)
                     {
                         pgs.ActiveCaseIndex = idx;
@@ -2694,6 +2674,7 @@ namespace PileDesign.ViewModels
                 var synth = new FEM.VerticalBeamCaseResult
                 {
                     LoadCaseName = rec.LoadCaseName,
+                    CaseKey = rec.CaseKey,
                     IsConverged = rec.IsConverged,
                 };
                 if (rec.NodeResults != null) synth.NodeResults.AddRange(rec.NodeResults);
@@ -2725,16 +2706,16 @@ namespace PileDesign.ViewModels
         {
             var results = VerticalBeamCaseResults;
             if (results == null || results.Count == 0) return null;
-            var labels = results.Select(c => c.LoadCaseName).ToList();
+            var keys = results.Select(c => SeismicCaseLabels.KeyOf(c.LoadCaseName, c.CaseKey)).ToList();
             string selectedName = SelectedLoadCaseName;
-            int i = SeismicCaseLabels.Pick(labels, k => SeismicCaseLabels.BaseCaseName(labels[k]) == selectedName,
-                SelectedCombinationSuffix());
+            int i = SeismicCaseLabels.Pick(keys, k => SeismicCaseLabels.RefersTo(keys[k], CurrentInputModel, selectedName),
+                SelectedCombinationRepresentative());
             return i >= 0 ? results[i] : null;
         }
 
-        /// <summary>選んでいる組合せの、鉛直の結果の見出しに付く組合せの部分 (分離入力でなければ空)。</summary>
-        internal string SelectedCombinationSuffix()
-            => SeismicCaseLabels.SuffixFor(CurrentInputModel, SelectedLoadCombinationIn(CurrentInputModel));
+        /// <summary>選んでいる組合せの代表 (βU・βL の同じ組合せは代表に読み替え)。分離入力でない・選んでいないときは null (組合せで絞らない)。</summary>
+        internal LoadCombination? SelectedCombinationRepresentative()
+            => SeismicCaseLabels.RepresentativeFor(CurrentInputModel, SelectedLoadCombinationIn(CurrentInputModel));
 
         // 基礎梁鉛直解析結果
         private ObservableCollection<FEM.VerticalBeamCaseResult> _verticalBeamCaseResults;

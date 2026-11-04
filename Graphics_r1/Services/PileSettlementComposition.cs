@@ -72,11 +72,12 @@ namespace PileDesign.Services
             // 群杭沈下の記録が組合せごと (地震時軸力の分離入力・基礎梁考慮) なら、単杭沈下も<b>同じ組合せ</b>の結果を足す。
             // ケースごとの欄は組合せのうち軸力が最大のもので、記録と別の組合せなら同じ荷重状態の沈下量にならない
             // (2026-11-04 外部レビュー)。同じ組合せの結果が無ければ「単杭沈下の結果なし」(別の組合せで代えない)
-            string combinationPart = includeGroup ? SeismicCaseLabels.CombinationPartOf(groupRecord?.LoadCaseName) : "";
-            if (found && level is 1 or 2 && combinationPart.Length > 0)
+            // 照合は記録が持つ荷重ケース・組合せ (ResultCaseIdentity) で、番号と係数 (丸めない値) がすべて一致するもの
+            var groupKey = includeGroup && groupRecord != null ? SeismicCaseLabels.KeyOf(groupRecord.LoadCaseName, groupRecord.CaseKey) : null;
+            if (found && level is 1 or 2 && groupKey is { HasCombination: true })
             {
                 var separated = pile.SinglePileSettlementsSeparated?.FirstOrDefault(r => r.Level == level && r.CaseNo == caseIndex + 1
-                    && SeismicAxialForces.CombinationSuffix(r.CombinationNo, r.BetaU, r.BetaL) == combinationPart);
+                    && r.CombinationNo == groupKey.CombinationNo && r.BetaU == groupKey.BetaU && r.BetaL == groupKey.BetaL);
                 if (separated != null) (single_m, beyond) = (separated.Settlement, separated.BeyondCurve);
                 else (found, single_m, beyond) = (false, 0.0, false);
             }
@@ -93,7 +94,7 @@ namespace PileDesign.Services
                 // 群杭沈下の記録が単杭沈下と別の荷重ケースなら足さない (同じ荷重状態の沈下量にならない)。
                 // 以前は確かめずに足し、グラフで地震時のケースを選んでいても、画面で表示中の常時の群杭沈下を足していた
                 // (2026-11-04 外部レビュー)
-                else if (found && !SameLoadCase(groupRecord, level, caseIndex))
+                else if (found && !SeismicCaseLabels.RefersTo(groupKey!, input, singleCase))
                     groupReason = DescribeOtherLoadCase(groupRecord, singleCase);
                 else
                 {
@@ -138,37 +139,17 @@ namespace PileDesign.Services
                 ? vb + g : null;
 
         /// <summary>
-        /// 群杭沈下の記録が、単杭沈下の荷重ケース (<paramref name="level"/> 0 は常時、1・2 は地震時で
-        /// <paramref name="caseIndex"/> はそのレベルの並びの位置) と同じ荷重ケースか。
-        /// 常時は常時の記録どうし、地震時は見出しの「L{レベル}-{番号}: 」が一致するもの。
-        /// </summary>
-        internal static bool SameLoadCase(GroupSettlementCaseRecord record, int level, int caseIndex)
-        {
-            if (level == 0) return record.IsLongTerm;
-            if (record.IsLongTerm) return false;
-            var m = CaseCode.Match(SeismicCaseLabels.WithoutCombination(record.LoadCaseName));
-            return m.Success && int.Parse(m.Groups[1].Value) == level && int.Parse(m.Groups[2].Value) == caseIndex + 1;
-        }
-
-        /// <summary>
         /// 群杭沈下の記録が、荷重ケース名 <paramref name="singleCase"/> (null・"VL" は常時) と同じ荷重ケースか。
-        /// ケースが見つからなければ true (照合できないものは止めない。単杭沈下の側が「結果なし」になる)。
+        /// 記録が持つ荷重ケース (以前の記録は見出しから読む) で照合し、入力にあるケースならレベル・番号・名前のすべてが一致するもの
+        /// (<see cref="SeismicCaseLabels.RefersTo"/>)。記録が無ければ true。
         /// </summary>
         public static bool SameLoadCase(InputModel input, GroupSettlementCaseRecord? record, string? singleCase)
-        {
-            if (record == null) return true;
-            var (found, _, _, level, caseIndex) = SingleOfCase(input, new PileLayoutDataItem(), singleCase);
-            return !found && level == 0 && singleCase is not (null or "VL") || SameLoadCase(record, level, caseIndex);
-        }
+            => record == null || SeismicCaseLabels.RefersTo(SeismicCaseLabels.KeyOf(record.LoadCaseName, record.CaseKey), input, singleCase);
 
         /// <summary>群杭沈下の記録が単杭沈下と別の荷重ケースのときの理由。</summary>
         internal static string DescribeOtherLoadCase(GroupSettlementCaseRecord record, string? singleCase)
             => $"群杭沈下 ({CaseNameOf(record)}) は単杭沈下 ({(singleCase is null or "VL" ? "常時" : singleCase)}) と別の荷重ケースなので足していません"
                + " (同じ荷重ケースの群杭沈下を表示してください)";
-
-        /// <summary>地震時の記録の見出しの荷重ケースの符号 ("L1-1: " / "1-1: ")。</summary>
-        private static readonly System.Text.RegularExpressions.Regex CaseCode =
-            new(@"^L?(\d+)-(\d+): ", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
         /// <summary>記録の呼び名 (常時の記録は「常時」)。理由の文に使う。</summary>
         private static string CaseNameOf(GroupSettlementCaseRecord record)

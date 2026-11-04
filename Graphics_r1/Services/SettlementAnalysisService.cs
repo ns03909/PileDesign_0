@@ -417,8 +417,8 @@ namespace PileDesign.Services
             ObservableCollection<VerticalBeamCaseResult>? verticalBeamCaseResults)
         {
             if (verticalBeamCaseResults == null || verticalBeamCaseResults.Count == 0) return null;
-            return verticalBeamCaseResults.FirstOrDefault(c =>
-                (c.LoadCaseName ?? string.Empty).TrimStart().StartsWith("VL"));
+            // 結果が持つ荷重ケース (以前の結果は見出しから読む) で常時のもの
+            return verticalBeamCaseResults.FirstOrDefault(c => SeismicCaseLabels.KeyOf(c.LoadCaseName, c.CaseKey).IsLongTerm);
         }
 
         /// <summary>

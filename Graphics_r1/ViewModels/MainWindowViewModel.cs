@@ -1051,6 +1051,7 @@ namespace PileDesign.ViewModels
             var record = new GroupSettlementCaseRecord
             {
                 LoadCaseName = "VL",
+                CaseKey = ResultCaseIdentity.LongTerm(),
                 LoadingType = loadingType,
                 IsBeamAware = false,
                 IsConverged = true,

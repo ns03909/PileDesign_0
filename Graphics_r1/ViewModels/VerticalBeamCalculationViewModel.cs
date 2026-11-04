@@ -447,7 +447,7 @@ namespace PileDesign.ViewModels
 
                 // 荷重ステップ解析
                 var caseResult = await RunLoadSteps(
-                    modelling, anaModel, settings, caseName, caseIndex, totalCases, token);
+                    modelling, anaModel, settings, caseName, caseIndex, totalCases, token, ResultCaseIdentity.LongTerm());
 
                 // 結果収集
                 CollectResults(modelling, anaModel, caseResult, p => p.AxialForceVL);
@@ -504,7 +504,8 @@ namespace PileDesign.ViewModels
 
                         // 荷重ステップ解析
                         var caseResult = await RunLoadSteps(
-                            modelling, anaModel, settings, caseName, caseIndex, totalCases, token);
+                            modelling, anaModel, settings, caseName, caseIndex, totalCases, token,
+                            ResultCaseIdentity.Seismic(level, caseNo, levelCases[i].LoadName, combination));
 
                         // 結果収集（最終状態 = VL + delta）
                         CollectResults(modelling, anaModel, caseResult, Seismic);
@@ -581,9 +582,9 @@ namespace PileDesign.ViewModels
         internal async Task<VerticalBeamCaseResult> RunLoadSteps(
             VerticalBeamModelling modelling, AnaModel anaModel, VerticalBeamRunSettings settings,
             string caseName, int caseIndex, int totalCases,
-            CancellationToken token)
+            CancellationToken token, ResultCaseIdentity? caseKey = null)
         {
-            var caseResult = new VerticalBeamCaseResult { LoadCaseName = caseName };
+            var caseResult = new VerticalBeamCaseResult { LoadCaseName = caseName, CaseKey = caseKey };
             bool caseConverged = true;
             int loadStepsCount = settings.LoadStepsCount;
             double tolerance = settings.ConvergenceTolerance;

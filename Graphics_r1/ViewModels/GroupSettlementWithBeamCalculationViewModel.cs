@@ -63,6 +63,7 @@ namespace PileDesign.ViewModels
                 var caseResult = new GroupSettlementWithBeamCaseResult
                 {
                     LoadCaseName = rec.LoadCaseName,
+                    CaseKey = rec.CaseKey?.Clone(),
                     IsConverged = rec.IsConverged,
                     IterationCount = rec.IterationCount,
                     FinalResidual = rec.FinalResidual,
@@ -230,6 +231,7 @@ namespace PileDesign.ViewModels
                     var record = new GroupSettlementCaseRecord
                     {
                         LoadCaseName = cr.LoadCaseName,
+                        CaseKey = cr.CaseKey?.Clone(),
                         LoadingType = thisLoadingType,
                         IsBeamAware = true,
                         IsConverged = cr.IsConverged,
@@ -474,7 +476,7 @@ namespace PileDesign.ViewModels
                 for (int i = 0; i < total; i++)
                 {
                     token.ThrowIfCancellationRequested();
-                    var (label, ppi) = cases[i];
+                    var (label, caseKey, ppi) = cases[i];
                     StatusText = $"反復解析: {label} ({i + 1}/{total})";
 
                     // 取り消しは計算の中 (反復ごと) まで渡す。取り消されたあとに終わった計算の結果は載せない
@@ -492,7 +494,7 @@ namespace PileDesign.ViewModels
                         AddLog(line);
                     AddLog("");
 
-                    var caseResult = ToCaseResult(label, ppi, serviceResult);
+                    var caseResult = ToCaseResult(label, caseKey, ppi, serviceResult);
                     Application.Current?.Dispatcher.Invoke(() => CaseResults.Add(caseResult));
 
                     CurrentProgress = (i + 1.0) / total * 100;
@@ -681,9 +683,9 @@ namespace PileDesign.ViewModels
 
         // ── 荷重ケース構築 ──
 
-        private List<(string Label, Dictionary<int, double> Ppi)> BuildCaseList()
+        private List<(string Label, ResultCaseIdentity Key, Dictionary<int, double> Ppi)> BuildCaseList()
         {
-            var list = new List<(string, Dictionary<int, double>)>();
+            var list = new List<(string, ResultCaseIdentity, Dictionary<int, double>)>();
             var piles = InputModel.PileLayoutItems;
 
             if (LoadSource == SourceRectLoads)
@@ -695,7 +697,7 @@ namespace PileDesign.ViewModels
                     if (r.LinkedPileNo > 0 && ppi.ContainsKey(r.LinkedPileNo))
                         ppi[r.LinkedPileNo] += r.QA;
                 }
-                list.Add(("矩形荷重 (VL)", ppi));
+                list.Add(("矩形荷重 (VL)", ResultCaseIdentity.LongTerm(), ppi));
                 return list;
             }
 
@@ -703,7 +705,7 @@ namespace PileDesign.ViewModels
             if (AnalyzeVL)
             {
                 var ppi = piles.ToDictionary(p => p.PileNo, p => p.AxialForceVL);
-                list.Add(("杭軸力 VL", ppi));
+                list.Add(("杭軸力 VL", ResultCaseIdentity.LongTerm(), ppi));
             }
             // 地震時は、水平解析と同じく「解析対象」の荷重ケースだけ (適用しないケースも除く)。
             // 以前はレベルの荷重ケースをすべて並べ、解析対象・適用を外したケースまで解いていた
@@ -722,7 +724,8 @@ namespace PileDesign.ViewModels
                         var forces = lc.Level == 1 ? p.AxialForceLevel1s : p.AxialForceLevel2s;
                         return idx >= 0 && idx < (forces?.Count ?? 0) ? forces![idx] : 0.0;
                     });
-                    list.Add((CaseLabel(lc) + SeismicAxialForces.CombinationSuffix(combination), ppi));
+                    list.Add((CaseLabel(lc) + SeismicAxialForces.CombinationSuffix(combination),
+                        ResultCaseIdentity.Seismic(lc.Level, lc.No, lc.LoadName, combination), ppi));
                 }
             }
             return list;
@@ -765,12 +768,13 @@ namespace PileDesign.ViewModels
         partial void OnAnalyzeLevel1Changed(bool value) { OnPropertyChanged(nameof(PlannedCasesText)); OnPropertyChanged(nameof(RunSummaryText)); }
         partial void OnAnalyzeLevel2Changed(bool value) { OnPropertyChanged(nameof(PlannedCasesText)); OnPropertyChanged(nameof(RunSummaryText)); }
 
-        internal GroupSettlementWithBeamCaseResult ToCaseResult(string label,
+        internal GroupSettlementWithBeamCaseResult ToCaseResult(string label, ResultCaseIdentity? caseKey,
             Dictionary<int, double> ppi, IterativeBeamSettlementResult sr)
         {
             var caseResult = new GroupSettlementWithBeamCaseResult
             {
                 LoadCaseName = label,
+                CaseKey = caseKey,
                 IsConverged = sr.Converged,
                 IterationCount = sr.IterationCount,
                 FinalResidual = sr.FinalResidual,
@@ -835,6 +839,9 @@ namespace PileDesign.ViewModels
     public class GroupSettlementWithBeamCaseResult : ObservableObject
     {
         public string LoadCaseName { get; set; } = "";
+
+        /// <summary>どの荷重ケース・組合せの結果か (記録へそのまま写す。照合は見出しの文字から読まない)。</summary>
+        public ResultCaseIdentity? CaseKey { get; set; }
         public bool IsConverged { get; set; }
 
         /// <summary>

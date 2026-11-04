@@ -45,7 +45,7 @@ namespace TestProject1
             int missing = pileNos[1];
             var ppi = pileNos.ToDictionary(n => n, _ => 1000.0);
 
-            var result = vm.ToCaseResult("VL", ppi, ResultFor(pileNos, missing));
+            var result = vm.ToCaseResult("VL", ResultCaseIdentity.LongTerm(), ppi, ResultFor(pileNos, missing));
 
             CollectionAssert.AreEqual(new[] { missing }, result.MissingPileNos, "欠けた杭を記録していません");
             var row = result.PileResults.Single(p => p.PileNo == missing);
@@ -55,7 +55,7 @@ namespace TestProject1
             StringAssert.Contains(result.DisplayName, "結果欠損");
             StringAssert.Contains(result.MissingWarning, $"杭No.{missing}");
 
-            var complete = vm.ToCaseResult("VL", ppi, ResultFor(pileNos, null));
+            var complete = vm.ToCaseResult("VL", ResultCaseIdentity.LongTerm(), ppi, ResultFor(pileNos, null));
             Assert.AreEqual(0, complete.MissingPileNos.Count);
             Assert.AreEqual("", complete.MissingWarning);
         }
@@ -70,7 +70,7 @@ namespace TestProject1
                 var (vm, input) = Build();
                 var pileNos = input.PileLayoutItems.Select(p => p.PileNo).ToList();
                 var ppi = pileNos.ToDictionary(n => n, _ => 1000.0);
-                vm.CaseResults.Add(vm.ToCaseResult("VL", ppi, ResultFor(pileNos, pileNos[0])));
+                vm.CaseResults.Add(vm.ToCaseResult("VL", ResultCaseIdentity.LongTerm(), ppi, ResultFor(pileNos, pileNos[0])));
                 int before = input.PileGroupSettlement.CaseRecords.Count;
 
                 vm.OkCommand.Execute(null);

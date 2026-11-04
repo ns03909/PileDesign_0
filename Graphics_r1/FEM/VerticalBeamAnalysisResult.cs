@@ -158,6 +158,11 @@ namespace PileDesign.FEM
     public class VerticalBeamCaseResult
     {
         public string LoadCaseName { get; set; } = string.Empty;
+        /// <summary>
+        /// どの荷重ケース・組合せの結果か (照合はこれで行う。見出しの文字から読まない)。
+        /// 2026-11-05 より前に保存した結果は null で、見出しから読む (<see cref="Models.InputData.SeismicCaseLabels.KeyOf"/>)。
+        /// </summary>
+        public Models.InputData.ResultCaseIdentity? CaseKey { get; set; }
         public List<VerticalBeamPileResult> PileResults { get; set; } = [];
         public List<VerticalBeamNodeResult> NodeResults { get; set; } = [];
         public List<VerticalBeamBeamResult> BeamResults { get; set; } = [];

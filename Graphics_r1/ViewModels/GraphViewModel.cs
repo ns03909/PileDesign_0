@@ -1954,12 +1954,13 @@ namespace PileDesign.ViewModels
             var vbResults = _mainWindowViewModel.VerticalBeamCaseResults;
             if (vbResults == null || vbResults.Count == 0) return double.NaN;
 
-            // 荷重ケース名で結果を探す。結果の見出しは "1-1: U1" "VL (常時+追加)" (分離入力では組合せを添える) なので、
-            // 見出しのケース名で照合し、分離入力では選んでいる組合せのものを選ぶ (SeismicCaseLabels)。
+            // 荷重ケースで結果を探す。結果が持つ荷重ケース・組合せ (ResultCaseIdentity。以前の結果は見出しから読む) で照合し、
+            // 分離入力では選んでいる組合せのものを選ぶ (SeismicCaseLabels)。
             // 以前は見出しを丸ごとケース名と比べていて、地震時のケースは一致せず、いつも先頭 (常時) の結果を使っていた
-            var labels = vbResults.Select(c => c.LoadCaseName).ToList();
-            int picked = SeismicCaseLabels.Pick(labels, i => SeismicCaseLabels.BaseCaseName(labels[i]) == loadCaseName,
-                _mainWindowViewModel.SelectedCombinationSuffix());
+            var input = _mainWindowViewModel.CurrentInputModel;
+            var keys = vbResults.Select(c => SeismicCaseLabels.KeyOf(c.LoadCaseName, c.CaseKey)).ToList();
+            int picked = SeismicCaseLabels.Pick(keys, i => SeismicCaseLabels.RefersTo(keys[i], input, loadCaseName),
+                _mainWindowViewModel.SelectedCombinationRepresentative());
             if (picked < 0) return double.NaN;
             var caseResult = vbResults[picked];
 
@@ -2015,12 +2016,11 @@ namespace PileDesign.ViewModels
 
             if (!string.IsNullOrEmpty(loadCaseName))
             {
-                var exact = beamAware.FirstOrDefault(r => r.LoadCaseName == loadCaseName);
-                if (exact != null) return exact;
-                // 分離入力では組合せごとに並ぶので、選んでいる組合せ (代表に読み替え) のものを優先する (照合は SeismicCaseLabels)
-                var labels = beamAware.Select(r => r.LoadCaseName).ToList();
-                int picked = SeismicCaseLabels.Pick(labels, i => SeismicCaseLabels.RefersToCase(labels[i], loadCaseName),
-                    _mainWindowViewModel.SelectedCombinationSuffix());
+                // 記録が持つ荷重ケース・組合せで照合する。分離入力では組合せごとに並ぶので、選んでいる組合せ (代表に読み替え) のもの
+                var input = _mainWindowViewModel.CurrentInputModel;
+                var keys = beamAware.Select(r => SeismicCaseLabels.KeyOf(r.LoadCaseName, r.CaseKey)).ToList();
+                int picked = SeismicCaseLabels.Pick(keys, i => SeismicCaseLabels.RefersTo(keys[i], input, loadCaseName),
+                    _mainWindowViewModel.SelectedCombinationRepresentative());
                 return picked >= 0 ? beamAware[picked] : null;
             }
 

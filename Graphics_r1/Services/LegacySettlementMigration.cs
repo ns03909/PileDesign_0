@@ -105,6 +105,7 @@ namespace PileDesign.Services
                     new GroupSettlementCaseRecord
                     {
                         LoadCaseName = "VL",
+                        CaseKey = PileDesign.Models.InputData.ResultCaseIdentity.LongTerm(),
                         LoadingType = string.IsNullOrEmpty(pgs.LoadingType) ? "任意矩形" : pgs.LoadingType,
                         IsBeamAware = false,
                         IsConverged = false,

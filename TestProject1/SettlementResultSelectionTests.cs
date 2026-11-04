@@ -23,21 +23,28 @@ namespace TestProject1
         private const string Combo1 = " / 組合せNo.1 (βU=1, βL=1)";
         private const string Combo2 = " / 組合せNo.2 (βU=1, βL=-1)";
 
+        private static readonly LoadCombination C1 = new(1, 1.0, 1.0, 1.0);
+        private static readonly LoadCombination C2 = new(2, 1.0, 1.0, -1.0);
+
+        /// <summary>見出しだけを持つ (以前に保存した) 結果の荷重ケース・組合せ。</summary>
+        private static List<ResultCaseIdentity> Keys(params string[] labels) => labels.Select(l => SeismicCaseLabels.KeyOf(l, null)).ToList();
+
         [TestMethod]
         public void Pick_ReturnsNoResult_WhenTheChosenCombinationWasNotAnalyzed()
         {
-            var labels = new List<string> { "VL (常時+追加)", "1-1: U1" + Combo1 };
-            bool U1(int i) => SeismicCaseLabels.BaseCaseName(labels[i]) == "U1";
+            var keys = Keys("VL (常時+追加)", "1-1: U1" + Combo1);
+            bool U1(int i) => keys[i].CaseName == "U1";
 
-            Assert.AreEqual(1, SeismicCaseLabels.Pick(labels, U1, Combo1), "(前提) 解析した組合せは選べる");
-            Assert.AreEqual(-1, SeismicCaseLabels.Pick(labels, U1, Combo2),
+            Assert.AreEqual(1, SeismicCaseLabels.Pick(keys, U1, C1), "(前提) 解析した組合せは選べる");
+            Assert.AreEqual(-1, SeismicCaseLabels.Pick(keys, U1, C2),
                 "解析していない組合せを選んだのに、別の組合せの結果を返しています");
             // 組合せを分けずに解いた結果 (見出しに組合せが無い) も、組合せを指定したら当たらない (分離入力へ切り替えたあと)
-            var unseparated = new List<string> { "1-1: U1" };
-            Assert.AreEqual(-1, SeismicCaseLabels.Pick(unseparated, _ => true, Combo1));
+            Assert.AreEqual(-1, SeismicCaseLabels.Pick(Keys("1-1: U1"), _ => true, C1));
             // 組合せを指定しなければ従来どおり同じケースの最初
-            Assert.AreEqual(1, SeismicCaseLabels.Pick(labels, U1, ""));
-            Assert.AreEqual(-1, SeismicCaseLabels.Pick(labels, _ => false, ""));
+            Assert.AreEqual(1, SeismicCaseLabels.Pick(keys, U1, null));
+            Assert.AreEqual(-1, SeismicCaseLabels.Pick(keys, _ => false, null));
+            // 常時の結果は組合せを持たない。組合せを選んでいても常時を選べば常時の結果 (2026-11-05。以前は「結果なし」になった)
+            Assert.AreEqual(0, SeismicCaseLabels.Pick(keys, i => keys[i].IsLongTerm, C2), "組合せを選んでいると常時の結果を選べません");
         }
 
         [TestMethod]
@@ -150,9 +157,10 @@ namespace TestProject1
             Assert.AreEqual(" / 組合せNo.3 (βU=0.5, βL=1)", SeismicAxialForces.CombinationSuffix(3, 0.5, 1.0));
 
             // 古い係数 (1.001) で求めた結果は、新しい係数 (1.004) の組合せとして選ばない
-            var labels = new List<string> { "1-1: U1" + SeismicAxialForces.CombinationSuffix(1, 1.001, 1.0) };
-            Assert.AreEqual(-1, SeismicCaseLabels.Pick(labels, _ => true, SeismicAxialForces.CombinationSuffix(1, 1.004, 1.0)),
+            var keys = Keys("1-1: U1" + SeismicAxialForces.CombinationSuffix(1, 1.001, 1.0));
+            Assert.AreEqual(-1, SeismicCaseLabels.Pick(keys, _ => true, new LoadCombination(1, 1.0, 1.004, 1.0)),
                 "係数を変える前の結果を、変えたあとの組合せの結果として選んでいます");
+            Assert.AreEqual(0, SeismicCaseLabels.Pick(keys, _ => true, new LoadCombination(1, 1.0, 1.001, 1.0)), "(前提) 同じ係数なら選ぶ");
         }
 
         /// <summary>沈下の結果を「無ければ先頭」で選ぶ書き方が戻っていないこと (グラフ・メイン画面・ツールチップ)。</summary>
