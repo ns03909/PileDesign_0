@@ -27,6 +27,9 @@ namespace PileDesign.ViewModels
         }
 
         [ObservableProperty] private int calculationReportLevel = 1;
+        // 計算書の数式を、本文の順に並べた .tex ファイルにも出すか (計算書と同じ名前で横に置く)。既定は出さない。
+        // 章の選択ではなく出力の形式なので、名前を Include で始めない (「すべて選択」が Include* をまとめて入れる)
+        [ObservableProperty] private bool exportEquationsTex = false;
         [ObservableProperty] private bool includeGroundInformation = true;
         [ObservableProperty] private bool includeLiquefaction = false;
         // 解析未完了 OR 親 OFF 時は getter で false を返す → CheckBox が「未チェック+灰色」表示になり

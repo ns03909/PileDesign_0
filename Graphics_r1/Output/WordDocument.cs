@@ -244,6 +244,11 @@ namespace PileDesign.Output
             // 画面の状態から読むものは、ここ (画面のメッセージを回す前) で 1 つの時点に固定する (ReportSource 参照)。
             // 検定を求めるかは、解析を済ませたかと合わせて画面の側が決める (ここで _source を見ると、取る前の値を見る)
             bool wantsEvaluation = mainWindowViewModel?.DocxOutput?.IncludeHorizontal_NGReport == true;
+            // 数式を .tex にも出すか (出力の窓の選択)。ここで 1 つの時点に固定する
+            _wantsTex = mainWindowViewModel?.DocxOutput?.ExportEquationsTex == true;
+            _reportFileName = fileName;
+            _tex = null;
+            TexFilePath = null;
             _source = mainWindowViewModel?.CaptureReportSource(inputModel, wantsEvaluation) ?? new ReportSource();
 
             // 規模と出力の形式を添えて所要時間・メモリを記録する (PerfLog)
@@ -278,6 +283,31 @@ namespace PileDesign.Output
                 EndRun();
             }
 
+            // 数式の .tex は計算書を書き終えてから、計算書と同じ名前で横に置く。計算書と同じく書き切ってから差し替える
+            if (_tex != null)
+            {
+                string texPath = TexPathFor(fileName);
+                try
+                {
+                    string texText = _tex.Text;
+                    PileDesign.Services.FileOperationService.WriteAtomically(texPath, stream =>
+                    {
+                        using var writer = new StreamWriter(stream, new System.Text.UTF8Encoding(false));
+                        writer.Write(texText);
+                    });
+                    TexFilePath = texPath;
+                    Log.Information("[Docx] 数式の .tex を出力しました: {File} (数式 {Count} 個)", texPath, _tex.Equations);
+                    if (_tex.Missing > 0)
+                        _warnings.Add($"数式の .tex で、元の LaTeX が見つからなかった数式が {_tex.Missing} 個あります (Word の文字のまま書きました)。");
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    // 計算書はできているので止めずに知らせる
+                    Log.Warning(ex, "[Docx] 数式の .tex を書けませんでした: {File}", texPath);
+                    _warnings.Add($"数式の .tex を書けませんでした ({texPath})。{ex.Message}");
+                }
+            }
+
             lock (_omittedLock) OmittedItems = [.. _omitted];
             Warnings = [.. _warnings];
             Log.Debug("Word文書を出力しました。Word で開き、目次上をクリック → F9 でフィールド更新してください。");
@@ -289,6 +319,17 @@ namespace PileDesign.Output
         // 図を作る処理には静的なものもあるので、文書 1 つぶんの一覧を静的に持つ (CreateWordDocument の先頭で空にする)。
         private static readonly object _omittedLock = new();
         private static readonly List<string> _omitted = [];
+
+        // ── 数式の .tex (ReportTexExporter) ──
+        private bool _wantsTex;
+        private string _reportFileName = "";
+        private ReportTexExporter.Result? _tex;
+
+        /// <summary>計算書と一緒に出した数式の .tex の場所。出していなければ null。<see cref="CreateWordDocument"/> のあとに見る。</summary>
+        public string? TexFilePath { get; private set; }
+
+        /// <summary>計算書の docx に対する数式の .tex の場所 (同じフォルダー・同じ名前で拡張子だけ .tex)。</summary>
+        internal static string TexPathFor(string docxPath) => Path.ChangeExtension(docxPath, ".tex");
 
         /// <summary>この計算書で、作成できずに省いた図・表 (出力の順)。<see cref="CreateWordDocument"/> のあとに見る。</summary>
         public IReadOnlyList<string> OmittedItems { get; private set; } = [];
@@ -448,6 +489,14 @@ namespace PileDesign.Output
                 {
                     Log.Warning("[計算書] {Warning}", nonFinite);
                     _warnings.Add(nonFinite);
+                }
+
+                // 数式の .tex は出来上がった本文から読む (見出しと数式の順が計算書と同じになる)
+                if (_wantsTex)
+                {
+                    StartSection();
+                    _tex = ReportTexExporter.Build(body, Path.GetFileName(_reportFileName), _outputDate);
+                    EndSection("数式の .tex");
                 }
 
                 // まとめて追加

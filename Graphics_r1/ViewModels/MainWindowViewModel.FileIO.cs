@@ -1329,7 +1329,8 @@ namespace PileDesign.ViewModels
                     Serilog.Log.Information("[Docx] 完了: {Elapsed:N1} 秒, ファイル: {File}",
                         sw.Elapsed.TotalSeconds, System.IO.Path.GetFileName(saveFileDialog.FileName));
 
-                    ShowToast($"計算書を作成しました ({sw.Elapsed.TotalSeconds:N1}秒)");
+                    ShowToast($"計算書を作成しました ({sw.Elapsed.TotalSeconds:N1}秒)"
+                              + (doc.TexFilePath != null ? "。数式の .tex も出力しました" : ""));
 
                     // 作成できずに省いた図・表があれば知らせる (計算書の該当位置にも赤字で注記が入っている)
                     if (doc.OmittedItems.Count > 0)
@@ -1344,6 +1345,7 @@ namespace PileDesign.ViewModels
                     // 「目次を F9 で更新」は出力後に必ず要る手順なので、
                     // 数秒で消える Toast だけに載せず、ステータスバーにも残す。
                     StatusMessage = $"計算書を作成しました: {saveFileDialog.FileName}"
+                                  + (doc.TexFilePath != null ? $"（数式: {System.IO.Path.GetFileName(doc.TexFilePath)}）" : "")
                                   + "　／　Word で開き、目次の上をクリック → F9 でフィールドを更新してください";
 
                 }

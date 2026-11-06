@@ -138,6 +138,9 @@ WindowStartupLocation="CenterOwner">
                                          IsChecked="{Binding DocxOutput.CalculationReportLevel, Converter={StaticResource IntEqualsConverter}, ConverterParameter=1, Mode=TwoWay}" />
                             <RadioButton Content="詳細（数式説明あり）" GroupName="CalculationReportLevel" Margin="0,2,0,0"
                                          IsChecked="{Binding DocxOutput.CalculationReportLevel, Converter={StaticResource IntEqualsConverter}, ConverterParameter=2, Mode=TwoWay}" />
+                            <CheckBox Content="数式を LaTeX ファイル (.tex) にも出力" Margin="0,6,0,0"
+                                      IsChecked="{Binding DocxOutput.ExportEquationsTex, Mode=TwoWay}"
+                                      ToolTip="計算書の数式を、本文の順に見出しと一緒に並べた .tex ファイルを、計算書と同じフォルダー・同じ名前で出力します。&#x0a;自前の計算書へ式を写すときに使います。数式の多い「詳細」で効きます。"/>
                         </StackPanel>
                     </GroupBox>
 

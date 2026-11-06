@@ -441,7 +441,10 @@ namespace PileDesign.Output
 
             var runsList = ParseSequence('\0');
             var combined = CombineRunsToRun(runsList);
-            return GetCombinedRunToMath([combined]);
+            var math = GetCombinedRunToMath([combined]);
+            // 元の LaTeX を数式に結び付けておく (計算書の数式を .tex にも出すとき、本文から読み戻す)
+            ReportTexExporter.Remember(math, tex);
+            return math;
         }
         // 修正: CreateTableCell 内の string 処理を拡張して $...$ を TeX として変換できるようにする
         private static TableCell CreateTableCell(

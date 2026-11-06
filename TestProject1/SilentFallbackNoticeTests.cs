@@ -129,6 +129,7 @@ namespace TestProject1
                 ["WordDocument.cs|tempFile delete failed"] = "一時ファイルの後始末",
                 ["WordDocument.TextHelpers.cs|SetColumnWidth"] = "列幅の調整だけで、内容は欠けない",
                 ["WordDocument.Charts.cs|NodeResult取得失敗"] = "グラフの 1 点ぶんの値。グラフ自体は作る",
+                ["WordDocument.cs|数式の .tex を書けませんでした"] = "計算書の外のファイル (.tex)。計算書はできているので、確認の一覧 (Warnings) で知らせる",
             };
 
             var silent = new List<string>();
