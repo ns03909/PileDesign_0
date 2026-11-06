@@ -384,7 +384,7 @@ namespace PileDesign.ViewModels
                                 plotYValues = [.. moments];
                             }
 
-                            string legend = $"LC:{loadCase.LoadName}|Comb:{loadCombination.No}|LIQ:{isLiquefaction}|N:{axialN:F0}|Pile:{pileLayout.No}|Seg:{segLabel}";
+                            string legend = $"LC:{loadCase.LoadName}|{loadCombination.DisplayLabel}|LIQ:{isLiquefaction}|N:{axialN:F0}|Pile:{pileLayout.No}|Seg:{segLabel}";
                             var scatter = wpfPlot.Plot.Add.Scatter(plotXValues, plotYValues);
                             scatter.LineStyle.Width = 2;
                             scatter.MarkerSize = isEIMode ? 0 : 5; // EIモードはマーカー不要
@@ -404,7 +404,7 @@ namespace PileDesign.ViewModels
                                 $"杭 No: {pileLayout.No} / 要素 Seg{segLabel}\n" +
                                 $"入力杭区間 No: {(inputSegForDetails > 0 ? inputSegForDetails.ToString() : "—")}\n" +
                                 $"杭断面: {(string.IsNullOrEmpty(sectionDesc) ? "—" : sectionDesc)}\n" +
-                                $"LC: {loadCase.LoadName} / Comb: {loadCombination.No} / LIQ: {isLiquefaction}\n" +
+                                $"LC: {loadCase.LoadName} / {loadCombination.DisplayLabel} / LIQ: {isLiquefaction}\n" +
                                 $"軸力 N: {axialN:F1} kN\n" +
                                 $"曲線出典: {curveSource}";
                             _graphHoverMap[scatter] = mphiDetails;
@@ -711,7 +711,7 @@ namespace PileDesign.ViewModels
                                 {
                                     // 凡例のみ追加 (空シリーズ) して「剛結」表示
                                     string rigidLegend =
-                                        $"LC:{loadCase.LoadName}|Comb:{loadCombination.No}|LIQ:{isLiquefaction}|Pile:{pileLayout.No}|剛結 (M-θ 関係なし)";
+                                        $"LC:{loadCase.LoadName}|{loadCombination.DisplayLabel}|LIQ:{isLiquefaction}|Pile:{pileLayout.No}|剛結 (M-θ 関係なし)";
                                     var marker = wpfPlot.Plot.Add.Marker(0, 0);
                                     marker.LegendText = rigidLegend;
                                     marker.MarkerSize = 0;
@@ -737,7 +737,7 @@ namespace PileDesign.ViewModels
                             if (thetas.Length == 0 || moments.Length == 0) continue;
 
                             // 曲線プロット
-                            string legend = $"LC:{loadCase.LoadName}|Comb:{loadCombination.No}|LIQ:{isLiquefaction}|N:{axialN:F0}|Pile:{pileLayout.No}|Mode:{modeTag}";
+                            string legend = $"LC:{loadCase.LoadName}|{loadCombination.DisplayLabel}|LIQ:{isLiquefaction}|N:{axialN:F0}|Pile:{pileLayout.No}|Mode:{modeTag}";
                             var scatter = wpfPlot.Plot.Add.Scatter(thetas, moments);
                             scatter.LegendText = legend;
 
@@ -757,7 +757,7 @@ namespace PileDesign.ViewModels
                                 $"杭頭 Z: {(double.IsFinite(pileHeadZ) ? pileHeadZ.ToString("F3") + " m" : "—")}\n" +
                                 $"杭頭断面: {(string.IsNullOrEmpty(headSectionDesc) ? "—" : headSectionDesc)}\n" +
                                 $"回転ばね: {rs.Name} / Mode: {modeTag} / Kθ: {kUsed:0.###E+0}\n" +
-                                $"LC: {loadCase.LoadName} / Comb: {loadCombination.No} / LIQ: {isLiquefaction}\n" +
+                                $"LC: {loadCase.LoadName} / {loadCombination.DisplayLabel} / LIQ: {isLiquefaction}\n" +
                                 $"軸力 N: {axialN:F1} kN";
                             _graphHoverMap[scatter] = mthetaDetails;
 
@@ -1062,7 +1062,7 @@ namespace PileDesign.ViewModels
                                     marker.LegendText = $"最終:{legend}";
                                     _graphHoverMap[marker] =
                                         pyDetails + "\n" +
-                                        $"LC: {loadCase.LoadName} / Comb: {loadCombination.No} / LIQ: {isLiquefaction}"
+                                        $"LC: {loadCase.LoadName} / {loadCombination.DisplayLabel} / LIQ: {isLiquefaction}"
                                         + $" / {(isFront ? "前方杭" : "後方杭")}\n" +
                                         $"{endLabel}: 相対変位 {relDispMm:F2} mm, p = {pTheory:F1} kN/m²";
                                 }

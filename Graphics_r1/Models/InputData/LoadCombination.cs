@@ -171,6 +171,18 @@ namespace PileDesign.Models.InputData
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
 
+        /// <summary>
+        /// 図の凡例・見出しで使う呼び名。番号と係数を並べる (「組合せ1（αL=-1.00, βU=0.50, βL=-0.50）」)。
+        ///
+        /// <para>以前は画面の凡例が番号だけ (「1-1: U1|2|LIQ:False|3」の 2)、計算書の図の見出しが係数だけで、
+        /// 4 つの組合せの応力・変位図を見比べるときに、どれがどの組合せか分かりにくかった。
+        /// 照合には使わない (照合は番号 <see cref="IsSameCombination"/>、検定の項目は <see cref="Name"/>)。</para>
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public string DisplayLabel
+            => $"組合せ{No}（αL={Alpha1.ToString("F2")}, βU={Beta1.ToString("F2")}, βL={Beta2.ToString("F2")}）";
+
         public string GetName()
         {
             return Alpha1.ToString("F2") + "/" + Beta1.ToString("F2") + "/" + Beta2.ToString("F2");

@@ -363,7 +363,7 @@ namespace PileDesign.Output
 
                         AddAutoFigureCaption(
                             body,
-                            $"杭の応力・変位　杭番号:{pli.No} | 荷重ケース:{lc.LoadName} | 荷重組合せ:{comb.Name} | 液状化: {(isLiq ? "考慮" : "非考慮")}"
+                            $"杭の応力・変位　杭番号:{pli.No} | 荷重ケース:{lc.LoadName} | 荷重{comb.DisplayLabel} | 液状化: {(isLiq ? "考慮" : "非考慮")}"
                                 + MissingResultsNote(missingResults),
                             "図");
                     }
@@ -1286,7 +1286,7 @@ namespace PileDesign.Output
                 150, 100, limitXsByPanel, limitYsByPanel, limitLegend);
 
             string liqText = isLiq ? "液状化" : "非液状化";
-            string caption = $"杭No.{pli.No} | {lc.LoadName} | {comb.Name} | {liqText}" + MissingResultsNote(missingResults);
+            string caption = $"杭No.{pli.No} | {lc.LoadName} | {comb.DisplayLabel} | {liqText}" + MissingResultsNote(missingResults);
             return (png, caption);
         }
 
@@ -1534,7 +1534,7 @@ namespace PileDesign.Output
 
                             string liqText = isLiq ? "液状化" : "非液状化";
                             AddAutoFigureCaption(body,
-                                $"杭地盤セット 杭体:{pileRef}|地盤:{soilRef}|杭頭Z={headZ:N1}m | {lc.LoadName} | {comb.Name} | {liqText}"
+                                $"杭地盤セット 杭体:{pileRef}|地盤:{soilRef}|杭頭Z={headZ:N1}m | {lc.LoadName} | {comb.DisplayLabel} | {liqText}"
                                     + MissingResultsNote(missingResults),
                                 "図");
                         }

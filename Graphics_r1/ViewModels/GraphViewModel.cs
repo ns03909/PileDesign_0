@@ -1912,18 +1912,20 @@ namespace PileDesign.ViewModels
         // 杭レジェンドテキスト取得メソッド
         private static string GetPileLegendText(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction, PileLayoutDataItem pileLayoutDataItem)
         {
-            return loadCase.LoadName + "|" + loadCombination.No + "|LIQ:" + isLiquefaction + "|" + pileLayoutDataItem.No;
+            // 組合せは番号と係数で示す (以前は番号だけで、どの α・β の組か分からなかった)
+            return $"杭{pileLayoutDataItem.No}|{loadCase.LoadName}|{loadCombination.DisplayLabel}|{LiquefactionLegendText(isLiquefaction)}";
         }
 
         // 一般レジェンド取得メソッド
         private static string GetGeneralLegendText(LoadCase loadCase, LoadCombination loadCombination, bool isLiquefaction)
         {
             // 同名ケース（LoadAngle 違い）を区別するため角度を付記
-            // LoadCombination は No 以外にも α₁/β₁/β₂ で同定されるため組合せ係数も付記して一意化
-            return $"{loadCase.LoadName}@{loadCase.LoadAngle:F0}°|cmb{loadCombination.No}"
-                 + $"(αL={loadCombination.Alpha1:F2}/βU={loadCombination.Beta1:F2}/βL={loadCombination.Beta2:F2})"
-                 + $"|LIQ:{isLiquefaction}";
+            // 組合せは番号と係数で示す (LoadCombination.DisplayLabel)
+            return $"{loadCase.LoadName}@{loadCase.LoadAngle:F0}°|{loadCombination.DisplayLabel}|{LiquefactionLegendText(isLiquefaction)}";
         }
+
+        /// <summary>凡例の液状化の書き方 (以前は「LIQ:True」)。</summary>
+        internal static string LiquefactionLegendText(bool isLiquefaction) => isLiquefaction ? "液状化考慮" : "液状化非考慮";
 
         /// <summary>
         /// 慣性力作用点荷重変形関係グラフで、ケースごと（同一 LoadCase/Combination/Liq）に共通の色を返す。

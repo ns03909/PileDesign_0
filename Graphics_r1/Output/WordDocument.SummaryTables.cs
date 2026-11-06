@@ -410,7 +410,7 @@ namespace PileDesign.Output
                                     row.FoundResults[k]++;
                                     if (analyzed && status >= StepStatus.Unconverged)
                                         row.UnconvergedCases[k].Add(
-                                            $"{loadCase.LoadName} {loadCombination.Name}{(isLiquefaction ? "（液状化）" : "")}");
+                                            $"{loadCase.LoadName} {loadCombination.DisplayLabel}{(isLiquefaction ? "（液状化）" : "")}");
                                     row.Qmax[k] = Max(row.Qmax[k], force.FabsMax);
                                     row.Mmax[k] = Max(row.Mmax[k], force.MabsMax);
 
