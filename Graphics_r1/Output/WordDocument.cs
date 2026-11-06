@@ -1690,7 +1690,8 @@ namespace PileDesign.Output
     List<List<double>> xsScatterLists, List<List<double>> ysScatterLists, List<string> scatterLegends,
     string title, string xLabel, string yLabel,
     double widthMm = 150, double heightMm = 150, bool showLegend = true,
-    List<(LinePattern Pattern, ScottPlot.Color Color, float Width)?>? lineStyles = null)
+    List<(LinePattern Pattern, ScottPlot.Color Color, float Width)?>? lineStyles = null,
+    List<string?>? envelopeLegends = null)
         {
             try
             {
@@ -1773,6 +1774,9 @@ namespace PileDesign.Output
                         if (i < scatterLegends.Count) sc.LegendText = scatterLegends[i];
                         if (i < scatterColors.Length)
                             sc.MarkerColor = scatterColors[i];
+                        // 応力範囲の包絡線 (点を囲む点線)。凡例の指定がある系列だけ
+                        if (envelopeLegends != null && i < envelopeLegends.Count && !string.IsNullOrEmpty(envelopeLegends[i]))
+                            Common.StressRangeEnvelope.AddTo(plot, xs, ys, sc.MarkerColor, envelopeLegends[i]!);
                     }
                 }
 

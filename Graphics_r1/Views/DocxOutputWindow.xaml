@@ -221,6 +221,9 @@ WindowStartupLocation="CenterOwner">
                                       IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"/>
                             <CheckBox Content="N-M関係" IsChecked="{Binding DocxOutput.IncludeHorizontal_NMinT, Mode=TwoWay}" Margin="15,2,0,2"
                                       IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"/>
+                            <CheckBox Content="└ 応力範囲の包絡線表示" IsChecked="{Binding DocxOutput.IncludeHorizontal_NMinTEnvelope, Mode=TwoWay}" Margin="30,2,0,2"
+                                      IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"
+                                      ToolTip="N-M 図に、レベル1・レベル2 地震時の点をすべて囲む最も外側の線 (凸包) を点と同じ色の点線で描きます"/>
                             <CheckBox Content="N-Q関係" IsChecked="{Binding DocxOutput.IncludeHorizontal_QNInT, Mode=TwoWay}" Margin="15,2,0,2"
                                       IsEnabled="{Binding DocxOutput.CanEditHorizontalChildren}"/>
                             <!-- 杭の変位・応力ダイアグラム (3 連グラフ: 変位 / せん断力 / 曲げモーメント) -->

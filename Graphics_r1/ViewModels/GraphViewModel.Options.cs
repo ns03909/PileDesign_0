@@ -442,6 +442,28 @@ namespace PileDesign.ViewModels
             set => SetProperty(ref _isSeismicGradeOptionVisible, value);
         }
 
+        // N-M 図の応力範囲の包絡線 (地震時の点を囲む点線)。既定で描く (計算書の慣例。点だけでは範囲を読み取りにくい)
+        private bool _isStressRangeEnvelopeVisible = true;
+        public bool IsStressRangeEnvelopeVisible
+        {
+            get => _isStressRangeEnvelopeVisible;
+            set
+            {
+                if (SetProperty(ref _isStressRangeEnvelopeVisible, value))
+                {
+                    UpdateGraph();
+                }
+            }
+        }
+
+        // 包絡線の切替の表示 (N-M 図・定着部の N-M 図のときのみ)
+        private bool _isStressRangeEnvelopeOptionVisible;
+        public bool IsStressRangeEnvelopeOptionVisible
+        {
+            get => _isStressRangeEnvelopeOptionVisible;
+            set => SetProperty(ref _isStressRangeEnvelopeOptionVisible, value);
+        }
+
         // レジェンド描画
         private bool _isLegendVisible = true;
         public bool IsLegendVisible

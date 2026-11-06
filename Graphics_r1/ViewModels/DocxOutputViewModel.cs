@@ -89,6 +89,7 @@ namespace PileDesign.ViewModels
             OnPropertyChanged(nameof(IncludeHorizontal_Bending));
             OnPropertyChanged(nameof(IncludeHorizontal_Shear));
             OnPropertyChanged(nameof(IncludeHorizontal_NMinT));
+            OnPropertyChanged(nameof(IncludeHorizontal_NMinTEnvelope));
             OnPropertyChanged(nameof(IncludeHorizontal_QNInT));
             OnPropertyChanged(nameof(IncludeHorizontal_MPhi));
             OnPropertyChanged(nameof(IncludeHorizontal_MTheta));
@@ -134,6 +135,13 @@ namespace PileDesign.ViewModels
         {
             get => _includeHorizontal_NMinT && _includeHorizontal && _main.IsHorizontalAnalysisDone;
             set { if (_includeHorizontal_NMinT != value) { _includeHorizontal_NMinT = value; OnPropertyChanged(); } }
+        }
+        // N-M 図に地震時の応力範囲の包絡線 (点を囲む点線) を描くか。既定で描く (N-M 図の子)
+        private bool _includeHorizontal_NMinTEnvelope = true;
+        public bool IncludeHorizontal_NMinTEnvelope
+        {
+            get => _includeHorizontal_NMinTEnvelope && _includeHorizontal && _main.IsHorizontalAnalysisDone;
+            set { if (_includeHorizontal_NMinTEnvelope != value) { _includeHorizontal_NMinTEnvelope = value; OnPropertyChanged(); } }
         }
         private bool _includeHorizontal_QNInT = true;
         public bool IncludeHorizontal_QNInT

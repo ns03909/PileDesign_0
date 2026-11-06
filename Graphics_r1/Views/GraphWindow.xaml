@@ -271,6 +271,12 @@
                 </StackPanel>
             </StackPanel>
 
+            <!-- N-M 図: 地震時の点を囲む包絡線 (応力範囲)。既定で表示 -->
+            <CheckBox Content="応力範囲の包絡線表示" IsChecked="{Binding IsStressRangeEnvelopeVisible, Mode=TwoWay}"
+                      Margin="0,4,0,4"
+                      Visibility="{Binding IsStressRangeEnvelopeOptionVisible, Converter={StaticResource BooleanToVisibilityConverter}}"
+                      ToolTip="レベル1・レベル2 地震時の点をすべて囲む最も外側の線 (凸包) を、点と同じ色の点線で描きます"/>
+
             <Button Content="レジェンド表示切替" Command="{Binding ToggleLegendCommand}" />
 
             <!-- 案 C v2 (2026-04-24): 「杭周地盤変位反力」グラフで地盤反力度 / 反力係数に切替 -->

@@ -834,6 +834,7 @@ namespace PileDesign.ViewModels
             IsLimitStateOptionVisible = false;
             IsMonQdSliderVisible = false;
             IsSeismicGradeOptionVisible = false;
+            IsStressRangeEnvelopeOptionVisible = false;
 
             if (SelectedGraphOption.StartsWith("杭頭応力変形関係"))
             {
@@ -1128,6 +1129,7 @@ namespace PileDesign.ViewModels
                 IsLiquefactionOptionVisible = false;
                 IsGridOptionVisible = false;
                 IsSeismicGradeOptionVisible = true;
+                IsStressRangeEnvelopeOptionVisible = true;
 
                 WpfPlot.Plot.Clear();
                 _graphHoverMap.Clear();
@@ -1323,6 +1325,8 @@ namespace PileDesign.ViewModels
                         scatterResultLevel1.LineStyle.Width = 0;
                         scatterResultLevel1.MarkerStyle.FillColor = damageColor;       // NikkenGreen
                         scatterResultLevel1.MarkerStyle.OutlineColor = damageColor;
+                        if (IsStressRangeEnvelopeVisible)
+                            StressRangeEnvelope.AddTo(WpfPlot.Plot, axialForceResultsLevel1, momentResultsLevel1, damageColor, $"レベル1地震時 {StressRangeEnvelope.LegendSuffix}");
                     }
                     if (axialForceResultsLevel2.Count > 0 && ShowAnalysisOverlay)
                     {
@@ -1331,6 +1335,8 @@ namespace PileDesign.ViewModels
                         scatterResultLevel2.LineStyle.Width = 0;
                         scatterResultLevel2.MarkerStyle.FillColor = ultimateColor;     // NikkenPaleRed
                         scatterResultLevel2.MarkerStyle.OutlineColor = ultimateColor;
+                        if (IsStressRangeEnvelopeVisible)
+                            StressRangeEnvelope.AddTo(WpfPlot.Plot, axialForceResultsLevel2, momentResultsLevel2, ultimateColor, $"レベル2地震時 {StressRangeEnvelope.LegendSuffix}");
                     }
 
                     ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "NMINT", "軸力(kN)", "曲げモーメント(kNm)");
@@ -1347,6 +1353,7 @@ namespace PileDesign.ViewModels
                 IsPileSegmentOptionVisible = false;
                 IsLiquefactionOptionVisible = false;
                 IsGridOptionVisible = false;
+                IsStressRangeEnvelopeOptionVisible = true;
 
                 WpfPlot.Plot.Clear();
 
@@ -1452,12 +1459,16 @@ namespace PileDesign.ViewModels
                     var sc = WpfPlot.Plot.Add.Scatter(axialForceResultsL1.ToArray(), momentResultsL1.ToArray());
                     sc.LegendText = "レベル1地震時";
                     sc.LineStyle.Width = 0;
+                    if (IsStressRangeEnvelopeVisible)
+                        StressRangeEnvelope.AddTo(WpfPlot.Plot, axialForceResultsL1, momentResultsL1, sc.MarkerStyle.FillColor, $"レベル1地震時 {StressRangeEnvelope.LegendSuffix}");
                 }
                 if (axialForceResultsL2.Count > 0 && ShowAnalysisOverlay)
                 {
                     var sc = WpfPlot.Plot.Add.Scatter(axialForceResultsL2.ToArray(), momentResultsL2.ToArray());
                     sc.LegendText = "レベル2地震時";
                     sc.LineStyle.Width = 0;
+                    if (IsStressRangeEnvelopeVisible)
+                        StressRangeEnvelope.AddTo(WpfPlot.Plot, axialForceResultsL2, momentResultsL2, sc.MarkerStyle.FillColor, $"レベル2地震時 {StressRangeEnvelope.LegendSuffix}");
                 }
 
                 ConfigurePlot(WpfPlot, MyCrosshair, "CrosshairPositionText", "定着部NMINT", "軸力(kN)", "曲げモーメント(kNm)");

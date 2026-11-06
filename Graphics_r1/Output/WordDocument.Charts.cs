@@ -266,6 +266,10 @@ namespace PileDesign.Output
                     List<List<double>> xsLists = [axialForceResultsLevel2, axialForceResultsLevel1, axialForceResultsVL];
                     List<List<double>> ysLists = [momentResultsLevel2, momentResultsLevel1, momentResultsVL];
                     List<string> legends = ["レベル2", "レベル1", "常時"];
+                    // 地震時の点を囲む応力範囲の包絡線。常時は M = 0 の点だけなので描かない
+                    List<string?>? envelopeLegends = mainWindowViewModel.DocxOutput.IncludeHorizontal_NMinTEnvelope
+                        ? [$"レベル2 {Common.StressRangeEnvelope.LegendSuffix}", $"レベル1 {Common.StressRangeEnvelope.LegendSuffix}", null]
+                        : null;
 
                     AddNMinTScottPlotGraphToBody(
                         mainPart,
@@ -273,7 +277,7 @@ namespace PileDesign.Output
                         lineListsX, lineListsY, lineListsLegend,
                         xsLists, ysLists, legends,
                         "", "軸力[kN]", "曲げモーメント[kNm]",
-                        150, 150, lineStyles: nmLineStyles);
+                        150, 150, lineStyles: nmLineStyles, envelopeLegends: envelopeLegends);
 
                     AddAutoFigureCaption(body,
                         $"軸力-モーメント関係　杭体符号:{pileBody.PileBodyRef} | 杭区間番号: {segment.No}",
