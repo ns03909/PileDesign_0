@@ -178,15 +178,21 @@ namespace PileDesign.FEM
         }
 
         // 杭配置により作用点の拘束を返すメソッド
-        private Boundary GetActionPointBoundary()
+        private Boundary GetActionPointBoundary() => ActionPointBoundaryFor(InputModel);
+
+        /// <summary>
+        /// 代表点 (慣性力中心) の拘束。杭配置から決める (計算書の境界条件の表も同じ規則を読む)。
+        /// 剛床連結では、このあと鉛直・回転 (Uz・Rx・Ry) も固定する (<see cref="FoundationBeamConnectionMode"/>)。
+        /// </summary>
+        internal static Boundary ActionPointBoundaryFor(InputModel inputModel)
         {
-            if (InputModel.PileLayoutItems == null || !InputModel.PileLayoutItems.Any())
+            if (inputModel.PileLayoutItems == null || !inputModel.PileLayoutItems.Any())
                 throw new InvalidOperationException("杭配置が存在しません。");
 
-            double xMax = InputModel.PileLayoutItems.Max(p => p.X);
-            double xMin = InputModel.PileLayoutItems.Min(p => p.X);
-            double yMax = InputModel.PileLayoutItems.Max(p => p.Y);
-            double yMin = InputModel.PileLayoutItems.Min(p => p.Y);
+            double xMax = inputModel.PileLayoutItems.Max(p => p.X);
+            double xMin = inputModel.PileLayoutItems.Min(p => p.X);
+            double yMax = inputModel.PileLayoutItems.Max(p => p.Y);
+            double yMin = inputModel.PileLayoutItems.Min(p => p.Y);
 
             // 杭配置がX、Y方向いずれかにスタンスがない場合、回転拘束をする
             // (この場合 Rz は元から拘束されるので、ねじれ拘束の有無で結果は変わらない)
@@ -198,7 +204,7 @@ namespace PileDesign.FEM
             // 境界条件は方程式番号による縮約なので、Rz の式が剛性行列から消え、
             // ねじれが厳密にゼロになる。剛体の cross-term (Ux += -Rz·ΔY 等) も
             // master の Rz が消えることで自動的に落ち、杭頭の水平変位が揃う。
-            bool fixRz = InputModel.RestrainFoundationTorsion;
+            bool fixRz = inputModel.RestrainFoundationTorsion;
             return new Boundary(false, false, false, false, false, fixRz);
         }
 
@@ -476,8 +482,15 @@ namespace PileDesign.FEM
         // 各杭節点に Z 非線形ばねを設置するか判定
         // 条件: UsePsSpringAtPileTip が ON、かつ沈下解析の節点別履歴 (NodeDisplacements/NodeReactions) が存在
         private bool ShouldApplyVerticalSpringsToPile(Models.InputData.SoilPile soilPile)
+            => AppliesVerticalSpringsToPile(_inputModel, soilPile);
+
+        /// <summary>
+        /// 杭の各節点に鉛直地盤ばね (P-S 非線形) を付けるか。付けないときは杭先端の鉛直変位を固定する
+        /// (計算書の境界条件の表・杭モデルの図も同じ規則を読む)。
+        /// </summary>
+        internal static bool AppliesVerticalSpringsToPile(InputModel inputModel, Models.InputData.SoilPile? soilPile)
         {
-            if (!_inputModel.UsePsSpringAtPileTip) return false;
+            if (!inputModel.UsePsSpringAtPileTip) return false;
             if (soilPile == null) return false;
             if (soilPile.NodeDisplacements == null || soilPile.NodeReactions == null) return false;
             if (soilPile.NodeDisplacements.Count == 0 || soilPile.NodeReactions.Count == 0) return false;

@@ -799,6 +799,9 @@ namespace PileDesign.Output
                 if (soilPiles is { Count: > 0 })
                 {
                     TimeH("PileForceDiagram (horizontal)", () => {
+                        // 境界条件の表 (図の記号の説明を兼ねる)。前の章の表に続けず、新しいページから
+                        AddPageBreak(body);
+                        AddPileModelBoundarySection(body, soilPiles);
                         // 先頭 1 本だけだと、杭体や地盤が複数あるモデルで表と図が食い違う
                         foreach (var soilPile in soilPiles)
                         {
@@ -807,7 +810,8 @@ namespace PileDesign.Output
                             // 図を置けなかったときは省いたことを書き、図の無いキャプション・注記は付けない
                             if (AddPileForceDiagramByMm(mainPart, body,
                                 widthMm: Layout.PileElevationWidthMm,
-                                heightMm: Layout.PileElevationHeightMm, soilPile, "horizontal"))
+                                heightMm: Layout.PileElevationHeightMm, soilPile, "horizontal",
+                                PileModelAnnotationFor(inputModel, soilPile)))
                             {
                                 AddAutoFigureCaption(body, $"水平抵抗解析杭モデル{DescribeSoilPile(soilPile)}", "図");
                                 AddTableNote(body, "※ 図中の土層諸元は抜粋です。薄い層は表示を省いています。全層の値は「地盤情報」の土層表を参照してください。横方向は模式図で、縮尺は縦方向のみです。");

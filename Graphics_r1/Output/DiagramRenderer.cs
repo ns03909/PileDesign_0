@@ -128,6 +128,29 @@ namespace PileDesign.Output
         }
 
         /// <summary>a → b をジグザグ (ばね記号) で結ぶ。</summary>
+        // 杭モデルの図の強制変位の矢じり。静的なブラシは凍結する (別のスレッドの描画で使えなくなる)
+        private static readonly Brush ForcedDisplacementBrush = Freeze(new SolidColorBrush(Color.FromRgb(0xC0, 0x50, 0x20)));
+
+        private static Brush Freeze(Brush brush) { brush.Freeze(); return brush; }
+
+        /// <summary>先端を <paramref name="tip"/> に置き、<paramref name="direction"/> の向きを指す塗りの矢じり。</summary>
+        private static void DrawArrowHead(DrawingContext dc, Point tip, Vector direction, double sizePx, Brush brush)
+        {
+            if (direction.Length < 1e-12) return;
+            direction.Normalize();
+            var normal = new Vector(-direction.Y, direction.X);
+            var back = tip - direction * sizePx;
+            var g = new StreamGeometry();
+            using (var ctx = g.Open())
+            {
+                ctx.BeginFigure(tip, true, true);
+                ctx.LineTo(back + normal * sizePx * 0.45, true, false);
+                ctx.LineTo(back - normal * sizePx * 0.45, true, false);
+            }
+            g.Freeze();
+            dc.DrawGeometry(brush, null, g);
+        }
+
         private static void DrawZigzag(DrawingContext dc, Point a, Point b, int zigCount, double amplitudePx, Pen pen)
         {
             double dx = b.X - a.X;
@@ -283,7 +306,8 @@ namespace PileDesign.Output
             double widthMm,
             double heightMm,
             double dpi = DefaultDpi,
-            double scale = 1.0)
+            double scale = 1.0,
+            PileModelAnnotation? annotation = null)
         {
             ArgumentNullException.ThrowIfNull(soilPile);
 
@@ -320,8 +344,12 @@ namespace PileDesign.Output
                 if (layers is { Count: > 0 }) botAlt = Math.Min(botAlt, layers[^1].BottomAltitude);
                 if (topAlt - botAlt < 1e-6) topAlt = botAlt + 1.0;
 
-                double topPadPx = PtToPx(style.FontSizePt) * 2.8;       // N値柱状図の見出し 2 行分
-                double botPadPx = PtToPx(style.SmallFontSizePt) * 2.8;  // 凡例の分
+                // 境界条件の記号 (水平抵抗の杭モデルだけ): 杭頭の上に荷重の矢印、杭先端の下に支点、凡例 2 行を足す
+                bool annotate = annotation != null
+                    && !string.Equals(springType, "vertical", StringComparison.OrdinalIgnoreCase);
+                double topPadPx = PtToPx(style.FontSizePt) * (annotate ? 7.0 : 2.8);       // N値柱状図の見出し 2 行分 (+ 荷重の矢印)
+                double botPadPx = PtToPx(style.SmallFontSizePt) * 2.8                       // 凡例の分
+                    + (annotate ? PtToPx(style.SmallFontSizePt) * 2.7 + PtToPx(style.FontSizePt) * 1.8 : 0); // 凡例 2 行 + 杭先端の支点
                 double scaleYPxPerM = (heightPx - topPadPx - botPadPx) / (topAlt - botAlt);
                 double YOf(double alt) => topPadPx + (topAlt - alt) * scaleYPxPerM;
                 double plotTopPx = topPadPx;
@@ -701,6 +729,15 @@ namespace PileDesign.Output
                                     pileCenterX - start.X,
                                     Math.Min(halfWidthPx * 0.35, nodePitchPx * 0.35));
                                 DrawZigzag(dc, start, new Point(pileCenterX, y), zigCount, zigAmp, springPen);
+
+                                // ばねの外側の節点に与える強制変位の向き (0 から外端へ)。矢じりだけを外端に置く
+                                // (軸を引くとばねの線と重なって読めない)
+                                if (annotate && Math.Abs(outer) > 1e-9 && ampMm > 1e-9)
+                                {
+                                    double head = Math.Min(PtToPx(3.2), nodePitchPx * 0.45);
+                                    double dir = Math.Sign(outer);
+                                    DrawArrowHead(dc, start, new Vector(dir, 0), head, ForcedDisplacementBrush);
+                                }
                             }
 
                             void DrawDisp(Func<PileZDataItem, double> sel, Brush brush)
@@ -723,12 +760,101 @@ namespace PileDesign.Output
                         }
                     }
 
+                    // --- 7b. 境界条件の記号 (水平抵抗の杭モデル) ---
+                    // 利用者の声 (2026-11-07): 単杭の解析モデル図のように、拘束・強制変位・設計用の荷重を図で示す。
+                    // 拘束の詳しい中身は計算書の「解析モデルの境界条件」の表に書き、図には記号だけを置く
+                    if (annotate)
+                    {
+                        var a = annotation!;
+                        double line = PtToPx(style.FontSizePt);
+                        double headY = YOf(pileHeadAlt);
+                        double tipY = YOf(pileHeadAlt - pileDepth);
+                        var loadBrush = Brushes.Firebrick;
+                        var loadPen = new Pen(loadBrush, thick);
+
+                        // 基礎 (慣性力中心)。N値柱状図の目盛にかからない幅にする
+                        double blockW = Math.Min(Math.Max(pileDrawWidthPx * 1.8, line * 2.6),
+                            2 * (nChartL - pileCenterX) - PtToPx(4));
+                        double blockH = line * 0.9;
+                        double blockBottom = plotTopPx - line * 0.4;
+                        var block = new Rect(pileCenterX - blockW * 0.5, blockBottom - blockH, blockW, blockH);
+                        dc.DrawRectangle(new SolidColorBrush(Color.FromRgb(0xD9, 0xD9, 0xD9)), new Pen(Brushes.Black, thin), block);
+
+                        // 基礎と杭頭のつながり (杭頭が地中にあるときは間を点線で結ぶ)
+                        if (headY > blockBottom + 1)
+                        {
+                            var linkPen = new Pen(Brushes.Black, thin) { DashStyle = new DashStyle([3, 2], 0) };
+                            dc.DrawLine(linkPen, new Point(pileCenterX, blockBottom), new Point(pileCenterX, headY));
+                        }
+
+                        // 水平力 H (基礎の左から)
+                        double hLen = widthPx * 0.09;
+                        double hy = block.Top + blockH * 0.5;
+                        double arrowHead = PtToPx(4);
+                        dc.DrawLine(loadPen, new Point(block.Left - hLen, hy), new Point(block.Left - arrowHead * 0.8, hy));
+                        DrawArrowHead(dc, new Point(block.Left, hy), new Vector(1, 0), arrowHead, loadBrush);
+                        var ftH = Text("H", style.FontSizePt, loadBrush);
+                        dc.DrawText(ftH, new Point(block.Left - hLen * 0.5 - ftH.Width * 0.5, hy - ftH.Height - PtToPx(1)));
+
+                        // 杭の軸力 N (基礎の上から)。外力として与えないとき (M-φ に用いるだけ) は点線にする
+                        double nLen = line * 2.4;
+                        var nPen = a.AxialForceAsLoad ? loadPen : new Pen(loadBrush, thick) { DashStyle = new DashStyle([2, 1.5], 0) };
+                        dc.DrawLine(nPen, new Point(pileCenterX, block.Top - nLen), new Point(pileCenterX, block.Top - arrowHead * 0.8));
+                        DrawArrowHead(dc, new Point(pileCenterX, block.Top), new Vector(0, 1), arrowHead, loadBrush);
+                        var ftN = Text("N", style.FontSizePt, loadBrush);
+                        dc.DrawText(ftN, new Point(pileCenterX + PtToPx(2.5), block.Top - nLen));
+
+                        // 杭頭の接合: 剛接合は塗りの四角、回転ばねは二重丸
+                        double mark = nodeRadius * 1.9;
+                        if (a.HeadRotationSpring)
+                        {
+                            dc.DrawEllipse(Brushes.White, new Pen(Brushes.Black, thin), new Point(pileCenterX, headY), mark, mark);
+                            dc.DrawEllipse(Brushes.White, axisPen, new Point(pileCenterX, headY), nodeRadius, nodeRadius);
+                        }
+                        else
+                        {
+                            dc.DrawRectangle(Brushes.Black, null,
+                                new Rect(pileCenterX - mark * 0.7, headY - mark * 0.7, mark * 1.4, mark * 1.4));
+                        }
+
+                        // 杭先端: 鉛直固定は三角の支点、鉛直ばねはばね記号。どちらも下に地盤のハッチ
+                        double supH = line * 1.0;
+                        double baseY;
+                        if (a.TipVerticalFixed)
+                        {
+                            double top = tipY + nodeRadius;
+                            baseY = top + supH;
+                            var tri = new StreamGeometry();
+                            using (var g = tri.Open())
+                            {
+                                g.BeginFigure(new Point(pileCenterX, top), true, true);
+                                g.LineTo(new Point(pileCenterX - supH * 0.6, baseY), true, false);
+                                g.LineTo(new Point(pileCenterX + supH * 0.6, baseY), true, false);
+                            }
+                            tri.Freeze();
+                            dc.DrawGeometry(Brushes.White, new Pen(Brushes.Black, thin), tri);
+                        }
+                        else
+                        {
+                            baseY = tipY + nodeRadius + supH;
+                            DrawZigzag(dc, new Point(pileCenterX, tipY + nodeRadius), new Point(pileCenterX, baseY), 3,
+                                Math.Max(2.0, supH * 0.18), new Pen(Brushes.DarkGray, thin));
+                        }
+                        double baseHalf = supH * 0.85;
+                        var basePen = new Pen(Brushes.Black, thin);
+                        dc.DrawLine(basePen, new Point(pileCenterX - baseHalf, baseY), new Point(pileCenterX + baseHalf, baseY));
+                        double hatch = PtToPx(2.5);
+                        for (double x = pileCenterX - baseHalf + hatch; x <= pileCenterX + baseHalf; x += hatch * 1.4)
+                            dc.DrawLine(basePen, new Point(x, baseY), new Point(x - hatch * 0.7, baseY + hatch));
+                    }
+
                     // --- 8. 凡例 ---
                     {
                         double legendPt = style.SmallFontSizePt;
                         double swatch = PtToPx(legendPt) * 0.8;
                         double lx = layerInfoL;
-                        double ly = plotBottomPx + PtToPx(legendPt) * 1.2;
+                        // 杭先端の支点の下に置く
+                        double ly = plotBottomPx + (annotate ? PtToPx(style.FontSizePt) * 1.8 : 0) + PtToPx(legendPt) * 1.2;
 
                         void LegendText(string s)
                         {
@@ -753,6 +879,31 @@ namespace PileDesign.Output
                         LegendText(isVertical ? "○ 節点   ⌇ 鉛直地盤ばね" : "○ 節点   ⌇ 水平地盤ばね");
                         if (!isVertical && dispAmpMm > 0)
                             LegendText($"地盤変位 δmax = {dispAmpMm:N1} mm");
+
+                        if (annotate)
+                        {
+                            var a = annotation!;
+                            void NextRow() { lx = layerInfoL; ly += PtToPx(legendPt) * 1.35; }
+                            void Colored(string s, Brush brush)
+                            {
+                                var ft = Text(s, legendPt, brush);
+                                dc.DrawText(ft, new Point(lx, ly - ft.Height * 0.5));
+                                lx += ft.Width + PtToPx(1);
+                            }
+
+                            NextRow();
+                            LegendText("▭ 基礎（慣性力中心）");
+                            Colored("→", Brushes.Firebrick);
+                            LegendText("H 水平力 βU·Ps + βL·Pf");
+                            Colored("↓", Brushes.Firebrick);
+                            LegendText(a.AxialForceAsLoad ? "N 杭の軸力（外力）" : "N 杭の軸力（点線: M-φ に用いる。外力ではない）");
+
+                            NextRow();
+                            Colored("▶", ForcedDisplacementBrush);
+                            LegendText("強制変位（地盤変位 × αL）");
+                            LegendText(a.HeadRotationSpring ? "◎ 杭頭 回転ばね" : "■ 杭頭 剛接合");
+                            LegendText(a.TipVerticalFixed ? "△ 杭先端 鉛直固定" : "⌇ 杭先端 鉛直地盤ばね");
+                        }
                     }
                 }
 

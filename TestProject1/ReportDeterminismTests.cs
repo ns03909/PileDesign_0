@@ -138,6 +138,14 @@ namespace TestProject1
                     Directory.CreateDirectory(sampleDir);
                     File.Copy(paths[0], Path.Combine(sampleDir, SampleReportFileName), overwrite: true);
 
+                    // 解析モデルの境界条件の表が、杭モデルの図の前にある
+                    string text;
+                    using (var w = WordprocessingDocument.Open(paths[0], false))
+                        text = w.MainDocumentPart!.Document!.Body!.InnerText;
+                    int table = text.IndexOf("解析モデルの境界条件", StringComparison.Ordinal);
+                    Assert.IsTrue(table >= 0, "解析モデルの境界条件の表がありません");
+                    Assert.IsTrue(table < text.IndexOf("水平抵抗解析杭モデル", StringComparison.Ordinal), "表が杭モデルの図より後ろです");
+
                     // 結果のグラフを 1 ページ 2 枚の高さにした計算書。グラフの高さだけが変わる
                     vm.DocxOutput.ChartsPerPage = 2;
                     string twoPerPage = Path.Combine(dir, "report_2perpage.docx");

@@ -455,7 +455,8 @@ namespace PileDesign.Output
             double widthMm,
             double heightMm,
             SoilPile soilPile,
-            string springType = "horizontal"
+            string springType = "horizontal",
+            PileModelAnnotation? annotation = null
             )
         {
             try
@@ -472,7 +473,7 @@ namespace PileDesign.Output
                     Layout.MinSpringLengthPx);
                 var pngBytes = DiagramRenderer.RenderPileForceElevationPngBytes(
                     soilPile, springType, style, widthMm, heightMm,
-                    dpi: Layout.BaseDpi, scale: Layout.HiResScale);
+                    dpi: Layout.BaseDpi, scale: Layout.HiResScale, annotation: annotation);
                 if (pngBytes == null || pngBytes.Length == 0)
                 {
                     NoteOmitted(body, "杭に作用する力の図", EmptyDiagramImage());
