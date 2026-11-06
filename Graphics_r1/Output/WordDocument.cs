@@ -34,7 +34,7 @@ namespace PileDesign.Output
         private int _figureCounter = 0;
         private int _tableCounter = 0;
 
-        private static class Layout
+        internal static class Layout
         {
             // 本文。数行以上の説明文は明朝が読みやすい
             public const string FontName = "游明朝";
@@ -74,9 +74,15 @@ namespace PileDesign.Output
             // 図の題・注記を含めて 1 ページに 3 枚入る高さにする (以前は 150×150 / 150×100 で 1 ページに 1〜2 枚。
             // 図の多い計算書でページ数がかさむ、という利用者の声)。
             // 高さは Word で描画して決めた: A4 の本文の高さ約 230mm に、題 1 行＋注記 2 行 (約 22.5mm) の付く N-Q 図が 3 枚入る。
-            // 60mm では 3 枚目の題が次のページへ分かれた (tools/report-layout-check.ps1 が検出)
+            // 60mm では 3 枚目の題が次のページへ分かれた (tools/report-layout-check.ps1 が検出)。
+            // 1 ページに 2 枚も選べる (計算書出力の「結果のグラフの高さ」)。同じ考えで 2 枚が入る高さにする
             public const double ChartWidthMm = 150;
-            public const double ChartHeightMm = 53;
+            public const double ChartHeightMm3PerPage = 53;
+            public const double ChartHeightMm2PerPage = 90;
+
+            /// <summary>1 ページに入れる枚数 (3 か 2) に合わせた結果のグラフの高さ。それ以外の数は 3 枚として扱う。</summary>
+            public static double ChartHeightMmFor(int chartsPerPage)
+                => chartsPerPage == 2 ? ChartHeightMm2PerPage : ChartHeightMm3PerPage;
             public const double LayoutDiagramWidthMm = 150;
             public const double LayoutDiagramHeightMm = 200;
             public const double PileElevationWidthMm = 150;
@@ -109,6 +115,9 @@ namespace PileDesign.Output
         }
 
         private readonly MainWindowViewModel mainWindowViewModel = _mainWindowViewModel; // 追加
+
+        /// <summary>結果のグラフの高さ (計算書出力で選んだ「1 ページに 3 枚 / 2 枚」)。</summary>
+        private double ChartHeightMm => Layout.ChartHeightMmFor(mainWindowViewModel.DocxOutput.ChartsPerPage);
 
         private readonly InputModel inputModel = _inputModel;
         private readonly AnaModel anaModel = _anaModel;

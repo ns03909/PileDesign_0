@@ -144,6 +144,16 @@ WindowStartupLocation="CenterOwner">
                         </StackPanel>
                     </GroupBox>
 
+                    <GroupBox Header="結果のグラフの高さ" Margin="0,0,0,4" Padding="4"
+                              ToolTip="N-M・N-Q・M-φ・M-θ・杭の応力・変位・沈下のグラフの高さです。横幅はどちらも 150mm です。">
+                        <StackPanel>
+                            <RadioButton Content="1 ページに 3 枚" GroupName="ChartsPerPage"
+                                         IsChecked="{Binding DocxOutput.ChartsPerPage, Converter={StaticResource IntEqualsConverter}, ConverterParameter=3, Mode=TwoWay}" />
+                            <RadioButton Content="1 ページに 2 枚" GroupName="ChartsPerPage" Margin="0,2,0,0"
+                                         IsChecked="{Binding DocxOutput.ChartsPerPage, Converter={StaticResource IntEqualsConverter}, ConverterParameter=2, Mode=TwoWay}" />
+                        </StackPanel>
+                    </GroupBox>
+
                 </StackPanel>
             </ScrollViewer>
 

@@ -137,9 +137,34 @@ namespace TestProject1
                     string sampleDir = Path.Combine(TestSource.Dir("TestProject1"), "TestResults", "report-sample");
                     Directory.CreateDirectory(sampleDir);
                     File.Copy(paths[0], Path.Combine(sampleDir, SampleReportFileName), overwrite: true);
+
+                    // 結果のグラフを 1 ページ 2 枚の高さにした計算書。グラフの高さだけが変わる
+                    vm.DocxOutput.ChartsPerPage = 2;
+                    string twoPerPage = Path.Combine(dir, "report_2perpage.docx");
+                    new PileDesign.Output.WordDocument(input, vm.CurrentModel!, vm) { FixedOutputDate = new DateTime(2026, 9, 30) }
+                        .CreateWordDocument(input, twoPerPage);
+                    vm.DocxOutput.ChartsPerPage = 3;
+                    int Charts(string path, double heightMm) => ImageHeightsMm(path).Count(h => Math.Abs(h - heightMm) < 0.05);
+                    double h3 = PileDesign.Output.WordDocument.Layout.ChartHeightMm3PerPage;
+                    double h2 = PileDesign.Output.WordDocument.Layout.ChartHeightMm2PerPage;
+                    int charts3 = Charts(paths[0], h3);
+                    TestSource.AssertScanned(charts3, 5, "1 ページ 3 枚の高さのグラフ");
+                    Assert.AreEqual(charts3, Charts(twoPerPage, h2), "1 ページ 2 枚にしたとき、高さの変わらないグラフがあります");
+                    Assert.AreEqual(0, Charts(twoPerPage, h3), "1 ページ 2 枚にしたのに 3 枚の高さのグラフが残っています");
+                    File.Copy(twoPerPage, Path.Combine(sampleDir, "sample-report-2perpage.docx"), overwrite: true);
                 }
                 finally { Directory.Delete(dir, recursive: true); }
             }
+        }
+
+        /// <summary>本文に貼った画像の高さ (mm)。</summary>
+        private static List<double> ImageHeightsMm(string path)
+        {
+            using var doc = WordprocessingDocument.Open(path, false);
+            return doc.MainDocumentPart!.Document!.Body!
+                .Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>()
+                .Select(e => (e.Cy?.Value ?? 0) / 36000.0)
+                .ToList();
         }
 
         /// <summary>出力に乱数・時刻を直接使わない (図の関係の番号・番号付けの識別・図の名前・出力日)。</summary>
