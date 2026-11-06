@@ -277,7 +277,7 @@ namespace PileDesign.Output
                         lineListsX, lineListsY, lineListsLegend,
                         xsLists, ysLists, legends,
                         "", "軸力[kN]", "曲げモーメント[kNm]",
-                        150, 150, lineStyles: nmLineStyles, envelopeLegends: envelopeLegends);
+                        Layout.ChartWidthMm, Layout.ChartHeightMm, lineStyles: nmLineStyles, envelopeLegends: envelopeLegends);
 
                     AddAutoFigureCaption(body,
                         $"軸力-モーメント関係　杭体符号:{pileBody.PileBodyRef} | 杭区間番号: {segment.No}",
@@ -359,7 +359,7 @@ namespace PileDesign.Output
                             mainPart, body,
                             [disps, shears, moments, soilDisps], [zs, zs, zs],
                             titles, xLabels, yLabels,
-                            150, 100);
+                            Layout.ChartWidthMm, Layout.ChartHeightMm);
 
                         AddAutoFigureCaption(
                             body,
@@ -601,7 +601,7 @@ namespace PileDesign.Output
                         lineListsX, lineListsY, lineListsLegend,
                         xsLists, ysLists, legends,
                         "", "軸力[kN]", "せん断力[kN]",
-                        150, 150, showLegend: true, lineStyles: nqLineStyles);
+                        Layout.ChartWidthMm, Layout.ChartHeightMm, showLegend: true, lineStyles: nqLineStyles);
 
                     AddAutoFigureCaption(body,
                         $"軸力-せん断力関係　杭体符号:{pileBody.PileBodyRef} | 杭区間番号: {segment.No}",
@@ -810,7 +810,7 @@ namespace PileDesign.Output
                         lineListsX, lineListsY, [],
                         xsScatter, ysScatter, scatterLegends,
                         "", "曲率φ[rad/m]", "曲げモーメント[kNm]",
-                        150, 150);
+                        Layout.ChartWidthMm, Layout.ChartHeightMm);
 
                     string nRange = mphiNMin <= mphiNMax
                         ? $"（曲線 {lineListsX.Count} 本、軸力 N≈{mphiNMin:N0}〜{mphiNMax:N0}kN）" : string.Empty;
@@ -1042,7 +1042,7 @@ namespace PileDesign.Output
                     lineListsX, lineListsY, [],
                     xsScatter, ysScatter, scatterLegends,
                     "", "回転角θ[rad]", "曲げモーメント[kNm]",
-                    150, 150);
+                    Layout.ChartWidthMm, Layout.ChartHeightMm);
 
                 string nRangeTheta = mthetaNMin <= mthetaNMax
                     ? $"（曲線 {lineListsX.Count} 本、軸力 N≈{mthetaNMin:N0}〜{mthetaNMax:N0}kN）" : string.Empty;
@@ -1150,7 +1150,7 @@ namespace PileDesign.Output
             foreach (var (png, caption) in results)
             {
                 if (png == null || png.Length == 0) continue;
-                WordDrawingBuilder.AddPngBytesToBody(mainPart, body, png, 150, 100);
+                WordDrawingBuilder.AddPngBytesToBody(mainPart, body, png, Layout.ChartWidthMm, Layout.ChartHeightMm);
                 AddAutoFigureCaption(body, caption, "図");
             }
         }
@@ -1283,7 +1283,7 @@ namespace PileDesign.Output
 
             byte[]? png = RenderPileElevResultToPngBytes(
                 xsLists, ysLists, titles, xLabels, yLabels,
-                150, 100, limitXsByPanel, limitYsByPanel, limitLegend);
+                Layout.ChartWidthMm, Layout.ChartHeightMm, limitXsByPanel, limitYsByPanel, limitLegend);
 
             string liqText = isLiq ? "液状化" : "非液状化";
             string caption = $"杭No.{pli.No} | {lc.LoadName} | {comb.DisplayLabel} | {liqText}" + MissingResultsNote(missingResults);
@@ -1530,7 +1530,7 @@ namespace PileDesign.Output
                                 legends,
                                 soilDispSeries,
                                 titles, xLabels, yLabels,
-                                150, 100);
+                                Layout.ChartWidthMm, Layout.ChartHeightMm);
 
                             string liqText = isLiq ? "液状化" : "非液状化";
                             AddAutoFigureCaption(body,
@@ -1581,7 +1581,7 @@ namespace PileDesign.Output
                     [pileTopLoads, rzToes, rzCircums, weights],
                     ["杭頭荷重", "杭先端支持力", "杭周面抵抗力", "杭自重"],
                     "", "杭頭沈下量[mm]", "荷重[kN]",
-                    150, 150);
+                    Layout.ChartWidthMm, Layout.ChartHeightMm);
                 AddAutoFigureCaption(body, $"{caption}：荷重-杭頭沈下関係", "図");
 
                 // --- 2. 杭頭沈下量の表 ---
@@ -1594,7 +1594,7 @@ namespace PileDesign.Output
                     [pileTopLoads, rzToes],
                     ["杭頭荷重", "杭先端支持力"],
                     "", "杭先端沈下量[mm]", "荷重[kN]",
-                    150, 150);
+                    Layout.ChartWidthMm, Layout.ChartHeightMm);
                 AddAutoFigureCaption(body, $"{caption}：荷重-杭先端沈下関係", "図");
 
                 // --- 4. 杭周面抵抗力グラフ ---
@@ -1676,7 +1676,7 @@ namespace PileDesign.Output
                     mainPart, body,
                     xsLists, ysLists, legends,
                     "", "相対変位[mm]", "周面抵抗力度[kN/m²]",
-                    150, 150);
+                    Layout.ChartWidthMm, Layout.ChartHeightMm);
                 AddAutoFigureCaption(body, $"{caption}：杭周面抵抗力度-変位関係", "図");
             }
         }

@@ -70,6 +70,13 @@ namespace PileDesign.Output
             // 図・グラフ標準寸法(mm)
             public const double FigureWidthMm = 150;
             public const double FigureHeightMm = 150;
+            // 結果のグラフ (N-M・N-Q・M-φ・M-θ・杭の応力・変位・沈下の曲線) の大きさ。
+            // 図の題・注記を含めて 1 ページに 3 枚入る高さにする (以前は 150×150 / 150×100 で 1 ページに 1〜2 枚。
+            // 図の多い計算書でページ数がかさむ、という利用者の声)。
+            // 高さは Word で描画して決めた: A4 の本文の高さ約 230mm に、題 1 行＋注記 2 行 (約 22.5mm) の付く N-Q 図が 3 枚入る。
+            // 60mm では 3 枚目の題が次のページへ分かれた (tools/report-layout-check.ps1 が検出)
+            public const double ChartWidthMm = 150;
+            public const double ChartHeightMm = 53;
             public const double LayoutDiagramWidthMm = 150;
             public const double LayoutDiagramHeightMm = 200;
             public const double PileElevationWidthMm = 150;
@@ -1799,7 +1806,9 @@ namespace PileDesign.Output
                 }
                 catch { /* 安全に無視 */ }
 
-                if (showLegend) plot.ShowLegend();
+                // 凡例は図の外 (右) に置く。図を 1 ページ 3 枚の高さにしてから、項目の多い N-M・N-Q 図で
+                // 凡例が曲線と点を隠すようになった (図の中の凡例は高さに収まらない)
+                if (showLegend) plot.ShowLegend(Edge.Right);
                 plot.Axes.AutoScale();
 
                 // 一時ファイルへ保存して Word に貼り込み（既存コードと合わせる）
