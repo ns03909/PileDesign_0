@@ -157,8 +157,13 @@ namespace TestProject1
                     double h2 = PileDesign.Output.WordDocument.Layout.ChartHeightMm2PerPage;
                     int charts3 = Charts(paths[0], h3);
                     TestSource.AssertScanned(charts3, 5, "1 ページ 3 枚の高さのグラフ");
-                    Assert.AreEqual(charts3, Charts(twoPerPage, h2), "1 ページ 2 枚にしたとき、高さの変わらないグラフがあります");
+                    // 地盤グラフは 3 枚の設定でも 2 枚の高さなので、その数を差し引いて比べる
+                    Assert.AreEqual(charts3, Charts(twoPerPage, h2) - Charts(paths[0], h2), "1 ページ 2 枚にしたとき、高さの変わらないグラフがあります");
                     Assert.AreEqual(0, Charts(twoPerPage, h3), "1 ページ 2 枚にしたのに 3 枚の高さのグラフが残っています");
+                    // 地盤グラフは設定によらず常に 1 ページ 2 枚の高さ (縦長の分布図は 3 枚の高さでは詰まる)
+                    var ground = ImageHeightsBeforeCaption(paths[0], "N値分布").Concat(ImageHeightsBeforeCaption(twoPerPage, "N値分布")).ToList();
+                    TestSource.AssertScanned(ground.Count, 2, "N値分布の図");
+                    Assert.IsTrue(ground.All(h => Math.Abs(h - h2) < 0.05), "地盤グラフが 1 ページ 2 枚の高さになっていません: " + string.Join(", ", ground));
                     File.Copy(twoPerPage, Path.Combine(sampleDir, "sample-report-2perpage.docx"), overwrite: true);
                 }
                 finally { Directory.Delete(dir, recursive: true); }
@@ -173,6 +178,26 @@ namespace TestProject1
                 .Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>()
                 .Select(e => (e.Cy?.Value ?? 0) / 36000.0)
                 .ToList();
+        }
+
+        /// <summary>題に <paramref name="caption"/> を含む図の、題の直前に貼った画像の高さ (mm)。</summary>
+        private static List<double> ImageHeightsBeforeCaption(string path, string caption)
+        {
+            using var doc = WordprocessingDocument.Open(path, false);
+            var heights = new List<double>();
+            double? last = null;
+            foreach (var para in doc.MainDocumentPart!.Document!.Body!.Descendants<DocumentFormat.OpenXml.Wordprocessing.Paragraph>())
+            {
+                var extent = para.Descendants<DocumentFormat.OpenXml.Drawing.Wordprocessing.Extent>().FirstOrDefault();
+                if (extent != null) { last = (extent.Cy?.Value ?? 0) / 36000.0; continue; }
+                string text = para.InnerText;
+                if (last.HasValue && text.StartsWith("図", StringComparison.Ordinal) && text.Contains(caption, StringComparison.Ordinal))
+                {
+                    heights.Add(last.Value);
+                    last = null;
+                }
+            }
+            return heights;
         }
 
         /// <summary>出力に乱数・時刻を直接使わない (図の関係の番号・番号付けの識別・図の名前・出力日)。</summary>

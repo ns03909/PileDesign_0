@@ -145,7 +145,7 @@ WindowStartupLocation="CenterOwner">
                     </GroupBox>
 
                     <GroupBox Header="結果のグラフの高さ" Margin="0,0,0,4" Padding="4"
-                              ToolTip="N-M・N-Q・M-φ・M-θ・杭の応力・変位・沈下のグラフの高さです。横幅はどちらも 150mm です。">
+                              ToolTip="N-M・N-Q・M-φ・M-θ・杭の応力・変位・沈下のグラフの高さです。横幅はどちらも 150mm です。地盤グラフは常に 1 ページに 2 枚の高さです。">
                         <StackPanel>
                             <RadioButton Content="1 ページに 3 枚" GroupName="ChartsPerPage"
                                          IsChecked="{Binding DocxOutput.ChartsPerPage, Converter={StaticResource IntEqualsConverter}, ConverterParameter=3, Mode=TwoWay}" />

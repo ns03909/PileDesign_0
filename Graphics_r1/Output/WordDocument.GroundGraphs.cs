@@ -15,8 +15,11 @@ namespace PileDesign.Output
     // GroundLayerViewModel の Draw*Graph に依存せず、ScottPlot.Plot を直接組み立てて PNG 化する
     internal partial class WordDocument
     {
-        private const double GroundGraphWidthMm = 120;
-        private const double GroundGraphHeightMm = 150;
+        // 地盤グラフは常に 1 ページ 2 枚の高さ (結果のグラフの高さの設定には従わない)。
+        // 深さ方向の分布図は縦長で、1 ページ 3 枚の高さでは縦に詰まって読みにくい。
+        // 以前は 120×150mm で、1 ページに 1 枚しか入らなかった
+        private const double GroundGraphWidthMm = Layout.ChartWidthMm;
+        private const double GroundGraphHeightMm = Layout.ChartHeightMm2PerPage;
 
         private enum GroundGraphType { NValue, Cu, Vs, Es, FL }
 
