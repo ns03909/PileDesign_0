@@ -922,7 +922,7 @@
 
         <!-- 検索機能 -->
         <div class="tab-content" id="search" style="display:none;">
-            <input type="text" id="searchInput" placeholder="検索語を入力">
+            <input type="text" id="searchInput" placeholder="検索語を入力 (Ctrl+F / Esc で目次へ)">
             <div class="controls">
                 <span id="matchCount">一致数: 0</span>
                 <button onclick="prevMatch()">←</button>
@@ -2279,7 +2279,9 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     <tr><td rowspan="2">ユーティリティ</td><td><img class="button-icon" src="icons/CommandPalette.svg" alt=""><a href="#section-utility-windows">コマンドパレット</a></td><td>Ctrl+Shift+P</td></tr>
                     <tr><td><img class="button-icon" src="icons/InputDataVisible.svg" alt="">INPUT 表示切替（説明用）</td><td>F12</td></tr>
 
-                    <tr><td rowspan="3">ヘルプ</td><td><img class="button-icon" src="icons/Help.svg" alt="">ヘルプ</td><td>F1</td></tr>
+                    <tr><td rowspan="5">ヘルプ</td><td><img class="button-icon" src="icons/Help.svg" alt="">ヘルプ</td><td>F1</td></tr>
+                    <tr><td>ヘルプ内検索 (ヘルプの中で。Esc で目次へ戻る)</td><td>Ctrl+F</td></tr>
+                    <tr><td>検索から目次へ戻る (ヘルプの中で。目次のときはヘルプを閉じる)</td><td>Esc</td></tr>
                     <tr><td><img class="button-icon" src="icons/QuickHint.svg" alt="">クイックヒント</td><td>Shift+F1</td></tr>
                     <tr><td><img class="button-icon" src="icons/ShortcutKeys.svg" alt="">ショートカットキー一覧</td><td>Ctrl+/</td></tr>
 
@@ -16273,7 +16275,33 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
             document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
             document.getElementById(tabId).style.display = 'block';
             document.querySelector(`.tab[onclick="showTab('${tabId}')"]`).classList.add('active');
+            // アプリ側 (HelpWindow) に今のタブを知らせる。Esc を「目次へ戻る」と「ヘルプを閉じる」のどちらにするかの判断に使う
+            try { window.chrome?.webview?.postMessage('tab:' + tabId); } catch (e) { }
         }
+
+        // Ctrl+F: ヘルプ内検索を開く (ブラウザ標準の検索バーの代わり)。Esc: 検索から目次へ戻る。
+        // アプリ側がキーを受け取ったときも同じ関数を呼ぶ (HelpWindow.OnPreviewKeyDown)
+        function helpOpenSearch() {
+            showTab('search');
+            window.helpOpenSidebar?.();   // 幅の狭いとき (目次が隠れている) は開く
+            const input = document.getElementById('searchInput');
+            input.focus();
+            input.select();
+        }
+        function helpBackToToc() {
+            if (document.getElementById('search').style.display === 'none') return false;
+            document.getElementById('searchInput').blur();
+            showTab('toc');
+            return true;
+        }
+        document.addEventListener('keydown', function (e) {
+            if (e.ctrlKey && !e.shiftKey && !e.altKey && (e.key === 'f' || e.key === 'F')) {
+                e.preventDefault();
+                helpOpenSearch();
+            } else if (e.key === 'Escape' && helpBackToToc()) {
+                e.preventDefault();
+            }
+        });
 
         let matches = [];
         let currentMatchIndex = -1;
@@ -16825,6 +16853,8 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
             function isMobile() {
                 return window.matchMedia('(max-width: 900px)').matches;
             }
+
+            window.helpOpenSidebar = function () { if (isMobile()) openSidebar(); };
 
             toggle.addEventListener('click', () => {
                 if (!isMobile()) return;

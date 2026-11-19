@@ -48,6 +48,18 @@ namespace PileDesign.Views
 
             HelpWebView.Source = BuildUri(anchor);
 
+            // ヘルプの今のタブ (目次 / 検索) を help.html の showTab から受け取る
+            HelpWebView.CoreWebView2InitializationCompleted += (s, e) =>
+            {
+                if (!e.IsSuccess || HelpWebView.CoreWebView2 == null) return;
+                HelpWebView.CoreWebView2.WebMessageReceived += (s2, args) =>
+                {
+                    try { _searchTabActive = args.TryGetWebMessageAsString() == "tab:search"; }
+                    catch (Exception ex) { Log.Debug(ex, "[HelpWindow] タブの通知を読めません"); }
+                };
+                HelpWebView.CoreWebView2.NavigationStarting += (s2, args) => _searchTabActive = false;
+            };
+
             HelpWebView.NavigationCompleted += async (s, e) =>
             {
                 try
@@ -181,6 +193,48 @@ namespace PileDesign.Views
                 await HelpWebView.ExecuteScriptAsync(script);
             }
             catch { /* ignore script errors */ }
+        }
+
+        /// <summary>検索タブを開いているか (help.html の showTab が知らせる)。</summary>
+        private bool _searchTabActive;
+
+        /// <summary>
+        /// Ctrl+F でヘルプ内検索を開き、検索中の Esc は目次へ戻す (目次のときの Esc はこれまでどおり閉じる)。
+        ///
+        /// <para>本文にフォーカスがあるときのキーは、WebView2 からこのウィンドウのキーの事象として届く。
+        /// 何もしないと Ctrl+F はブラウザ標準の検索バーを開き、Esc は EscapeKeyBehavior がヘルプを閉じる。
+        /// 既定の処理 (OnPreviewKeyDown) は、XAML で付けた EscapeKeyBehavior の処理より先に呼ばれるので、
+        /// ここで処理済みにすれば閉じない。届かなかったときは help.html 側の keydown が同じことをする。</para>
+        /// </summary>
+        protected override void OnPreviewKeyDown(System.Windows.Input.KeyEventArgs e)
+        {
+            var key = e.Key == System.Windows.Input.Key.System ? e.SystemKey : e.Key;
+            if (key == System.Windows.Input.Key.F
+                && System.Windows.Input.Keyboard.Modifiers == System.Windows.Input.ModifierKeys.Control)
+            {
+                e.Handled = true;
+                _ = RunHelpScriptAsync("helpOpenSearch()");
+                return;
+            }
+            if (key == System.Windows.Input.Key.Escape && _searchTabActive)
+            {
+                e.Handled = true;
+                _searchTabActive = false;
+                _ = RunHelpScriptAsync("helpBackToToc()");
+                return;
+            }
+            base.OnPreviewKeyDown(e);
+        }
+
+        private async System.Threading.Tasks.Task RunHelpScriptAsync(string script)
+        {
+            try
+            {
+                if (HelpWebView.CoreWebView2 == null) return;
+                HelpWebView.Focus();
+                await HelpWebView.ExecuteScriptAsync(script);
+            }
+            catch (Exception ex) { Log.Debug(ex, "[HelpWindow] スクリプトを実行できません: {Script}", script); }
         }
 
         private Uri BuildUri(string? anchor)

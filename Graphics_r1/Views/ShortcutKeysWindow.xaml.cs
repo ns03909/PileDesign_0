@@ -76,6 +76,7 @@ namespace PileDesign.Views
 
                 // ヘルプ
                 new("ヘルプ", "ヘルプ", "F1"),
+                new("ヘルプ", "ヘルプ内検索 (ヘルプの中で。Esc で目次へ戻る)", "Ctrl + F"),
                 new("ヘルプ", "クイックヒント", "Shift + F1"),
                 new("ヘルプ", "ショートカット一覧", "Ctrl + /"),
                 new("ヘルプ", "コマンドパレット", "Ctrl + Shift + P"),
