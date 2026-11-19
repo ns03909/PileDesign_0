@@ -38,6 +38,9 @@ namespace PileDesign.Services
             var errors = new List<Diagnostic>();
             if (inputModel == null) return errors;
 
+            // 同じ位置に複数の杭。基礎梁の有無によらず見る (下の基礎梁の検査より前)
+            AddOverlappingPileErrors(errors, inputModel.PileLayoutItems);
+
             var fb = inputModel.FoundationBeamInput;
             var beams = fb?.Beams;
             if (beams == null || beams.Count == 0) return errors;
@@ -166,25 +169,49 @@ namespace PileDesign.Services
             var piles = inputModel?.PileLayoutItems;
             if (piles == null) return warnings;
 
-            // 同じ位置に複数の杭。剛体でつながるので解析は通るが、
-            // 貼り付けの繰り返しなどで意図せず重なっていることがある。
-            var seen = new Dictionary<(long, long), int>();
+            // 位置は mm に丸めた整数で比べる。数値でない座標・long に収まらない座標は丸められない
+            // (範囲外の double を long にすると値が決まらず、離れた杭どうしが「同じ位置」になり得た)。
+            // 重なりそのものは解析を止める問題 (AddOverlappingPileErrors)。ここは判定できないことだけを知らせる
             foreach (var p in piles)
             {
                 if (p == null) continue;
-                // 位置は mm に丸めた整数で比べる。数値でない座標・long に収まらない座標は丸められない
-                // (範囲外の double を long にすると値が決まらず、離れた杭どうしが「同じ位置」になり得た)
-                if (!TryPositionKey(p.X, p.Y, out var key))
-                {
+                if (!TryPositionKey(p.X, p.Y, out _))
                     warnings.Add($"杭 No.{p.No}: 座標が数値でないか大きすぎるため、ほかの杭との重なりを判定できません (X={p.X}, Y={p.Y})。");
-                    continue;
-                }
-                if (seen.TryGetValue(key, out int firstNo))
-                    warnings.Add($"杭 No.{p.No}: 杭 No.{firstNo} と同じ位置にあります (X={p.X:N3}, Y={p.Y:N3})。");
-                else
-                    seen[key] = p.No;
             }
             return warnings;
+        }
+
+        /// <summary>
+        /// 同じ位置 (mm 単位で一致) に複数の杭があれば、重なった杭の番号と座標を挙げて解析を止める。
+        ///
+        /// <para>重なった杭は杭頭が同じ剛体につながるので行列は組めて解析は通るが、同じ場所に杭が 2 本ある
+        /// モデルとして水平力・軸力を分け合い、結果が大きく変わる。貼り付けの繰り返しなどで意図せず重なることが
+        /// 多く、意図して 2 本を同じ位置に置く使い方は無い。2026-11-20 までは警告にとどめていたが、
+        /// 見落とすと結果が黙って違うため止める (レビューの指摘、利用者の判断)。</para>
+        /// </summary>
+        private static void AddOverlappingPileErrors(List<Diagnostic> errors, IEnumerable<PileLayoutDataItem>? piles)
+        {
+            if (piles == null) return;
+            var groups = new Dictionary<(long, long), List<PileLayoutDataItem>>();
+            var order = new List<(long, long)>();
+            foreach (var p in piles)
+            {
+                if (p == null || !TryPositionKey(p.X, p.Y, out var key)) continue;
+                if (!groups.TryGetValue(key, out var list)) { groups[key] = list = []; order.Add(key); }
+                list.Add(p);
+            }
+            foreach (var key in order)
+            {
+                var list = groups[key];
+                if (list.Count < 2) continue;
+                string nos = string.Join("・", list.Select(p => $"No.{p.No}"));
+                var targets = list.Select(p => DiagnosticTarget.Pile(p.No)).ToList();
+                errors.Add(Diagnostic.Input(targets[0],
+                    $"杭 {nos} が同じ位置にあります (X={list[0].X:N3}, Y={list[0].Y:N3})。"
+                    + "同じ位置の杭は 2 本として力を分け合うため、結果が大きく変わります。"
+                    + "「杭配置」で、不要な杭を消すか座標を直してください。")
+                    with { MoreTargets = targets.Skip(1).ToList() });
+            }
         }
 
         /// <summary>

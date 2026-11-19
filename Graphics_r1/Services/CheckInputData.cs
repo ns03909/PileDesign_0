@@ -162,7 +162,7 @@ namespace PileDesign.Services
                     "不要なら一般節点を消す"));
             }
 
-            // 意図しない入力の可能性が高いもの (同じ位置に複数の杭など)。
+            // 意図しない入力の可能性が高いもの (座標が数値でなく杭の重なりを判定できないなど)。
             // 解析は通るので警告にとどめる。
             foreach (var w in ModelConnectivityCheck.CollectWarnings(inputModel))
                 warnings.Add(Diagnostic.Notice(affects, DiagnosticTarget.Nowhere, w, "杭配置・基礎梁の配置を確かめる"));

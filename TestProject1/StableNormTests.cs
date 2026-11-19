@@ -132,6 +132,8 @@ public class StableNormTests
         var warnings = ModelConnectivityCheck.CollectWarnings(input);
 
         Assert.IsFalse(warnings.Any(w => w.Contains("同じ位置")), "離れた杭を同じ位置としている");
+        Assert.IsFalse(ModelConnectivityCheck.CollectErrorDiagnostics(input).Any(e => e.Message.Contains("同じ位置")),
+            "離れた杭を同じ位置として解析を止めている");
         Assert.AreEqual(2, warnings.Count(w => w.Contains("重なりを判定できません")));
     }
 }

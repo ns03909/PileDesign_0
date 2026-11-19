@@ -150,19 +150,37 @@ namespace TestProject1
                 "杭までつながっているのに問題として挙げている");
         }
 
-        /// <summary>同じ位置に杭が重なっていたら警告すること。</summary>
+        /// <summary>
+        /// 同じ位置に杭が重なっていたら解析を止めること (2026-11-20 までは警告だった)。
+        /// 基礎梁が無くても止める。重なった杭はすべて挙げ、場所はどの杭も指す。
+        /// </summary>
         [TestMethod]
-        public void PilesAtTheSamePlace_AreWarned()
+        public void PilesAtTheSamePlace_BlockTheAnalysis()
         {
             var m = MakeModel();
             AddPile(m, 1, 2.5, 1.5);
             AddPile(m, 2, 2.5, 1.5);
             AddPile(m, 3, 9.0, 1.5);
+            AddPile(m, 4, 2.5004, 1.5);   // mm に丸めると同じ位置
 
-            var warnings = ModelConnectivityCheck.CollectWarnings(m);
+            var errors = ModelConnectivityCheck.CollectErrorDiagnostics(m);
 
-            Assert.AreEqual(1, warnings.Count, "重なりを 1 件だけ挙げるはず: " + string.Join(" / ", warnings));
-            StringAssert.Contains(warnings[0], "杭 No.2");
+            Assert.AreEqual(1, errors.Count, "重なりを 1 件にまとめて挙げるはず: " + string.Join(" / ", errors.Select(e => e.Message)));
+            StringAssert.Contains(errors[0].Message, "杭 No.1・No.2・No.4 が同じ位置");
+            Assert.AreEqual(1, errors[0].Target.PileNo);
+            CollectionAssert.AreEqual(new int?[] { 2, 4 }, errors[0].MoreTargets.Select(t => t.PileNo).ToList());
+            Assert.AreEqual(0, ModelConnectivityCheck.CollectWarnings(m).Count, "止める問題を警告にも重ねて出している");
+        }
+
+        /// <summary>1 mm 離れていれば重なりとしないこと。</summary>
+        [TestMethod]
+        public void PilesApartByAMillimetre_AreNotOverlapping()
+        {
+            var m = MakeModel();
+            AddPile(m, 1, 2.5, 1.5);
+            AddPile(m, 2, 2.501, 1.5);
+
+            Assert.AreEqual(0, ModelConnectivityCheck.CollectErrorDiagnostics(m).Count);
         }
 
         /// <summary>

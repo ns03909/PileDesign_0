@@ -112,7 +112,7 @@ namespace TestProject1
                 var (a, b) = (m.PileLayoutItems[0], m.PileLayoutItems[1]);
                 b.X = a.X; b.Y = a.Y;
                 return false;
-            }, Stage.Warn | Stage.Report),
+            }, Stage.Block),   // 2026-11-20 までは注意 (警告) だった
 
             // ── 杭体 ──
             new("杭体", "杭区間の長さ", "0", m => Rejected(() => m.PileBodies[0].PileBodySegments[0].SegmentLength, () => m.PileBodies[0].PileBodySegments[0].SegmentLength = 0, 0), Stage.Block),

@@ -302,7 +302,7 @@ namespace PileDesign.Services
                     if (ReferenceEquals(p, q)) continue;
                     double dx = Math.Abs(q.X - p.X), dy = Math.Abs(q.Y - p.Y);
                     double d = StableNumerics.Norm(dx, dy);
-                    if (!(d > tol)) continue; // 同じ位置の杭は別の警告 (ModelConnectivityCheck) で知らせる
+                    if (!(d > tol)) continue; // 同じ位置の杭は解析の前に止める (ModelConnectivityCheck)
                     nearest = Math.Min(nearest, d);
                     if (dy <= tol) alongX = Math.Min(alongX, dx);
                     if (dx <= tol) alongY = Math.Min(alongY, dy);
