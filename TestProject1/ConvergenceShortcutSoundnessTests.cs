@@ -342,5 +342,37 @@ namespace TestProject1
                     $"{name} の段階を失敗させると限界値の行が変わりました: [{string.Join(", ", expected)}] → [{string.Join(", ", actual)}]");
             }
         }
+
+        /// <summary>
+        /// 刻みを最初の 1% まで縮めても収束せずに打ち切ったときは、極限荷重に届いていないことを警告に出す。
+        /// 以前は黙って曲線を終え、ヘルプは「その点を極限とみなす」と書いていた (外部レビュー 2026-11-20)。
+        /// 打ち切った曲線に極限 (***) の行は無い。打ち切らなければ警告は出ない。
+        /// </summary>
+        [TestMethod]
+        public void ACutOffCurveSaysTheUltimateLoadWasNotReached()
+        {
+            var (model, error) = IntegrationTests.BuildExampleInputModel("Example9", "PileExample9");
+            if (model == null) { Assert.Inconclusive(error); return; }
+            var soilPile = model.ElementDivision.SoilPiles[0];
+
+            var plain = new VerticalLoadTransferMethod(model, soilPile);
+            Assert.IsFalse(plain.Warnings.Any(w => w.Contains("打ち切りました")),
+                "打ち切っていないのに打切りの警告: " + string.Join(" / ", plain.Warnings));
+
+            int calls = 0;
+            VerticalLoadTransferMethod.FailLoadStepForTesting = _ => ++calls > 3;   // 4 段目から先はすべて失敗
+            VerticalLoadTransferMethod cut;
+            try { cut = new VerticalLoadTransferMethod(model, soilPile); }
+            finally { VerticalLoadTransferMethod.FailLoadStepForTesting = null; }
+
+            var push = cut.Warnings.SingleOrDefault(w => w.StartsWith("押込み側") && w.Contains("打ち切りました"));
+            var pull = cut.Warnings.SingleOrDefault(w => w.StartsWith("引抜き側") && w.Contains("打ち切りました"));
+            Assert.IsNotNull(push, "押込み側の打切りを知らせていない: " + string.Join(" / ", cut.Warnings));
+            Assert.IsNotNull(pull, "引抜き側の打切りを知らせていない: " + string.Join(" / ", cut.Warnings));
+            StringAssert.Contains(push, $"極限荷重 {Math.Abs(soilPile.R_ULS):N0} kN に届く前に");
+            StringAssert.Contains(push, "極限荷重に達したことを示すものではありません");
+            Assert.IsFalse(cut.LoadDisplacementsLimit.Any(r => Math.Abs(r.PileTopLoad - soilPile.R_ULS) < 1e-6),
+                "打ち切った曲線に極限の行がある");
+        }
     }
 }

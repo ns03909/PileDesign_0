@@ -968,8 +968,13 @@
             <h2 id="h-はじめに">はじめに</h2>
             <h3 id="h-アプリケーションの目的">アプリケーションの目的</h3>
             <p>
-                多くの荷重ケースに対する非線形解析や繰り返し計算を、<br />
-                 <strong>手軽に正確に</strong>できるだけ<strong>可視化</strong>し、<strong>一貫出力</strong>までできることを目的とします。
+                多くの荷重ケースに対する非線形解析や繰り返し計算を<strong>手軽に</strong>行い、
+                できるだけ<strong>可視化</strong>し、<strong>一貫出力</strong>までできることを目的とします。
+            </p>
+            <p>
+                <strong>現在 β 版です。</strong>重要な計算書としての使用は想定していません。
+                計算は設計例・文献の値との照合（「バージョン情報」画面の「文献検証」）で確かめていますが、
+                照合した杭種・条件の範囲に限ります。結果は設計者の判断で確かめてお使いください。
             </p>
 
             <p>
@@ -1102,7 +1107,7 @@
 
                     <p>本プログラムでは、水平抵抗に対する検討では、基礎指針'19　図6.6.9(a)に示された群杭フレームモデルに拠ります。ただし、各杭の軸力は、杭頭剛体連結（全拘束）モデルの場合には、各杭に個別に入力された値とし、基礎梁を含む杭頭剛床連結（UX,UY,RZ拘束）モデルの場合には、各杭位置で荷重伝達法で得られた鉛直ばねを設けた基礎梁モデルに各杭軸力を与えて解析して得られた反力とします。</p>
                     <figure>
-                        <img src="images/Fig_6.6.9(a).png" alt="___" width="600">
+                        <img src="images/Fig_6.6.9(a).png" alt="基礎指針'19 図6.6.9(a)（群杭フレームモデル）" width="600">
                         <figcaption>基礎指針'19　図6.6.9(a)</figcaption>
                     </figure>
                 </section>
@@ -1168,42 +1173,42 @@
                 </div>
 
             <!--             <figure>
-                            <img src="images/Fig_6.1.8.png" alt="___" width="400">
+                            <img src="images/Fig_6.1.8.png" alt="基礎指針'19 図6.1.8" width="400">
                             <figcaption>図6.1.8</figcaption>
                         </figure> -->
             <!--             <figure>
-                            <img src="images/Fig_6.1.9.png" alt="___" width="400">
+                            <img src="images/Fig_6.1.9.png" alt="基礎指針'19 図6.1.9" width="400">
                             <figcaption>図6.1.9</figcaption>
                         </figure> -->
             <!--             <figure>
-                            <img src="images/Fig_6.3.6.png" alt="___" width="400">
+                            <img src="images/Fig_6.3.6.png" alt="基礎指針'19 図6.3.6" width="400">
                             <figcaption>図6.3.6</figcaption>
                         </figure> -->
             <!--             <figure>
-                            <img src="images/Fig_6.6.2.png" alt="___" width="400">
+                            <img src="images/Fig_6.6.2.png" alt="基礎指針'19 図6.6.2" width="400">
                             <figcaption>図6.6.2</figcaption>
                         </figure>
 
                         <figure>
-                            <img src="images/Fig_6.6.3.png" alt="___" width="400">
+                            <img src="images/Fig_6.6.3.png" alt="基礎指針'19 図6.6.3" width="400">
                             <figcaption>図6.6.3</figcaption>
                         </figure>
 
                         <figure>
-                            <img src="images/Fig_6.6.4.png" alt="___" width="400">
+                            <img src="images/Fig_6.6.4.png" alt="基礎指針'19 図6.6.4" width="400">
                             <figcaption>図6.6.4</figcaption>
                         </figure> -->
             <!--             <figure>
-                            <img src="images/Fig_6.6.8.png" alt="___" width="400">
+                            <img src="images/Fig_6.6.8.png" alt="基礎指針'19 図6.6.8" width="400">
                             <figcaption>図6.6.8</figcaption>
                         </figure>
              -->
             <!--             <figure>
-                            <img src="images/Fig_6.6.9(b).png" alt="___" width="400">
+                            <img src="images/Fig_6.6.9(b).png" alt="基礎指針'19 図6.6.9(b)" width="400">
                             <figcaption>図6.6.9(b)</figcaption>
                         </figure> -->
             <!--             <figure>
-                            <img src="images/Fig_6.6.10.png" alt="___" width="400">
+                            <img src="images/Fig_6.6.10.png" alt="基礎指針'19 図6.6.10" width="400">
                             <figcaption>図6.6.10</figcaption>
                         </figure> -->
 
@@ -1400,6 +1405,16 @@
             <p class="indent-level-3" style="text-align:center;">
                 $N = VL_0 + VL_\text{add} + \beta_L \cdot \Delta L(L) + \beta_U \cdot \Delta L(U)$
             </p>
+            <table class="table-doc indent-level-3">
+                <caption style="text-align: center">数値の例（長期軸力 1,000 kN、地震時の変動軸力 500 kN = 上部構造分 400 kN + 基礎部分 100 kN。係数は例示）</caption>
+                <tr><th>荷重組合せの係数</th><th>既定（分離入力なし）</th><th>分離入力あり</th></tr>
+                <tr><td>&beta;<sub>U</sub> = 1.0, &beta;<sub>L</sub> = 0.5</td><td>1,000 + 500 = 1,500 kN</td><td>1,000 + 0.5×100 + 1.0×400 = 1,450 kN</td></tr>
+                <tr><td>&beta;<sub>U</sub> = 0.5, &beta;<sub>L</sub> = 1.0</td><td>1,500 kN（同じ）</td><td>1,000 + 1.0×100 + 0.5×400 = 1,300 kN</td></tr>
+                <tr><td>&beta;<sub>U</sub> = 1.0, &beta;<sub>L</sub> = −0.5</td><td>1,500 kN（同じ）</td><td>1,000 − 0.5×100 + 1.0×400 = 1,350 kN</td></tr>
+            </table>
+            <p class="indent-level-3">
+                既定では係数によらず同じ軸力です（「荷重条件」入力の<a href="#loadcase-superposition">作用の重ね合わせ</a>の注も参照）。
+            </p>
             <ul class="indent-level-3">
                 <li>&beta;<sub>U</sub>・&beta;<sub>L</sub> は荷重組合せの上部構造慣性力・基礎部慣性力の係数です。&beta; が負の組合せでは、その分だけ軸力が減ります。</li>
                 <li>入力は変動の値で行います。「変動」では表が ΔL1-1(U)・ΔL1-1(L) … ΔL2-4(L) の欄になります。</li>
@@ -1429,7 +1444,14 @@
 
             <h3 id="h-Step-7-杭要素分割"><img class="heading-icon" src="icons/ElementDivisionWindow.svg" alt="">Step 7: 杭要素分割</h3>
             <p class="indent-level-3" style="color:#555; font-size:0.9em;">
-                <em>なぜ必要？</em> 有限要素法（FEM）による解析を行うため、杭を細かい要素に分割する必要があります。分割が細かいほど精度が上がりますが、計算時間も増えます。
+                <em>なぜ必要？</em> 有限要素法（FEM）による解析を行うため、杭を細かい要素に分割する必要があります。
+                分割が粗いと離散化の誤差が残ります（同梱の計算例で、土層・杭体区間の境界だけで区切った状態は細かく分けた場合より応答が 10〜27% 大きく出ます）。
+                ただし、細かくするほど一律に良くなるわけではなく、ある程度から先は結果がほとんど変わらず計算時間だけが増えます。
+            </p>
+            <p class="indent-level-3" style="color:#555; font-size:0.9em;">
+                <em>分割が足りているかの確かめ方：</em> 今の分割で解析した結果を控え（杭頭の変位、最大曲げモーメント・せん断力、最も厳しい検定比）、
+                分割を 1 段細かくして同じ荷重ケースを解き直して比べます。差が数 % 以内なら今の分割で足りています。
+                差が大きければ細かいほうを採り、もう 1 段細かくして同じように比べます。比べた分割数と計算時間を記録しておくと、後で条件を変えたときの目安になります。
             </p>
             <ol>
                 <li>地盤と杭体を適切に入力をした後、その組合せごとに杭要素分割を行う必要があります。</li>
@@ -1993,15 +2015,18 @@
                         （4／8／10 N/mm²）に ±5% で一致する</td></tr>
             </table>
             <p>
-                2 つ目が 1 つ目の<strong>独立した検算</strong>になっています。
-                どちらかが誤っていれば、先端軸部の σ<sub>ce</sub> は JIS の規定値から外れます。
+                2 つ目は、1 つ目の仮定（PCD の逆算）と「有効プレストレス力は両軸部で共通」という仮定の下で、
+                求めた値が規定値と<strong>整合することの確認</strong>です。
+                整合しない場合はどちらかの仮定が誤っていると分かりますが、整合したからといって仮定が一意に正しいとは限りません。
             </p>
             <p>
                 <strong>先端軸部の耐力（M<sub>cr</sub>／M<sub>u</sub>／Q<sub>as</sub> 等）はカタログに存在しない</strong>ため、
                 本プログラムの断面計算（PC 鋼棒のみの中空断面＝PHC 杭と同じ計算）の結果を
                 そのまま設計値として用います。
-                その妥当性の根拠として、<strong>頭部軸部では同じ計算値がカタログの M<sub>u</sub> と
-                全 27 製品で +2〜7% に収まる</strong>ことを確認しています（計算値の方がやや大きい）。
+                参考として、<strong>頭部軸部では同じ計算値がカタログの M<sub>u</sub> と
+                全 27 製品で +2〜7% の差に収まる</strong>ことを確認しています。
+                <strong>計算値の方がカタログ値より大きい（危険側）</strong>ので、先端軸部の耐力が検定を左右する場合は、
+                メーカーの資料で確かめてください。
             </p>
 
             <h4>自重はコンクリート単位体積重量による</h4>
@@ -2041,7 +2066,7 @@
 
             <h3 id="h-マウス操作" style="font-weight: bold;"><img class="heading-icon" src="icons/Mouse.svg" alt="">マウス操作</h3>
 
-            <img src="images/mouse.png" alt="___" width="300">
+            <img src="images/mouse.png" alt="メインビューでのマウス操作の一覧" width="300">
 
             <table class="table-doc">
                 <caption style="text-align: center">メインビューでのマウス操作</caption>
@@ -2088,7 +2113,7 @@
                 また、編集モードに応じてカーソル形状が変化します（杭配置追加モード：十字カーソル、一般節点追加モード：十字カーソル、梁要素追加モード：ペンカーソル、選択モード：矢印カーソル）。
             </p>
             <p />
-            <img src="images/RightClickMenu.png" alt="___" width="300">
+            <img src="images/RightClickMenu.png" alt="メインビューの右クリックメニュー（節点上・梁要素上・一般節点上で切り替わる）" width="300">
 
             <p>
                 右クリックの位置（節点上 / 梁要素上 / 一般節点上）に応じて、表示されるメニューが切り替わります。
@@ -2294,7 +2319,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                 </tbody>
             </table>
 
-            <img src="images/viewCube.png" alt="___" width="300">
+            <img src="images/viewCube.png" alt="ビューキューブでのマウス操作の一覧" width="300">
             <table class="table-doc">
 
                 <caption style="text-align: center">ビューキューブにおけるマウス操作</caption>
@@ -3058,6 +3083,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     何かの力の大きさで割った比で判定します。絶対値で見ると荷重の大きいモデルほど厳しくなるため、
                     無次元にしています。<strong>何で割るかで判定の厳しさが変わる</strong>ので、ここで選べます。
                     判定式は次の形で、許容値は $10^{-6}$（2 乗の比なので 1 乗に直すと $10^{-3}$ = 0.1%）です。
+                    単杭沈下の残差は 2 乗しない比なので、同じ $10^{-6}$ でも意味が違います（<a href="#residual-horizontal-vs-settlement">比べ方</a>）。
                     $$\frac{\|\mathbf{R}\|^2}{\|\text{基準}\|^2} &lt; 10^{-6}$$
                     強制変位を与えた自由度の残差は 0 と置きます（そこは変位が決まっているため）。
                     <ul>
@@ -3304,7 +3330,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                 共通入力データグリッドで入力して適用ボタンをクリックすると、そのレベルのすべてのケースに入力が適用されます。
             </p>
 
-            <h4>「上部構造・基礎部、地盤の作用の重ね合わせ」タブ</h4>
+            <h4 id="loadcase-superposition">「上部構造・基礎部、地盤の作用の重ね合わせ」タブ</h4>
             <p>
                 杭応力評価では、上部構造慣性力 ($P_s$)・基礎部慣性力 ($P_f$)・地盤変位 ($D$) の最大値が時間的に必ずしも同時に発生しないことを考慮し、
                 それぞれに 1.0 以下の低減係数 $\alpha_L, \beta_U, \beta_L$ を乗じて重ね合わせます (基礎指針'19 6.6 節、2 杭基礎の応力評価法、d 杭応力の重ね合わせ)。
@@ -3386,7 +3412,11 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
             </p>
 
             <p style="font-size: 0.92em; color: #555;">
-                ※ 現状の実装では、各杭に入力する軸方向力に上部構造変動成分・基礎部変動成分の区別がなく、これらに対し $\beta_U, \beta_L$ の乗算は行われません (杭軸力はすべての重ね合わせケースで同一値となります)。
+                ※ 杭軸力に $\beta_U, \beta_L$ を掛けるかは、「軸力」タブの入力のしかたで変わります。
+                <strong>既定 (分離入力なし)</strong>では、地震時軸力は荷重ケースごとに 1 つで、$\beta_U, \beta_L$ は掛けません (すべての組合せで同じ軸力)。
+                <strong>分離入力を有効にした場合</strong>は、上部構造慣性力による変動軸力 &Delta;L(U) と基礎部慣性力による変動軸力 &Delta;L(L) に
+                組合せごとの $\beta_U, \beta_L$ を掛けるので、組合せごとに軸力が変わります。
+                式と数値の例は<a href="#h-地震時軸力の分離入力">地震時軸力の分離入力</a>を参照してください。
             </p>
 
             <p>
@@ -5872,7 +5902,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 </li>
             </ul>
 
-            <h5>未収束・再試行ログ</h5>
+            <h5 id="convergence-log">未収束・再試行ログ</h5>
             <pre style="font-family: 'MS Gothic', monospace; background: #F5F5F5; padding: 8px; font-size: 12px;">
 → 未収束: 最大反復回数 100 に到達。残差ノルム=2.341E-002 (許容値=1.000E-006), max|d|=1.234E-005m
 → 未収束: リミットサイクルとして早期に打ち切り。残差ノルム=2.410E-005 (許容値=1.000E-006), max|d|=8.340E-008m
@@ -6301,13 +6331,25 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 が即座に区別できます。サマリーレポートの「α許容」列にも反映されます。
             </p>
 
-            <h5 id="convergence-physical">6. 物理的未収束 (耐力超過判定)</h5>
+            <h5 id="convergence-physical">6. 物理的未収束 (耐力不足の可能性による再試行の打切り)</h5>
             <p>
                 未収束で終わったステップの残差が 10 を超え、なおかつ既にステップ数を増やして 1 回以上やり直している場合、
-                <strong>そもそも荷重に対する耐力が不足しており、解が存在しない</strong>可能性があります。
-                この状態では、ステップを細分化しても収束しないため、本プログラムは
-                試行を打ち切って <strong>「⛔ 物理的未収束」</strong>として記録します。
+                <strong>荷重に対して耐力が不足し、解が存在しない</strong>可能性があります。
+                この状態ではステップを細分化しても収束する見込みが小さいため、本プログラムは
+                再試行を打ち切って <strong>「⛔ 物理的未収束」</strong>として記録します。
             </p>
+            <p>
+                <strong>この判定は残差の大きさと再試行の回数だけで行っており、耐力不足と確定したものではありません。</strong>
+                入力の誤り（荷重・地盤定数の単位や桁）、モデル化（杭頭の接合条件・地盤ばねの剛性・液状化の扱い）、
+                ステップの刻みといった数値上の原因でも同じ状態になります。次の順に切り分けてください。
+            </p>
+            <ol>
+                <li>「入力の診断」と、入力の荷重・地盤定数の桁を確かめる。</li>
+                <li>同じ荷重ケースで、地盤変位や液状化を外した解析が収束するかを見る（どの条件で収束しなくなるか）。</li>
+                <li>そのケースの最後に収束したステップの断面力が、杭の耐力（M-φ の終局点）に近づいているかを見る。
+                    耐力に近ければ耐力不足の可能性が高く、遠ければ数値上の原因を疑います。</li>
+                <li>ステップ数を増やす・安定化手法を変える（<a href="#faq-nonconvergence">収束しない場合の FAQ</a>）。</li>
+            </ol>
             <p>
                 ログ例:
             </p>
@@ -6321,7 +6363,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 検定では判定が <strong>「未収束」</strong> となり、OK にも NG にも数えません (計算書も同じ)。
                 高強度せん断補強筋の工法で、断面が工法の適用範囲の外にある場合も同じく判定しません
                 (判定は「適用範囲外」。<a href="#h-高強度せん断補強筋の工法">高強度せん断補強筋の工法</a>)。
-                設計上はそのケースを対象外とせず、荷重低減・断面増等を検討する必要があります。
+                設計上はそのケースを対象外とせず、上の手順で原因を切り分け、耐力不足であれば荷重低減・断面増等を検討する必要があります。
             </p>
 
             <h5 id="convergence-summary-table">7. 収束対策のまとめ表</h5>
@@ -8510,15 +8552,20 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
             <h3 id="h-解析に関する質問">解析に関する質問</h3>
 
-            <h4>Q: 非線形解析が収束しない場合はどうすればよいですか？</h4>
+            <h4 id="faq-nonconvergence">Q: 非線形解析が収束しない場合はどうすればよいですか？</h4>
             <p>
-                <strong>A:</strong> 以下を確認してください。
+                <strong>A:</strong> 次の順に確認してください。
             </p>
-            <ul>
-                <li>荷重が極端に大きくないか（杭の支持力を大幅に超過していないか）</li>
-                <li>地盤条件（特にE₀値）が適切か</li>
-                <li>杭頭拘束条件が適切に設定されているか</li>
-            </ul>
+            <ol>
+                <li><strong>入力を確かめる</strong>：荷重が極端に大きくないか（杭の耐力・支持力を大幅に超えていないか）、地盤条件（特に E<sub>0</sub>・N 値）が極端でないか、杭頭の接合条件が意図どおりかを確かめます。「入力の診断」に注意が出ていないかも見てください。</li>
+                <li><strong>解析ログで、どこが収束しなかったかを見る</strong>：どの荷重ケースの何ステップ目で、残差がどの程度かを確かめます（<a href="#convergence-log">未収束・再試行ログ</a>）。残差が大きいまま再試行を打ち切ったケースは<a href="#convergence-physical">物理的未収束</a>として記録されます。</li>
+                <li><strong>モデルを切り分ける</strong>：地盤変位を「考慮しない」にする、液状化を考慮しないケースだけを解く、など条件を 1 つずつ外し、どの条件で収束しなくなるかを確かめます。</li>
+                <li><strong>ステップ数・安定化手法を変える</strong>：レベル2 でステップ数を 16〜32 程度に増やします。荷重を小さく分けて段階的に載荷することで安定します。安定化手法を「ラインサーチ」にすると、発散やリミットサイクルを防ぐ効果があります。</li>
+                <li><strong>「反復なし」は診断・概略の確認に使う</strong>：各ステップを 1 回だけ解くので最後まで進みますが、各ステップで釣合いを満たすまでは解いていません。
+                    結果を使う場合は、サマリーレポートで残差を確認し、ステップ数を変えても（32〜64 程度）結果が変わらないこと、通常の反復解析で解けた範囲の結果と差が小さいことを確かめてください。</li>
+                <li><strong>結果の採否を決める</strong>：収束しなかったケースは検定で「未収束」となり、OK・NG に数えません。基準を緩めて受理したステップを含むケースは「OK(緩和受理)」のように表示されます（<a href="#convergence-relaxed-criterion">緩和基準</a>）。
+                    未収束のケースは対象外とせず、原因（入力・モデル・耐力の不足）を確かめてから判断してください。</li>
+            </ol>
 
             <h4>Q: 液状化地盤の検討はどのように行いますか？</h4>
             <p>
@@ -8591,14 +8638,8 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
             <h4>Q: 解析が収束しない場合の対処法は？</h4>
             <p>
-                <strong>A:</strong> 以下を段階的に試してください。
+                <strong>A:</strong> 「<a href="#faq-nonconvergence">非線形解析が収束しない場合はどうすればよいですか？</a>」にまとめています。
             </p>
-            <ol>
-                <li><strong>解析ステップ数を増やす</strong>：レベル2で16～32程度に設定します。荷重を小さく分けて段階的に載荷することで安定します。</li>
-                <li><strong>安定化手法を変更する</strong>：「ラインサーチ」を選択すると、発散やリミットサイクルを防ぐ効果があります。</li>
-                <li><strong>「反復なし」を有効にする</strong>：各ステップ1回のみ解析する最も安定な方法です。ステップ数を32～64に増やしてください。</li>
-                <li><strong>入力値を確認する</strong>：荷重が杭の支持力を大幅に超えていないか、地盤のN値が極端でないか確認してください。</li>
-            </ol>
 
             <h4>Q: 地盤変位を与えずに水平解析を行うことができますか？</h4>
             <p>
@@ -9768,7 +9809,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 (c)の側方流動のような現象は考慮できません。
             </p>
             <figure>
-                <img src="images/Fig_6.1.6.png" alt="___" width="600">
+                <img src="images/Fig_6.1.6.png" alt="基礎指針'19 図6.1.6（液状化に伴う地盤の現象）" width="600">
                 <figcaption>基礎指針'19　図6.1.6</figcaption>
             </figure>
 
@@ -11760,86 +11801,86 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
 
 
                     <figure>
-                        <img src="images/解説図1.1.png" alt="___" width="600">
+                        <img src="images/解説図1.1.png" alt="基礎地盤の強度と変形性能 解説図1.1" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図1.1</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="images/解説図1.1_r1.png" alt="___" width="600">
+                        <img src="images/解説図1.1_r1.png" alt="基礎地盤の強度と変形性能 解説図1.1r1" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図1.1r1</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="images/解説図2.1.jpeg" alt="___" width="600">
+                        <img src="images/解説図2.1.jpeg" alt="基礎地盤の強度と変形性能 解説図2.1" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図2.1</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="images/解説図2.1.jpg" alt="___" width="600">
+                        <img src="images/解説図2.1.jpg" alt="基礎地盤の強度と変形性能 解説図2.1" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図2.1</figcaption>
                     </figure>
 
                     <!--             <figure>
-                                    <img src="images/解説図2.2a.png" alt="___" width="600">
+                                    <img src="images/解説図2.2a.png" alt="基礎地盤の強度と変形性能 解説図2.2a" width="600">
                                     <figcaption>基礎地盤の強度と変形性能　解説図2.2a</figcaption>
                                 </figure>  -->
 
                     <figure>
-                        <img src="images/解説図2.3a.jpeg" alt="___" width="600">
+                        <img src="images/解説図2.3a.jpeg" alt="基礎地盤の強度と変形性能 解説図2.3a" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図2.3a</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="images/解説図2.3b.png" alt="___" width="600">
+                        <img src="images/解説図2.3b.png" alt="基礎地盤の強度と変形性能 解説図2.3b" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図2.3b</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="images/解説図2.4.png" alt="___" width="600">
+                        <img src="images/解説図2.4.png" alt="基礎地盤の強度と変形性能 解説図2.4" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図2.4</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="images/解説図2.5.png" alt="___" width="600">
+                        <img src="images/解説図2.5.png" alt="基礎地盤の強度と変形性能 解説図2.5" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図2.5</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="images/解説図3.21.png" alt="___" width="600">
+                        <img src="images/解説図3.21.png" alt="基礎地盤の強度と変形性能 解説図3.21" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図3.21</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="images/解説図4.2.png" alt="___" width="600">
+                        <img src="images/解説図4.2.png" alt="基礎地盤の強度と変形性能 解説図4.2" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図4.2</figcaption>
                     </figure>
 
 
                     <figure>
-                        <img src="images/解説図4.8.png" alt="___" width="600">
+                        <img src="images/解説図4.8.png" alt="基礎地盤の強度と変形性能 解説図4.8" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図4.8</figcaption>
                     </figure>
 
 
                     <figure>
-                        <img src="images/解説図4.12.png" alt="___" width="600">
+                        <img src="images/解説図4.12.png" alt="基礎地盤の強度と変形性能 解説図4.12" width="600">
                         <figcaption>基礎地盤の強度と変形性能　解説図4.12</figcaption>
                     </figure>
 
 
                     <figure>
-                        <img src="images/図2.1.jpeg" alt="___" width="600">
+                        <img src="images/図2.1.jpeg" alt="基礎地盤の強度と変形性能 図2.1" width="600">
                         <figcaption>基礎地盤の強度と変形性能　図2.1</figcaption>
                     </figure>
 
 
                     <figure>
-                        <img src="images/図3.1.png" alt="___" width="600">
+                        <img src="images/図3.1.png" alt="基礎地盤の強度と変形性能 図3.1" width="600">
                         <figcaption>基礎地盤の強度と変形性能　図3.1</figcaption>
                     </figure>
 
                     <figure>
-                        <img src="images/図3.2.png" alt="___" width="600">
+                        <img src="images/図3.2.png" alt="基礎地盤の強度と変形性能 図3.2" width="600">
                         <figcaption>基礎地盤の強度と変形性能　図3.2</figcaption>
                     </figure>
                 </section>
@@ -13033,27 +13074,27 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                         本プログラムでは、ブロック破壊により沈下性状が決まる杭には対応していません。
                     </p>
                     <figure>
-                        <img src="images/Fig_6.2.20.png" alt="___" width="600">
+                        <img src="images/Fig_6.2.20.png" alt="基礎指針'19 図6.2.20（ブロック破壊）" width="600">
                         <figcaption>基礎指針'19　図6.2.20</figcaption>
                     </figure>
                     <p>
                         単杭の即時沈下量は、荷重伝達解析（既往の載荷試験で得られた杭の先端抵抗-先端変位量関係と周面抵抗-変位量関係に基づいて単杭の荷重-沈下量関係を解析的に求める方法）によって求めます。
                     </p>
                     <figure>
-                        <img src="images/Fig_6.3.2.png" alt="___" width="400">
+                        <img src="images/Fig_6.3.2.png" alt="基礎指針'19 図6.3.2（荷重伝達解析による単杭の荷重-沈下関係）" width="400">
                         <figcaption>基礎指針'19　図6.3.2</figcaption>
                     </figure>
                     <p>
                         杭周面抵抗は基礎指針'19　表6.3.2の土層の種類と計算された極限周面抵抗力によるトリリニアモデルでモデル化します。
 
                         <figure>
-                            <img src="images/Fig_6.3.3.png" alt="___" width="400">
+                            <img src="images/Fig_6.3.3.png" alt="基礎指針'19 図6.3.3（杭周面抵抗のトリリニアモデル）" width="400">
                             <figcaption>基礎指針'19　図6.3.3</figcaption>
                         </figure>
 
                     </p>杭先端抵抗は、基礎指針'19の6.3.1式によります。沈下曲線のパラメータである$\alpha$と$n$は任意の値とすることができます。
                     <figure>
-                        <img src="images/Fig_6.3.4.png" alt="___" width="400">
+                        <img src="images/Fig_6.3.4.png" alt="基礎指針'19 図6.3.4（杭先端抵抗と先端変位の関係）" width="400">
                         <figcaption>基礎指針'19　図6.3.4</figcaption>
                     </figure>
 
@@ -13096,10 +13137,14 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
 
                     <h4>解き方（荷重増分）</h4>
                     <ul>
-                        <li>杭頭荷重を少しずつ増やし、各ステップで非線形の釣り合いを反復計算で解きます（荷重増分解析）。押込み側と引抜き側を、それぞれ杭自重だけが作用した状態から解きます。</li>
+                        <li>杭頭荷重を少しずつ増やし、各ステップで非線形の釣り合いを反復計算で解きます（荷重増分解析）。押込み側と引抜き側を、それぞれ杭自重だけが作用した状態から解きます。
+                            釣り合いの判定は $\|\mathbf{R}\| / \|\mathbf{F}\| \le 10^{-6}$ で、水平解析の残差（2 乗どうしの比）とは比の取り方が違います（<a href="#residual-horizontal-vs-settlement">比べ方</a>）。</li>
                         <li>最初の荷重刻みは、押込み側は先端の極限抵抗と周面抵抗の最大値の和、引抜き側は後述の $p_{min}$ の大きさに応じて、10〜5,000 kN の範囲で決めます。</li>
                         <li>常時・損傷・極限の各限界荷重をまたぐステップでは、刻みをその荷重ちょうどに合わせて止め、限界点として記録します。</li>
-                        <li>杭頭荷重が極限荷重に達したところで終えます。途中で収束しないときは刻みを半分にしてやり直し、最初の刻みの 1% まで縮めても収束しなければ、その点を極限とみなして終えます。</li>
+                        <li>杭頭荷重が極限荷重に達したところで終えます。途中で収束しないときは刻みを半分にしてやり直し、最初の刻みの 1% まで縮めても収束しなければ、<strong>最後に収束した点で打ち切ります</strong>。
+                            これは数値計算上の打切りで、極限荷重に達したことを示すものではありません。荷重-沈下曲線はその点までで、極限 (***) の行は記録しません。
+                            打ち切ったときは、打ち切った杭頭荷重・極限荷重・最後に試した刻みを解析の警告に出します。
+                            設計用の軸力が曲線の範囲の外になった場合、沈下量は曲線の端の値（実際より小さい値）になり、そのことも警告に出します。</li>
                     </ul>
 
                     <h4>圧縮側（押込み）</h4>
@@ -13795,11 +13840,11 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                     水平解析で杭先端の P-S ばねを使う場合は、杭頭の荷重を止める仕組みがないため、引抜き側の周面の抵抗を各土層の $\tau_T$ で頭打ちにします (押込み側と同じ勾配 $\tau_1/S_1$ で立ち上がり、$|\tau_T|$ に達したら一定)。
                 </p>
                 <figure>
-                    <img src="images/Fig_6.5.10.png" alt="___" width="600">
+                    <img src="images/Fig_6.5.10.png" alt="基礎指針'19 図6.5.10" width="600">
                     <figcaption>基礎指針'19　図6.5.10</figcaption>
                 </figure>
                 <figure>
-                    <img src="images/Fig_6.5.11.png" alt="___" width="600">
+                    <img src="images/Fig_6.5.11.png" alt="基礎指針'19 図6.5.11" width="600">
                     <figcaption>基礎指針'19　図6.5.11</figcaption>
                 </figure>
             </section>
@@ -13831,17 +13876,17 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                     基礎指針 2019 では、杭周面抵抗に対する等価荷重面の例として杭下端から杭長の 1/3 上方のレベルに荷重面を設ける場合、杭先端荷重に対する等価荷重面の例として杭先端レベルに荷重面を設ける場合が例示されています。
                 </p>
                 <figure>
-                    <img src="images/Fig_6.3.7.png" alt="___" width="400">
+                    <img src="images/Fig_6.3.7.png" alt="基礎指針'19 図6.3.7（等価荷重面の例）" width="400">
                     <figcaption>基礎指針'19　図6.3.7</figcaption>
                 </figure>
 
                 <figure>
-                    <img src="images/Fig_6.3.10.png" alt="___" width="600">
+                    <img src="images/Fig_6.3.10.png" alt="基礎指針'19 図6.3.10" width="600">
                     <figcaption>基礎指針'19　図6.3.10</figcaption>
                 </figure>
 
                 <figure>
-                    <img src="images/Fig_6.3.11.png" alt="___" width="400">
+                    <img src="images/Fig_6.3.11.png" alt="基礎指針'19 図6.3.11" width="400">
                     <figcaption>基礎指針'19　図6.3.11</figcaption>
                 </figure>
                 <p>
@@ -16026,6 +16071,13 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                     反復の途中で残差の停滞・長期未改善などを検出すると、収束基準の緩和が自動的に適用されます
                     （現在の残差が $10^{-2}$ 以下のときだけ）。
                     反復が最大回数（既定: 100回）に達しても収束しない場合は未収束となり、ステップ数を増やして再試行します。</p>
+                    <p id="residual-horizontal-vs-settlement"><strong>水平解析と単杭沈下では「残差」の比の取り方が違います。</strong>同じ数字どうしを比べないでください。</p>
+                    <table class="table-doc">
+                        <tr><th>解析</th><th>判定に使う比</th><th>既定の許容値</th><th>力の比に直すと</th></tr>
+                        <tr><td>水平解析</td><td>$\|\mathbf{R}\|^2 / \|\text{基準}\|^2$（2 乗どうしの比）</td><td>$10^{-6}$</td><td>$10^{-3}$（0.1%）</td></tr>
+                        <tr><td>単杭沈下（荷重伝達法）</td><td>$\|\mathbf{R}\| / \|\mathbf{F}\|$（2 乗しない）</td><td>$10^{-6}$</td><td>$10^{-6}$</td></tr>
+                    </table>
+                    <p>単杭沈下は反復が 100 回を超えると許容値を最大 100 倍まで緩め、反復の上限で 1,000 倍以内なら受理して、そのことを解析の警告に出します。</p>
                 </dd>
 
                 <dt><strong>残差（Residual）</strong></dt>

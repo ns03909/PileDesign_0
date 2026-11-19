@@ -857,7 +857,14 @@ namespace PileDesign.FEM
                     double currentStep = Math.Abs(VectorDF[0]);
                     if (currentStep <= minStep)
                     {
-                        // ステップが最小に達しても収束しない場合 → 極限状態に到達したと判断
+                        // 刻みを最初の 1% まで縮めても収束しない → ここで打ち切る。
+                        // 極限荷重に達したとは限らない (数値上の打切り)。曲線は最後に収束した点までで、極限 (***) の行は記録しない。
+                        // 以前はヘルプに「その点を極限とみなす」とだけ書き、利用者には何も知らせていなかった (外部レビュー 2026-11-20)
+                        double reached = Math.Abs(VectorF[0] - Weights[0]);
+                        double target = Math.Abs(pn == -1 ? soilPile.R_ULS : soilPile.Rt_ULS);
+                        Warnings.Add($"{(pn == -1 ? "押込み" : "引抜き")}側: 杭頭荷重 {reached:N0} kN から先が収束しなくなり、"
+                            + $"極限荷重 {target:N0} kN に届く前に打ち切りました (荷重の刻みを {currentStep:N1} kN まで縮めても収束しませんでした)。"
+                            + "荷重-沈下曲線は最後に収束した点までです。極限荷重に達したことを示すものではありません。");
                         break;
                     }
 
