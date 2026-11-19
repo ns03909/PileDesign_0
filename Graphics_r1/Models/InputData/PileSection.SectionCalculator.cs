@@ -117,9 +117,9 @@ namespace PileDesign.Models.InputData
         /// ユーザ指定式に従い β1 = β2 = 1.0:
         ///
         /// 鋼管部 (杭中間部・杭下部):
-        ///   |Nud|/sNuc &gt; 0.2:  Mu = β1·β2·1.25·sσCy1·(1 − |Nud|/sNuc)·sZe
-        ///   |Nud|/sNuc ≤ 0.2:   Mu = β1·β2·sσCy1·sZp        (塑性プラトー)
-        ///   sNuc = min(sNuc1, sNuc2)
+        ///   n &gt; 0.2:  Mu = β1·β2·1.25·sσCy1·(1 − n)·sZp
+        ///   n ≤ 0.2:   Mu = β1·β2·sσCy1·sZp        (塑性プラトー)
+        ///   n = |Nud|/sNuc (圧縮、sNuc = min(sNuc1, sNuc2)) / |Nud|/sNut (引張。原典と違う。柱座屈は引張で起きない)
         ///
         /// コンクリート充填鋼管部 (杭頭部):
         ///   Mu = β1·β2·(sMu + cMu)

@@ -12670,12 +12670,16 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                     <h4>損傷限界曲げモーメント — 杭中間部・杭下部 (鋼管のみ、コンクリート充填なし)</h4>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$M_d = \beta_1 \left(1.5 \cdot _sf_{c1} - \dfrac{|N_{dd}|}{_sA_p}\right) _sZ_e$$</p>
+                            <p>$$M_d = \beta_1 \left(1.5 \cdot _sf_{c1} - \dfrac{N_{dd}}{_sA_p}\right) _sZ_e \quad (N_{dd} \ge 0,\ \text{圧縮})$$</p>
+                            <p>$$M_d = \beta_1 \min\!\left(1.5 \cdot _sf_{t} - \dfrac{|N_{dd}|}{_sA_p},\;\; 1.5 \cdot _sf_{c1} + \dfrac{|N_{dd}|}{_sA_p}\right) _sZ_e \quad (N_{dd} &lt; 0,\ \text{引張})$$</p>
                         </div>
-                        <div class="formula-right"></div>
+                        <div class="formula-right">圧縮: 強度と変形性能 (8.7) 系<br>引張: <strong>原典と違う</strong></div>
                     </div>
                     <div class="warning" style="background:#FFFAEB; border:1px solid #E0A030; padding:8px 12px; margin:8px 0; color:#8A4500;">
-                        <strong>要注意 (引張軸力側)</strong>: 引張軸力のときも、局部座屈で低減した ${}_sf_{c1}$ を使っています (原文どおり)。引張側は ${}_sf_t$ を使うべき誤りの可能性があります。<a href="#steel-pipe-tension-caution">安全限界曲げモーメントの注</a>を参照してください。
+                        <strong>原典との違い (引張軸力側)</strong>: 原典は引張軸力のときも圧縮側の式（局部座屈で低減した ${}_sf_{c1}$ から軸応力を引く）を使います。
+                        本プログラムは引張のとき、曲げの<strong>引張縁</strong>（軸の引張と曲げの引張が重なり ${}_sf_t$ で決まる）と
+                        <strong>圧縮縁</strong>（軸の引張が曲げの圧縮を打ち消すので、局部座屈の ${}_sf_{c1}$ に軸応力を足した分まで曲げられる）の小さい方を採ります。
+                        軸力 0 では圧縮側の式と同じ値です。詳しくは<a href="#steel-pipe-tension-caution">安全限界曲げモーメントの注</a>を参照してください。
                     </div>
 
                     <h4>損傷限界曲げモーメント — 杭頭部 (鋼管 + 充填コンクリート)</h4>
@@ -12864,13 +12868,14 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                     <h4>安全限界曲げモーメント — 杭中間部・下部 (0.2 軸力比で式分岐)</h4>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$$M_u = \begin{cases} \beta_1 \beta_2 \cdot {}_s\sigma_{cy1} \cdot {}_sZ_p & (|N_{ud}|/{}_sN_{uc} \leq 0.2) \\[6pt] \beta_1 \beta_2 \cdot 1.25 \cdot {}_s\sigma_{cy1} \left(1 - \dfrac{|N_{ud}|}{{}_sN_{uc}}\right) {}_sZ_p & (|N_{ud}|/{}_sN_{uc} > 0.2) \end{cases}$$</p>
+                            <p>$$M_u = \begin{cases} \beta_1 \beta_2 \cdot {}_s\sigma_{cy1} \cdot {}_sZ_p & (n \leq 0.2) \\[6pt] \beta_1 \beta_2 \cdot 1.25 \cdot {}_s\sigma_{cy1} \left(1 - n\right) {}_sZ_p & (n > 0.2) \end{cases}$$</p>
                         </div>
-                        <div class="formula-right">強度と変形性能 (8.23)</div>
+                        <div class="formula-right">強度と変形性能 (8.23)<br>（引張の $n$ は<strong>原典と違う</strong>）</div>
                     </div>
                     <div class="formula-block">
                         <div class="formula-left">
-                            <p>$${}_sN_{uc} = \min({}_sN_{uc1},\;{}_sN_{uc2})$$</p>
+                            <p>$$n = \begin{cases} |N_{ud}| / {}_sN_{uc} & (N_{ud} \ge 0,\ \text{圧縮}) \\[4pt] |N_{ud}| / {}_sN_{ut} & (N_{ud} &lt; 0,\ \text{引張}) \end{cases}$$</p>
+                            <p>$${}_sN_{uc} = \min({}_sN_{uc1},\;{}_sN_{uc2}), \qquad {}_sN_{ut} = {}_s\sigma_{ty} \cdot {}_sA_p$$</p>
                             <p>$${}_sZ_p = \dfrac{4}{3}\,{}_sr_o^{\,3} \left(1 - \left(1 - \dfrac{t}{{}_sr_o}\right)^3\right)$$</p>
                         </div>
                         <div class="formula-right"></div>
@@ -12880,10 +12885,19 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                         高軸力では同じ ${}_sZ_p$ を用いた線形相互作用で耐力が低下する。
                     </p>
                     <div id="steel-pipe-tension-caution" class="warning" style="background:#FFFAEB; border:1px solid #E0A030; padding:8px 12px; margin:8px 0; color:#8A4500;">
-                        <strong>要注意 (引張軸力側)</strong>: 上の式は原文 (強度と変形性能 (8.23)) どおり、引張軸力のときも<strong>圧縮側の量</strong> (局部座屈で低減した ${}_s\sigma_{cy1}$ と、柱座屈を含む ${}_sN_{uc} = \min({}_sN_{uc1},\;{}_sN_{uc2})$) で計算しています。
-                        引張では局部座屈も柱座屈も起きないので、引張側は ${}_s\sigma_{ty}$ と ${}_sN_{ut}$ を使うべきで、原文の誤りの可能性があります (本プログラムの使用限界は、引張側に ${}_sf_t$ を使っています)。
-                        現状は原文のまま計算しており、引張になる杭の安全限界曲げモーメントと、解析の曲げモーメント－曲率関係を低め (安全側) に評価します。液状化区間の柱座屈を考える場合ほど差が大きく、試算では約 3 割低くなります。
-                        他の文献で確認でき次第、修正します。
+                        <strong>原典との違い (引張軸力側)</strong>: 原典 (強度と変形性能 (8.23)) は引張軸力のときも、軸力の比を<strong>柱座屈を含む</strong>
+                        ${}_sN_{uc} = \min({}_sN_{uc1},\;{}_sN_{uc2})$ で求めます。引張では柱座屈は起きないので、本プログラムは引張のとき
+                        <strong>引張の降伏軸力 ${}_sN_{ut}$</strong> で割ります（2026-11-20 から。それまでは原典どおりに計算し、ここに要注意と書いていました）。
+                        曲げの強度 ${}_s\sigma_{cy1}$（局部座屈で低減）は原典のまま使います。引張の杭でも、曲げの圧縮縁は局部座屈しうるためです
+                        （文字どおり ${}_s\sigma_{ty}$ に替えると、$D/t &gt; 25$ の鋼管で軸力 0 の前後に耐力が飛びます）。
+                        損傷限界も同じ考え方で、引張のときは引張縁と圧縮縁の小さい方を採ります（上の損傷限界の式）。
+                        <br>
+                        原典どおりの計算と比べると、引張になる鋼管杭の損傷限界・安全限界の曲げモーメントと、解析の曲げモーメント－曲率関係が大きくなります。
+                        例: F = 235 N/mm²、引張軸力が ${}_sN_{ut}$ の 20〜40% のとき、
+                        φ1000×10（D/t = 100）で損傷限界 +24〜37%・安全限界 +5〜13%（液状化区間 20 m では安全限界 +6〜16%）、
+                        φ800×16 で損傷限界 +15〜22%・安全限界 +3〜8%（液状化区間 20 m では +10〜31%）。
+                        圧縮軸力のときは原典どおりで、変わりません。
+                        原典どおりの値で照査したい場合は、この点を考慮して結果を読んでください。
                     </div>
 
                     <h4>安全限界曲げモーメント — 杭頭部 (コンクリート充填部)</h4>

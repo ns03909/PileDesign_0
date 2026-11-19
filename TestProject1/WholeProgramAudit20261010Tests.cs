@@ -543,17 +543,52 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 鋼管杭の引張軸力側の耐力は、原文どおり圧縮側の量で計算しているが、原文の誤りの可能性がある (2026-10-10 利用者の判断)。
-        /// 他の文献で確認して直すまで、ヘルプとコードに「要注意」を残す。直したら、このテストと注記を一緒に消すこと。
+        /// 鋼管杭 (中間部・下部) の引張軸力側の曲げ耐力は、原典と違う式で求める (2026-11-20 利用者の判断。外部レビュー #2)。
+        /// 2026-10-10 から 11-20 までは原典どおり圧縮側の量で計算し、ヘルプに要注意と書いていた (このテストはその注記を守っていた)。
+        ///
+        /// <list type="bullet">
+        /// <item>安全限界: 引張の軸力の比は sNut で割る。柱座屈 (座屈長) に左右されない。曲げの強度 sσcy1 は原典のまま</item>
+        /// <item>損傷限界: 引張は引張縁 (1.5sft − σN) と圧縮縁 (1.5sfc1 + σN) の小さい方</item>
+        /// <item>どちらも軸力 0 の前後で連続 (文字どおり sσty・sft に替えると D/t &gt; 25 で耐力が飛ぶ)</item>
+        /// <item>圧縮側は原典のまま (柱座屈で下がる)</item>
+        /// </list>
         /// </summary>
         [TestMethod]
-        public void SteelPipeTensionSide_CautionIsDocumentedUntilFixed()
+        public void SteelPipeTensionSide_UsesTensionQuantitiesAndStaysContinuous()
         {
+            static SteelPipeSection Pipe(double lk) => new(1000, 10, 235, 1.0, 0.0, 400, 205000.0, lk);   // D/t = 100
+            var free = Pipe(0.0);
+            var buckled = Pipe(40.0);   // 液状化区間 40 m: 柱座屈で sNuc が下がる (sfc2 ≈ 72 < sfc1 ≈ 133 N/mm²)
+            Assert.IsTrue(buckled.sNuc < free.sNuc * 0.9, "(前提) 座屈長で圧縮の耐力が下がる");
+            Assert.IsTrue(free.Sfc1 < free.sft, "(前提) D/t > 25 で局部座屈の低減がある");
+
+            double nT = -0.5 * free.sNut;   // 引張 (軸力の比 0.5)
+            // 安全限界: 引張では柱座屈に左右されない。sNut で割る
+            Assert.AreEqual(free.GetUltimateLimitMomentMiddle(nT), buckled.GetUltimateLimitMomentMiddle(nT), 1e-6,
+                "引張の安全限界曲げモーメントが柱座屈で変わっています");
+            Assert.AreEqual(1.25 * free.sSigmaCy1 * (1 - 0.5) * free.sZp, free.GetUltimateLimitMomentMiddle(nT), 1e-6);
+            // 圧縮側は原典のまま (柱座屈で下がる)
+            double nC = 0.5 * buckled.sNuc;
+            Assert.IsTrue(buckled.GetUltimateLimitMomentMiddle(nC) < free.GetUltimateLimitMomentMiddle(nC));
+
+            // 損傷限界: 引張は両縁の小さい方
+            double sigmaN = Math.Abs(nT) / free.sAp;
+            Assert.AreEqual(Math.Min(1.5 * free.sft - sigmaN, 1.5 * free.Sfc1 + sigmaN) * free.sZe,
+                free.GetDamageLimitMomentMiddle(nT), 1e-6);
+
+            // 軸力 0 の前後で連続
+            foreach (var p in new[] { free, buckled })
+            {
+                Assert.AreEqual(p.GetDamageLimitMomentMiddle(0.0), p.GetDamageLimitMomentMiddle(-1e-3), p.GetDamageLimitMomentMiddle(0.0) * 1e-6, "損傷限界が軸力 0 で飛んでいます");
+                Assert.AreEqual(p.GetUltimateLimitMomentMiddle(0.0), p.GetUltimateLimitMomentMiddle(-1e-3), p.GetUltimateLimitMomentMiddle(0.0) * 1e-6, "安全限界が軸力 0 で飛んでいます");
+            }
+
+            // ヘルプに原典との違いを書いている
             string help = TestSource.Read("Graphics_r1", "Help", "help.html");
-            StringAssert.Contains(help, "id=\"steel-pipe-tension-caution\"", "ヘルプの要注意の注記が消えています");
-            StringAssert.Contains(help, "href=\"#steel-pipe-tension-caution\"");
-            string code = TestSource.Read("Graphics_r1", "Models", "InputData", "SteelPipeSection.cs");
-            Assert.AreEqual(2, System.Text.RegularExpressions.Regex.Matches(code, @"要注意 \(引張軸力側\)").Count, "コードの要注意の注記が消えています");
+            StringAssert.Contains(help, "id=\"steel-pipe-tension-caution\"");
+            Assert.IsTrue(System.Text.RegularExpressions.Regex.Matches(help, "原典との違い \\(引張軸力側\\)").Count >= 2,
+                "ヘルプに原典との違い (損傷限界・安全限界) が書かれていません");
+            Assert.IsFalse(help.Contains("要注意 (引張軸力側)"), "直す前の要注意が残っています");
         }
     }
 }

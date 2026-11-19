@@ -226,13 +226,22 @@ namespace PileDesign.Models.InputData
 
         /// <summary>
         /// 損傷限界モーメント (杭中間部・杭下部、コンクリート充填なし)。
-        /// Md = β1 × (1.5 sfc1 − |Ndd|/sAp) × sZe
+        /// 圧縮 (Ndd ≥ 0): Md = β1 × (1.5 sfc1 − Ndd/sAp) × sZe          (原典 (8.7) 系のまま)
+        /// 引張 (Ndd &lt; 0): Md = β1 × min(1.5 sft − |Ndd|/sAp, 1.5 sfc1 + |Ndd|/sAp) × sZe
         /// </summary>
-        // 要注意 (引張軸力側): 引張でも局部座屈で低減した Sfc1 を使う (原文どおり)。引張側は sft を使うべき原文の誤りの
-        // 可能性がある (使用限界 GetServiceLimitMoment は引張側に sft)。他の文献で確認でき次第直す (ヘルプ steel-pipe-tension-caution)
+        /// <remarks>
+        /// <b>引張側は原典と違う。</b> 原典は引張でも圧縮側の式 (局部座屈で低減した sfc1 から軸応力を引く) を使う。
+        /// 引張では、曲げの引張縁は軸応力と曲げ応力が足し合わさって sft で決まり、圧縮縁は軸の引張が曲げの圧縮を
+        /// 打ち消すので sfc1 (局部座屈) に軸応力を足した分まで曲げられる。両縁の小さい方を採る
+        /// (使用限界 <see cref="GetServiceLimitMoment"/> が引張側に sft を使うのと同じ考え方に圧縮縁の照査を加えたもの)。
+        /// 軸力 0 で圧縮側の式と一致する (連続)。2026-11-20 利用者の判断 (外部レビュー #2)。ヘルプ steel-pipe-tension-caution。
+        /// </remarks>
         internal double GetDamageLimitMomentMiddle(double Ndd)
         {
-            return Beta1 * (1.5 * Sfc1 - Math.Abs(Ndd) / sAp) * sZe;
+            double sigmaN = Math.Abs(Ndd) / sAp;
+            if (Ndd >= 0)
+                return Beta1 * (1.5 * Sfc1 - sigmaN) * sZe;
+            return Beta1 * Math.Min(1.5 * sft - sigmaN, 1.5 * Sfc1 + sigmaN) * sZe;
         }
 
         /// <summary>
@@ -428,18 +437,22 @@ namespace PileDesign.Models.InputData
         // -------------- 安全限界モーメント --------------
 
         /// <summary>
-        /// 安全限界曲げモーメント (杭中間部・下部、鋼管のみ)。
-        /// |Nud|/sNuc > 0.2 のとき: Mu = β1 β2 × 1.25 × sσCy1 × (1 − |Nud|/sNuc) × sZp
-        /// |Nud|/sNuc ≤ 0.2 のとき: Mu = β1 β2 × sσCy1 × sZp (塑性モーメント、軸力依存なし)
+        /// 安全限界曲げモーメント (杭中間部・下部、鋼管のみ)。軸力の比 n は、圧縮なら |Nud|/sNuc、引張なら |Nud|/sNut。
+        /// n > 0.2 のとき: Mu = β1 β2 × 1.25 × sσCy1 × (1 − n) × sZp
+        /// n ≤ 0.2 のとき: Mu = β1 β2 × sσCy1 × sZp (塑性モーメント、軸力依存なし)
         /// 0.2 境界で連続 (どちらも sZp を使用する)。
         /// </summary>
-        // 要注意 (引張軸力側): 引張でも圧縮側の量 (局部座屈の sσCy1、柱座屈を含む sNuc) を使う (原文 (8.23) どおり)。
-        // 引張は座屈しないので sσTy と sNut を使うべき原文の誤りの可能性がある。他の文献で確認でき次第直す
-        // (ヘルプ steel-pipe-tension-caution。2026-10-10 利用者の判断: 原文のまま計算し、ヘルプに要注意と書く)
+        /// <remarks>
+        /// <b>引張側は原典 (8.23) と違う。</b> 原典は引張でも柱座屈を含む sNuc = min(sNuc1, sNuc2) で割る。
+        /// 引張では柱座屈は起きないので、引張の降伏軸力 sNut で割る (液状化区間の柱座屈を考える場合に原典との差が大きい)。
+        /// 曲げの強度 sσCy1 (局部座屈で低減) は変えない。引張の杭でも曲げの圧縮縁は局部座屈しうるため。
+        /// 2026-11-20 利用者の判断 (外部レビュー #2。2026-10-10 までは原典のまま計算し要注意と書いていた)。
+        /// ヘルプ steel-pipe-tension-caution。
+        /// </remarks>
         internal double GetUltimateLimitMomentMiddle(double Nud)
         {
             const double beta2 = 1.0;
-            double sNucLocal = sNuc;
+            double sNucLocal = Nud >= 0 ? sNuc : sNut;
             if (sNucLocal <= 0) return 0.0;
 
             double ratio = Math.Abs(Nud) / sNucLocal;
