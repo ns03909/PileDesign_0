@@ -227,5 +227,53 @@ namespace TestProject1
                 try { Directory.Delete(dir, recursive: true); } catch { /* 後片付けの失敗は無視 */ }
             }
         }
+
+        /// <summary>
+        /// 「液状化しない」と判定した地盤と「判定していない」地盤を区別する。土質点が無い・判定前の初期値
+        /// (対象外なのに β が数値) が残る地盤は判定していない。β = 0 の対象層は正当な判定結果。
+        /// </summary>
+        [TestMethod]
+        public void LiquefactionJudged_TellsNotLiquefiedFromNotChecked()
+        {
+            Assert.IsFalse(SteelPipeBuckling.IsLiquefactionJudged(null));
+            Assert.IsFalse(SteelPipeBuckling.IsLiquefactionJudged([]), "土質点が無いのに判定済みとしている");
+
+            var initial = new GroundMassDataInput();   // β の初期値 [0, 0]・対象層でない
+            Assert.IsFalse(SteelPipeBuckling.IsLiquefactionJudged([initial]), "判定前の初期値を判定済みとしている");
+
+            var notTarget = new GroundMassDataInput { BetaL = [null, null] };
+            var fullyLiquefied = new GroundMassDataInput { IsLiquefactionLayer = true, BetaL = [0.0, 0.0] };
+            Assert.IsTrue(SteelPipeBuckling.IsLiquefactionJudged([notTarget, fullyLiquefied]));
+        }
+
+        /// <summary>
+        /// 鋼管杭の地盤で液状化を判定していなければ、座屈長 0 として扱ったことを解析前の注意 (計算書にも書く) に出す。
+        /// 判定済みなら出さない。柱座屈を考えない設定でも出さない (外部レビュー 2026-11-20)。
+        /// </summary>
+        [TestMethod]
+        public void NotCheckedLiquefaction_IsNoticedForSteelPipePiles()
+        {
+            var model = BuildSteelPipeModel(out string? skip);
+            if (model == null) { Assert.Inconclusive(skip); return; }
+            bool saved = ConcreteModelOptions.ConsiderSteelPipeColumnBuckling;
+            try
+            {
+                ConcreteModelOptions.ConsiderSteelPipeColumnBuckling = true;
+                static bool Noticed(InputModel m) => PileDesign.Services.CheckInputData.CollectInputWarningDiagnostics(m)
+                    .Any(d => d.Severity == PileDesign.Common.DiagnosticSeverity.Warning && d.Message.Contains("液状化の判定をしていない"));
+
+                Assert.IsFalse(Noticed(model), "判定済み (液状化なし) の地盤で知らせている");
+
+                foreach (var mass in model.GroundsInput[0].GroundMassesData) mass.BetaL = [0.0, 0.0];   // 判定前の状態
+                Assert.IsTrue(Noticed(model), "判定していない地盤を知らせていない");
+
+                ConcreteModelOptions.ConsiderSteelPipeColumnBuckling = false;
+                Assert.IsFalse(Noticed(model), "柱座屈を考えない設定なのに知らせている");
+            }
+            finally
+            {
+                ConcreteModelOptions.ConsiderSteelPipeColumnBuckling = saved;
+            }
+        }
     }
 }

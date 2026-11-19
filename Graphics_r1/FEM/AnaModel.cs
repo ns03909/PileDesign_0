@@ -1576,6 +1576,29 @@ namespace PileDesign.FEM
         public bool HasUnconvergedSteps()
             => AnalysisStepResults?.Any(r => r.Status >= StepStatus.Unconverged) == true;
 
+        /// <summary>
+        /// 緩めた基準で受理したステップを、荷重条件ごとに集める: ステップ番号 (昇順) と、
+        /// 残差が通常の許容値 <paramref name="baseTolerance"/> の何倍だったか (最大)。
+        /// 「OK(緩和受理)」の文字だけでは、どれだけ緩めたかが読めないため (外部レビュー 2026-11-20)。
+        /// </summary>
+        public Dictionary<(int Level, int LoadCaseNo, int LoadCombinationNo, bool IsLiquefaction), (List<int> Steps, double WorstRatio)>
+            BuildRelaxedStepDetails(double baseTolerance)
+        {
+            var map = new Dictionary<(int, int, int, bool), (List<int> Steps, double WorstRatio)>();
+            if (AnalysisStepResults == null || !(baseTolerance > 0)) return map;
+            foreach (var r in AnalysisStepResults)
+            {
+                if (r.Status != StepStatus.ConvergedRelaxed) continue;
+                var key = CaseConvergenceKey(r.LoadCase, r.LoadCombination, r.IsLiquefaction);
+                if (!map.TryGetValue(key, out var d)) d = ([], 0.0);
+                if (!d.Steps.Contains(r.Step)) d.Steps.Add(r.Step);
+                double ratio = r.ResidualValue / baseTolerance;
+                map[key] = (d.Steps, double.IsFinite(ratio) ? Math.Max(d.WorstRatio, ratio) : d.WorstRatio);
+            }
+            foreach (var d in map.Values) d.Steps.Sort();
+            return map;
+        }
+
         /// <summary>緩めた基準で受理したステップを含む解析結果があるか。</summary>
         public bool HasRelaxedSteps()
             => AnalysisStepResults?.Any(r => r.Status == StepStatus.ConvergedRelaxed) == true;

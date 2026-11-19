@@ -1079,6 +1079,28 @@ namespace PileDesign.Output
                     + "釣り合いは満たしているとみなして OK / NG に数えているが、残差は本来の許容値まで下がっていない。"
                     + "判定には「(緩和受理)」を添えてある。");
                 AddText(body, "緩和受理を含む荷重ケース: " + string.Join(" / ", relaxedCases));
+
+                // どのステップを、どれだけ緩めて受理したか。「OK」の文字だけで通常の OK と同じに読まれないように
+                var details = anaModel?.BuildRelaxedStepDetails(ViewModels.HorizontalCalculationViewModel.BaseConvergenceTolerance);
+                if (details != null && details.Count > 0)
+                {
+                    var lines = result.Items
+                        .Where(i => i.IsFromRelaxedCase && i.LoadCaseNo is int && i.LoadCombinationNo is int && i.IsLiquefaction is bool)
+                        .Select(i => (Label: string.IsNullOrEmpty(i.LiquefactionLabel)
+                                ? $"{i.LoadCaseName} {i.LoadCombinationName}"
+                                : $"{i.LoadCaseName} {i.LoadCombinationName}（{i.LiquefactionLabel}）",
+                            Key: (i.Level, i.LoadCaseNo!.Value, i.LoadCombinationNo!.Value, i.IsLiquefaction!.Value)))
+                        .Distinct()
+                        .Where(x => details.ContainsKey(x.Key))
+                        .OrderBy(x => x.Label)
+                        .Select(x => $"{x.Label}: ステップ {string.Join("・", details[x.Key].Steps)}、"
+                            + $"残差は通常の許容値の最大 {details[x.Key].WorstRatio:N0} 倍")
+                        .ToList();
+                    if (lines.Count > 0)
+                        AddText(body, $"受理したステップと残差 (2 乗の比。通常の許容値 {ViewModels.HorizontalCalculationViewModel.BaseConvergenceTolerance:0.0E+0}、"
+                            + $"緩めた基準の上限はその {ViewModels.HorizontalCalculationViewModel.RelaxedAcceptanceCap / ViewModels.HorizontalCalculationViewModel.BaseConvergenceTolerance:N0} 倍): "
+                            + string.Join(" / ", lines));
+                }
             }
 
             // 杭頭のばねが降伏後の枝にある杭頭回転角。降伏後の回転角は要素分割に敏感なので、読む人に知らせる
@@ -1297,6 +1319,38 @@ namespace PileDesign.Output
 
             body.Append(table);
             AddTableNote(body, "※ 検定比 = 応答値 / 限界値。押込み・引抜きとも大きさ（絶対値）で比較している。");
+            NoteMethodApplicability(body);
+        }
+
+        /// <summary>
+        /// 高支持力杭工法の適用範囲を、支持力の検定とは別の項目として書く。
+        ///
+        /// <para>範囲の外でも上下限に丸めた値で支持力を計算するので、表には数値が並び、判定も出る。
+        /// 「計算できた」と「工法の適用条件を満たした」は別のことなので、検定表のすぐ後に、
+        /// 範囲内か、範囲外ならどの項目を何として計算したかを書く (外部レビュー 2026-11-20)。</para>
+        /// </summary>
+        private void NoteMethodApplicability(Body body)
+        {
+            var soilPiles = inputModel?.ElementDivision?.SoilPiles;
+            if (soilPiles == null) return;
+            foreach (var sp in soilPiles.Where(s => s != null && (s.IsSmartMagnum || s.IsHybridKneading)))
+            {
+                string method = sp.IsSmartMagnum ? "Smart-MAGNUM 工法" : "Hybrid ニーディング工法";
+                var outside = (sp.IsSmartMagnum
+                        ? sp.ValidateSmartMagnumRange().Concat(sp.SmartMagnumLiquefiedFrictionWarnings())
+                        : sp.ValidateHybridKneadingRange())
+                    .ToList();
+                if (outside.Count == 0)
+                {
+                    AddText(body, $"工法の適用範囲（杭体{sp.PileBodyNo}×地盤{sp.GroundNo}、{method}）: 確認した項目はすべて範囲内。");
+                    continue;
+                }
+                AddText(body, $"工法の適用範囲（杭体{sp.PileBodyNo}×地盤{sp.GroundNo}、{method}）: "
+                    + $"範囲の外の項目が {outside.Count} 件ある。支持力は計算しているが、適用範囲を満たしていない。"
+                    + "範囲の上下限に丸めて計算した項目は、その値を各項目に示す。");
+                foreach (var w in outside)
+                    AddText(body, "・" + w, fontSize: 9);
+            }
         }
 
         /// <summary>

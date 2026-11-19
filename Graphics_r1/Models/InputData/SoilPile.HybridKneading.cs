@@ -366,12 +366,18 @@ namespace PileDesign.Models.InputData
             if (depth < minDepth)
                 yield return $"{label}: 杭先端深度 {depth:N1} m は引抜き検討の最小施工深さ {minDepth:N1} m（6m かつ 10·D1）を下回っています。";
 
-            if (PileCircumVerticals != null
-                && PileCircumVerticals.Any(p => (p.IsPositiveCircumResistance || p.IsNegativeCircumResistance)
-                                                && !IsCohesive(p.GroundLayer.GranularityClass)
-                                                && p.GroundLayer.NValue > HybridNsMax))
+            // 範囲外の土層を 1 つずつ、入力値と計算に使う値を並べて挙げる (外部レビュー 2026-11-20。以前は「ある」とだけ)
+            if (PileCircumVerticals != null)
             {
-                yield return $"{label}: 周面の平均N値 Ns が適用範囲 30 を超える土層があります（クランプして計算します）。";
+                foreach (var layer in PileCircumVerticals
+                    .Where(p => (p.IsPositiveCircumResistance || p.IsNegativeCircumResistance)
+                                && !IsCohesive(p.GroundLayer.GranularityClass)
+                                && p.GroundLayer.NValue > HybridNsMax)
+                    .Select(p => p.GroundLayer).Distinct())
+                {
+                    yield return $"{label}: 土層「{layer.Name}」の周面の平均N値 Ns = {layer.NValue:N1} は適用範囲 30 以下の外です"
+                        + $"（{HybridClampNs(layer.NValue):N1} として計算します）。";
+                }
             }
         }
     }

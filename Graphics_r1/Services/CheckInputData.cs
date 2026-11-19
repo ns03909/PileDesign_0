@@ -136,8 +136,30 @@ namespace PileDesign.Services
                     const string clamp = "適用範囲の上下限に丸めた値で計算しています。杭体・地盤の入力を確かめる";
                     foreach (var w in soilPile.ValidateSmartMagnumRange())
                         warnings.Add(Diagnostic.Notice(affects, at, $"Smart-MAGNUM {w}", clamp));
+                    // 液状化のおそれのある層の周面抵抗 (チェックは自動では外さない)
+                    foreach (var w in soilPile.SmartMagnumLiquefiedFrictionWarnings())
+                        warnings.Add(Diagnostic.Notice(affects, DiagnosticTarget.Ground(soilPile.GroundNo), $"Smart-MAGNUM {w}",
+                            "「地盤」ウィンドウの土層の表で、その層の押込側・引抜側の周面抵抗のチェックを外す"));
                     foreach (var w in soilPile.ValidateHybridKneadingRange())
                         warnings.Add(Diagnostic.Notice(affects, at, $"Hybridニーディング {w}", clamp));
+                }
+            }
+
+            // 鋼管杭の柱座屈: 液状化の判定をしていない地盤は液状化区間なし (座屈長 0) として扱う。
+            // 「液状化しない」と判定したのとは違うので、杭体と地盤の組を挙げて知らせる (外部レビュー 2026-11-20)
+            if (ConcreteModelOptions.ConsiderSteelPipeColumnBuckling && inputModel.PileLayoutItems != null)
+            {
+                foreach (var group in inputModel.PileLayoutItems
+                    .Where(p => p != null && inputModel.PileBodyAt(p.PileBodyNo)?.PileBodyType == PileTypeNames.SteelPipe)
+                    .GroupBy(p => p.GroundNo).OrderBy(g => g.Key))
+                {
+                    var ground = inputModel.GroundAt(group.Key);
+                    if (ground == null || SteelPipeBuckling.IsLiquefactionJudged(ground.GroundMassesData)) continue;
+                    string bodies = string.Join("・", group.Select(p => p.PileBodyNo).Distinct().OrderBy(n => n).Select(n => $"杭体{n}"));
+                    warnings.Add(Diagnostic.Notice(affects, DiagnosticTarget.Ground(group.Key),
+                        $"地盤 {group.Key}: 液状化の判定をしていない (土質データが入力されていない) ため、鋼管杭 ({bodies}) の柱座屈の座屈長を 0 "
+                        + "(液状化区間なし) として扱っています。「液状化しない」と判定したものではありません。",
+                        "液状化を検討する場合は「地盤」ウィンドウで土質データを入力する"));
                 }
             }
 

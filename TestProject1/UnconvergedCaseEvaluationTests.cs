@@ -174,6 +174,28 @@ namespace TestProject1
             Assert.IsTrue(model.HasUnconvergedSteps());
         }
 
+        /// <summary>
+        /// 緩めて受理したステップを、ケースごとにステップ番号と残差の倍率 (通常の許容値に対する最大) で集める。
+        /// 計算書は「OK(緩和受理)」に添えてこれを書く (外部レビュー 2026-11-20)。収束したステップは数えない。
+        /// </summary>
+        [TestMethod]
+        public void RelaxedStepDetails_ListStepsAndTheWorstRatio()
+        {
+            var model = new AnaModel();
+            var lc = new LoadCase { LoadName = "L2-1" };
+            model.AnalysisStepResults.Add(new(lc, Combo, true, 1, 5, 1e-7, StepStatus.Converged));
+            model.AnalysisStepResults.Add(new(lc, Combo, true, 7, 100, 3.0e-5, StepStatus.ConvergedRelaxed));
+            model.AnalysisStepResults.Add(new(lc, Combo, true, 4, 100, 1.2e-4, StepStatus.ConvergedRelaxed));
+
+            var details = model.BuildRelaxedStepDetails(1e-6);
+
+            Assert.AreEqual(1, details.Count);
+            var d = details[AnaModel.CaseConvergenceKey(lc, Combo, true)];
+            CollectionAssert.AreEqual(new[] { 4, 7 }, d.Steps, "ステップ番号を昇順に並べていない、または収束したステップを数えている");
+            Assert.AreEqual(120.0, d.WorstRatio, 1e-9);
+            Assert.AreEqual(0, new AnaModel().BuildRelaxedStepDetails(1e-6).Count);
+        }
+
         [TestMethod]
         public void CaseConvergence_AllConvergedIsConverged()
         {

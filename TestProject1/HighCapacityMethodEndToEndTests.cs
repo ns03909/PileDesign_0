@@ -145,6 +145,44 @@ namespace TestProject1
             }
         }
 
+        /// <summary>
+        /// Smart-MAGNUM で、液状化のおそれのある土層に周面抵抗を見込んでいれば層を名指しで知らせ、
+        /// チェックを外せば消える。液状化の判定をしていなければ出さない。チェックは自動では変えない (外部レビュー 2026-11-20)。
+        /// </summary>
+        [TestMethod]
+        public void SmartMagnum_FrictionInALiquefiableLayer_IsReported()
+        {
+            var model = BuildModel(PileConstructionTypeNames.SmartMagnum, out string? skip);
+            if (model == null) { Assert.Inconclusive(skip); return; }
+            var sp = model.ElementDivision.SoilPiles[0];
+            var masses = sp.GroundInput.GroundMassesData;
+            foreach (var m in masses) { m.IsLiquefactionLayer = false; m.BetaL = [0.0, 0.0]; }   // 判定していない状態
+
+            Assert.AreEqual(0, sp.SmartMagnumLiquefiedFrictionWarnings().Count(), "判定していないのに液状化として扱った");
+
+            // 周面抵抗を見込んでいる層に重なる土質点を 1 つ、レベル2 だけ液状化させる
+            var pcv = sp.PileCircumVerticals.First(p => p.IsPositiveCircumResistance && p.L > 0.5);
+            double[] tops = sp.GroundInput.MassTopAltitudes();
+            int idx = Enumerable.Range(0, masses.Count).First(i =>
+                Math.Min(pcv.Top, tops[i]) - Math.Max(pcv.Bottom, tops[i] - (masses[i].H ?? masses[i].Spacing)) > 0.1);
+            masses[idx].IsLiquefactionLayer = true;
+            masses[idx].BetaL = [1.0, 0.5];
+
+            var warnings = sp.SmartMagnumLiquefiedFrictionWarnings().ToList();
+            Assert.AreEqual(1, warnings.Count(w => w.Contains($"土層「{pcv.GroundLayer.Name}」")),
+                "液状化のおそれのある層の周面抵抗を知らせていない: " + string.Join(" / ", warnings));
+            var w = warnings.First(x => x.Contains($"土層「{pcv.GroundLayer.Name}」"));
+            StringAssert.Contains(w, "レベル2 で β < 1");
+            Assert.IsFalse(w.Contains("レベル1"), "レベル1 は β = 1 (液状化しない) なのに挙げている");
+            Assert.IsTrue(pcv.IsPositiveCircumResistance, "チェックを自動で変えている");
+
+            // 同じ層を指す区間 (杭区間の境で分かれた区間) もすべて外すと消える
+            foreach (var p in sp.PileCircumVerticals.Where(p => p.GroundLayer == pcv.GroundLayer))
+            { p.IsPositiveCircumResistance = false; p.IsNegativeCircumResistance = false; }
+            Assert.IsFalse(sp.SmartMagnumLiquefiedFrictionWarnings().Any(x => x.Contains($"土層「{pcv.GroundLayer.Name}」")),
+                "チェックを外したのにまだ知らせている");
+        }
+
         // ── docx 出力 ────────────────────────────────────────────
 
         /// <summary>

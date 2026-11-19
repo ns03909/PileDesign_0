@@ -396,6 +396,28 @@ namespace TestProject1
                 "カタログ計算例の諸元で警告が出ている: " + string.Join(" / ", warnings));
         }
 
+        /// <summary>
+        /// 周面の Ns が範囲外の土層は、層ごとに入力値と計算に使う値を並べて挙げる (外部レビュー 2026-11-20)。
+        /// 以前は最初の 1 層だけを層名なしで「クランプして計算します」と書いていた。
+        /// </summary>
+        [TestMethod]
+        public void RangeCheck_NamesEachOutOfRangeNsLayerWithTheValueUsed()
+        {
+            var soilPile = BuildCatalogExamplePile();
+            var layers = soilPile.PileCircumVerticals
+                .Where(p => (p.IsPositiveCircumResistance || p.IsNegativeCircumResistance)
+                            && p.GroundLayer.GranularityClass != "粘性土")
+                .Select(p => p.GroundLayer).Distinct().Take(2).ToList();
+            if (layers.Count < 2) { Assert.Inconclusive("周面抵抗を見込む砂質の層が 2 つありません"); return; }
+            layers[0].NValue = 45;
+            layers[1].NValue = 0.5;
+
+            var warnings = soilPile.ValidateSmartMagnumRange().ToList();
+
+            StringAssert.Contains(string.Join("\n", warnings), $"土層「{layers[0].Name}」の周面の平均N値 Ns = 45.0 は適用範囲 1〜30 の外です（30.0 として計算します）");
+            StringAssert.Contains(string.Join("\n", warnings), $"土層「{layers[1].Name}」の周面の平均N値 Ns = 0.5 は適用範囲 1〜30 の外です（1.0 として計算します）");
+        }
+
         [TestMethod]
         public void RangeCheck_FlagsExcessiveBulbLength()
         {

@@ -90,6 +90,28 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// この地盤で液状化の判定が済んでいるか。土質点が 1 つも無い、または判定前の初期値
+        /// (対象層でないのに β が数値のまま) が残っている土質点があれば false。
+        ///
+        /// <para>判定は地盤の入力を更新するたびに自動で行われ、対象外の土質点の β は null になる
+        /// (<see cref="IsLiquefied"/> の説明)。判定が済んでいない地盤は液状化区間なし (座屈長 0) として扱うので、
+        /// 「液状化しない」と「検討していない」を利用者が区別できるよう、呼び出し側で知らせる (外部レビュー 2026-11-20)。</para>
+        /// </summary>
+        internal static bool IsLiquefactionJudged(IReadOnlyList<GroundMassDataInput>? groundMasses)
+        {
+            if (groundMasses == null || groundMasses.Count == 0) return false;
+            foreach (var mass in groundMasses)
+            {
+                if (mass == null || mass.IsLiquefactionLayer) continue;
+                var betas = mass.BetaL;
+                if (betas == null) continue;
+                foreach (var b in betas)
+                    if (b.HasValue) return false;   // 対象外なのに数値 = 判定前の初期値
+            }
+            return true;
+        }
+
+        /// <summary>
         /// この土質点が液状化区間か。<b>液状化対象層と判定されていて、かつ β が 1 未満</b>のとき。
         ///
         /// <b>β だけで判定してはいけない。</b> <c>BetaL</c> の初期値は null ではなく
@@ -103,7 +125,7 @@ namespace PileDesign.Models.InputData
         ///
         /// FL ≥ 1 で液状化に至らない場合は β = 1 が入る (低減なし)。
         /// </summary>
-        private static bool IsLiquefied(GroundMassDataInput? mass, int levelIndex)
+        internal static bool IsLiquefied(GroundMassDataInput? mass, int levelIndex)
         {
             if (mass == null || !mass.IsLiquefactionLayer) return false;
 
