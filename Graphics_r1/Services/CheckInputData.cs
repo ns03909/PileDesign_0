@@ -209,6 +209,8 @@ namespace PileDesign.Services
             inputModel.SyncPileTopsFromSections();
             // 鋼管杭の座屈長も今の杭配置・地盤から求め直す (分割済みだと土層-杭セットと一緒には作り直されない)
             inputModel.RefreshSteelPipeBucklingLengths();
+            // 鋼管杭の杭頭部の検討式の鋼管薄部 EI3 も、今の杭体の区間から入れ直す (区間の断面を編集しても自動では入らない)
+            inputModel.SyncSteelPipeHeadThinPipeEI();
 
             var problems = CollectAnalysisBlockers(inputModel);
             if (problems.Count == 0) return true; // OK: ダイアログなしで続行

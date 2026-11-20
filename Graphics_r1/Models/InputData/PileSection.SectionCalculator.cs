@@ -67,6 +67,8 @@ namespace PileDesign.Models.InputData
                 HeadFillLength = PileSectionType == PileTypeNames.CftSection && HasCftFillLengthInput ? CftFillLength : null,
                 // 杭頭部の鋼管厚部の長さ l2 (mm)。0 は厚部なし
                 HeadThickPartLength = PileSectionType == PileTypeNames.CftSection ? CftThickPartLength : 0.0,
+                // 杭頭部の鋼管薄部の EI3 (杭体の下の区間から配った値)。kNm² → N·mm²。無ければ null で杭頭部の鋼管と同じ
+                HeadThinPipeEI = PileSectionType == PileTypeNames.CftSection && HeadThinPipeEI > 0 ? HeadThinPipeEI * 1e9 : null,
             };
         }
 

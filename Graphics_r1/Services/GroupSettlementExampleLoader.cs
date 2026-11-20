@@ -241,6 +241,7 @@ namespace PileDesign.Services
                 inputModel.PileBodies = new ObservableCollection<PileBodyInput>(pileBodyList);
                 // 杭頭部の、杭断面から導く値 (例題の読み込みは読み込みの仕上げを通らない)
                 inputModel.SyncPileTopsFromSections();
+                inputModel.SyncSteelPipeHeadThinPipeEI();   // 鋼管杭の杭頭部の鋼管薄部 EI3
             }
             else
             {

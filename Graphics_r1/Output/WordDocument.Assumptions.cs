@@ -167,6 +167,8 @@ namespace PileDesign.Output
                         + (x.Section.HasCftFillLengthInput ? "" : " (杭径 D と仮定)")
                         + (x.Section.CftThickPartLength > 0 ? $"、鋼管厚部の長さ l2 = {x.Section.CftThickPartLength:N0} mm" : "")))
                     + ")。"
+                    + "鋼管厚部の剛性は杭頭部の鋼管、鋼管薄部の剛性 EI3 は杭体の鋼管の断面変化部 (l1 + l2) より下の区間の鋼管 (腐食後) から求めた"
+                    + "(下に鋼管部の区間が無い杭体は杭頭部の鋼管と同じとした)。"
                     + (anyAssumed ? "「杭径 D と仮定」は充填長が未入力のもので、実際の充填長が異なる場合は別途確認すること。" : ""));
             }
 

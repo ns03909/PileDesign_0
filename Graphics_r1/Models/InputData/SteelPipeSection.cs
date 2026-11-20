@@ -70,6 +70,12 @@ namespace PileDesign.Models.InputData
         internal double HeadThickPartLength { get; init; }
 
         /// <summary>
+        /// 杭頭部の鋼管薄部 (断面変化部から 4D まで) の曲げ剛性 EI3 [N·mm²]。杭体の下の区間の鋼管 (腐食後) の E·I を渡す
+        /// (<see cref="PileSection.HeadThinPipeEI"/>)。null なら杭頭部の鋼管と同じ (2026-11-21 までは常にこれ)。
+        /// </summary>
+        internal double? HeadThinPipeEI { get; init; }
+
+        /// <summary>
         /// 杭頭部の検討区間の境の深さ [mm] (杭頭 = パイルキャップ下面から): 充填部の下端 l1、鋼管の断面変化部 l1 + l2、
         /// 検討区間の下端 L = 4D。要素分割はここに節点を置く (InputModel.SoilPileNodeAltitudes)。
         /// 合成剛性 <see cref="ComputeEIeqHead"/> と同じ定義 (l1 は未入力なら D) から作るので、節点と検討式の区間は食い違わない。
@@ -839,7 +845,8 @@ namespace PileDesign.Models.InputData
         /// 0 は厚部なし)、l3 = L − l1 − l2。
         /// <para>L = 4D は θMu の長さと同じで、充填長に関わらず固定する。l1・l2 は L の中に収まるよう打ち切る
         /// (充填長が L 以上なら L 全体が充填部で EIeq = EI1)。以前は l1 = D・l2 = 0・l3 = 3D 固定で、既定値はそのときと同じ値になる。</para>
-        /// <para>EI2 (厚部) は、いまは EI3 と同じ鋼管の値なので、l2 は EIeq を変えない (節点の位置だけが変わる)。</para>
+        /// <para>EI1 = 杭断面の合成 EI、EI2 = 杭頭部の鋼管 (厚部)、EI3 = 杭体の下の区間の鋼管 (<see cref="HeadThinPipeEI"/>。
+        /// 2026-11-21 までは EI2 と同じ杭頭部の鋼管で、l2 は EIeq を変えなかった)。</para>
         /// </summary>
         internal double ComputeEIeqHead()
         {
@@ -862,8 +869,8 @@ namespace PileDesign.Models.InputData
             }
 
             double EI1 = CompositeHeadEI ?? (E * Iisteel + Ec * Iiconcrete);   // コンクリート充填鋼管部 合成 (杭断面の EI)
-            double EI2 = E * Iisteel;                      // 厚部 (本実装ではデフォルト同一)
-            double EI3 = E * Iisteel;                      // 鋼管のみ薄部
+            double EI2 = E * Iisteel;                      // 厚部: 杭頭部の鋼管 (充填なし)
+            double EI3 = HeadThinPipeEI ?? E * Iisteel;    // 薄部: 杭体の下の区間の鋼管 (無ければ杭頭部の鋼管)
 
             double L3 = L * L * L;
             double l2l3 = l2 + l3;

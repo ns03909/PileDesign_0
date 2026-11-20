@@ -920,6 +920,29 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        // 鋼管杭の杭頭部の検討式で使う鋼管薄部の曲げ剛性 EI3 (kNm²)。利用者の入力ではなく、杭体から配る値。
+        //
+        // 杭断面は自分の杭体を知らないので、杭体の区間から求めて入れる (InputModel.SyncSteelPipeHeadThinPipeEI。
+        // 座屈長 BucklingLength と同じ流儀で、解析の入口・読込・土層-杭セットの作り直しで入れ直す)。
+        // 杭頭から l1 + l2 (鋼管の断面変化部) のすぐ下にある鋼管部の区間の、腐食後の鋼管の E·I。
+        // 0 は該当する区間が無い (杭頭部の鋼管と同じとみなす。2026-11-21 までは常にこれ)。
+        // 保存する: 土層-杭セットは断面を複写して持つので、保存しないと複写で落ちる
+        private double _headThinPipeEI;
+
+        /// <summary>杭頭部の検討式の鋼管薄部の EI3 (kNm²)。杭体から配る値。0 は杭頭部の鋼管と同じとみなす。</summary>
+        public double HeadThinPipeEI
+        {
+            get => _headThinPipeEI;
+            set
+            {
+                double safeValue = value < 0 || !double.IsFinite(value) ? 0.0 : value;
+                if (SetProperty(ref _headThinPipeEI, safeValue))
+                {
+                    InvalidateAllCaches();
+                }
+            }
+        }
+
         // コンクリート肉厚
         private double _concreteThickness;
         public double ConcreteThickness

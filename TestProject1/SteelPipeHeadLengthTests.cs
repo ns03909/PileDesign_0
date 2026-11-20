@@ -79,24 +79,90 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 鋼管厚部の長さ l2 (2026-11-21 に入力を設けた)。いまは厚部 EI2 と薄部 EI3 を同じ鋼管の値にしているので、
-        /// l2 は EIeq を変えない (節点の位置だけが変わる)。EI3 を下の区間の鋼管から取るようにしたら、この表明を見直す。
+        /// 鋼管厚部の長さ l2 と鋼管薄部の剛性 EI3 (2026-11-21)。厚部 EI2 は杭頭部の鋼管、薄部 EI3 は杭体の下の区間の鋼管。
+        /// 薄部が杭頭部の鋼管より柔らかければ、l2 を長くする (薄部を厚部に置き換える) と EIeq は硬くなる。
+        /// 下の区間が無い (EI3 = 0 → 杭頭部の鋼管と同じ) ときは、l2 は EIeq を変えない。
         /// </summary>
         [TestMethod]
-        public void TheThickPartLengthIsWired_ButDoesNotChangeEIeqWhileEI2EqualsEI3()
+        public void TheThickPartLengthAndTheThinPipeEIReachTheFormula()
         {
-            double Eieq(double fill, double thick) => Head(fill, thick).TryCreateSteelPipeSection()!.ComputeEIeqHead();
             double d = Head().PileDiameter;
+            double thinEI = Pipe(9).EI;   // kNm²
+            double Eieq(double fill, double thick, double ei3)
+            {
+                var head = Head(fill, thick);
+                head.HeadThinPipeEI = ei3;
+                return head.TryCreateSteelPipeSection()!.ComputeEIeqHead();
+            }
 
             Assert.AreEqual(d, Head(0, d).TryCreateSteelPipeSection()!.HeadThickPartLength, "l2 の入力が検討式に渡っていない");
             Assert.AreEqual(0.0, Head(0, 0).TryCreateSteelPipeSection()!.HeadThickPartLength);
-            Assert.AreEqual(Eieq(0, 0), Eieq(0, d), Eieq(0, 0) * 1e-12, "EI2 = EI3 なのに l2 で EIeq が変わった");
-            Assert.AreEqual(Eieq(1600, 0), Eieq(1600, d), Eieq(1600, 0) * 1e-12, "EI2 = EI3 なのに l2 で EIeq が変わった");
-            Assert.AreEqual(Eieq(1600, 0), Eieq(1600, 10 * d), Eieq(1600, 0) * 1e-12, "L を超える l2 で壊れた");
+
+            // 下の区間が無い: EI2 = EI3 なので l2 は効かない (以前と同じ値)
+            Assert.AreEqual(Eieq(1600, 0, 0), Eieq(1600, d, 0), Eieq(1600, 0, 0) * 1e-12, "EI2 = EI3 なのに l2 で EIeq が変わった");
+
+            // 薄い下の区間: EI3 が効き、EIeq は下がる。l2 を長くすると硬くなる
+            Assert.IsTrue(Eieq(1600, 0, thinEI) < Eieq(1600, 0, 0), "薄い鋼管の EI3 を渡しても EIeq が下がらない");
+            Assert.IsTrue(Eieq(1600, d, thinEI) > Eieq(1600, 0, thinEI), "厚部を長くしても EIeq が上がらない");
+            Assert.AreEqual(Eieq(1600, 10 * d, thinEI), Eieq(1600, 10 * d, 0), Eieq(1600, 0, 0) * 1e-12, "L を超える l2 で薄部が残っている");
+            Assert.AreNotEqual(Head().GetMPhiCacheKey(1000), WithEI3(Head(), thinEI).GetMPhiCacheKey(1000), "EI3 が違うのに M-φ のキャッシュの鍵が同じ");
 
             // 中間部の断面には渡さない
-            var middle = new PileSection { PileBodyType = PileTypeNames.SteelPipe, PileSectionType = PileTypeNames.SteelPipeSection, PipeDia = 800, PipeTs = 12, CftThickPartLength = 800 };
+            var middle = new PileSection { PileBodyType = PileTypeNames.SteelPipe, PileSectionType = PileTypeNames.SteelPipeSection, PipeDia = 800, PipeTs = 12, CftThickPartLength = 800, HeadThinPipeEI = thinEI };
             Assert.AreEqual(0.0, middle.TryCreateSteelPipeSection()!.HeadThickPartLength, "鋼管部の断面に l2 を渡している");
+            Assert.IsNull(middle.TryCreateSteelPipeSection()!.HeadThinPipeEI, "鋼管部の断面に EI3 を渡している");
+        }
+
+        private static PileSection Pipe(double ts)
+            => new() { PileBodyType = PileTypeNames.SteelPipe, PileSectionType = PileTypeNames.SteelPipeSection, PipeDia = 800, PipeTs = ts };
+
+        private static PileSection WithEI3(PileSection s, double ei3) { s.HeadThinPipeEI = ei3; return s; }
+
+        /// <summary>
+        /// EI3 は、杭頭から断面変化部 l1 + l2 のすぐ下にある鋼管部の区間から取る。充填鋼管部の区間の中なら、その下の鋼管部。
+        /// 鋼管部の区間が無ければ 0 (杭頭部の鋼管と同じ)。
+        /// </summary>
+        [TestMethod]
+        public void TheThinPipeEIComesFromTheSegmentBelowTheSectionChange()
+        {
+            static double EIOf(PileSection pipe) { var s = pipe.TryCreateSteelPipeSection()!; return s.E * s.Iisteel / 1e9; }
+            var head = Head(1600);
+            var thick = Pipe(16);
+            var thin = Pipe(9);
+            var segments = new System.Collections.Generic.List<PileBodySegment>
+            {
+                new() { No = 1, SegmentLength = 1.6, PileSection = head },
+                new() { No = 2, SegmentLength = 1.0, PileSection = thick },
+                new() { No = 3, SegmentLength = 20.0, PileSection = thin },
+            };
+
+            InputModel.ApplyHeadThinPipeEI(segments);
+            Assert.AreEqual(EIOf(thick), head.HeadThinPipeEI, 1e-6, "l2 = 0 なのに充填部のすぐ下の区間から取っていない");
+
+            head.CftThickPartLength = 1200;   // 断面変化部は 2.8 m → 3 番目の区間
+            InputModel.ApplyHeadThinPipeEI(segments);
+            Assert.AreEqual(EIOf(thin), head.HeadThinPipeEI, 1e-6, "断面変化部より下の区間から取っていない");
+
+            head.CftThickPartLength = 0;
+            head.CftFillLength = 1000;        // 断面変化部 1.0 m はまだ充填鋼管部の区間の中 → その下の鋼管部
+            InputModel.ApplyHeadThinPipeEI(segments);
+            Assert.AreEqual(EIOf(thick), head.HeadThinPipeEI, 1e-6, "充填鋼管部の区間の中なのに、その下の鋼管部から取っていない");
+
+            InputModel.ApplyHeadThinPipeEI([segments[0]]);
+            Assert.AreEqual(0.0, head.HeadThinPipeEI, "下に鋼管部が無いのに値が残った");
+        }
+
+        /// <summary>EI3 は杭体から配る値なので、配る場所 (解析の入口・読込・例題の読込・土層-杭セットの作り直し) から外れていないこと。</summary>
+        [TestMethod]
+        public void TheThinPipeEIIsSyncedAtEveryEntry()
+        {
+            StringAssert.Contains(TestSource.MethodBody(TestSource.Read("Graphics_r1", "Services", "CheckInputData.cs"),
+                "public static bool ValidateForAnalysis("), "SyncSteelPipeHeadThinPipeEI()", "解析の入口で配っていない");
+            StringAssert.Contains(TestSource.MethodBody(TestSource.Read("Graphics_r1", "ViewModels", "MainWindowViewModel.FileIO.cs"),
+                "private void ApplyPostLoadProtocol("), "SyncSteelPipeHeadThinPipeEI()", "読込で配っていない");
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "Services", "PileExampleLoader.cs"), "SyncSteelPipeHeadThinPipeEI()", "例題の読込で配っていない");
+            StringAssert.Contains(TestSource.MethodBody(TestSource.Read("Graphics_r1", "Models", "InputData", "InputModel.cs"),
+                "public void GenerateSoilPiles("), "SyncSteelPipeHeadThinPipeEI()", "土層-杭セットの作り直しで配っていない");
         }
 
         [TestMethod]
@@ -144,6 +210,12 @@ namespace TestProject1
 
             var blank = Depths();
             Has(blank, d, "充填部の下端 (未入力 = D)");
+
+            // 鋼管薄部の EI3 は、杭体の断面と土層-杭セットの複写の両方に入っている (解析は複写を読む)
+            Assert.IsTrue(head.HeadThinPipeEI > 0, "(前提) 設計例集3.5 の杭体には充填鋼管部の下に鋼管部がある");
+            var copyHead = pile.SoilPileAt(input)!.PileBodySegments.Select(s => s.PileSection).First(s => s.PileSectionType == PileTypeNames.CftSection);
+            Assert.AreNotSame(head, copyHead, "(前提) 土層-杭セットは断面を複写して持つ");
+            Assert.AreEqual(head.HeadThinPipeEI, copyHead.HeadThinPipeEI, "土層-杭セットの複写に EI3 が入っていない");
             Has(blank, 4 * d, "検討区間の下端 4D");
 
             head.CftFillLength = 1600;

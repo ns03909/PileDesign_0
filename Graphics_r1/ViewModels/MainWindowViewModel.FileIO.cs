@@ -587,6 +587,8 @@ namespace PileDesign.ViewModels
                 model.EnsureAnalysisTargetDefaults();
                 // 杭頭部の、杭断面から導く値 (以前は杭頭部ウィンドウを開くまで入らなかった)
                 model.SyncPileTopsFromSections();
+                // 鋼管杭の杭頭部の検討式の鋼管薄部 EI3 (杭体の区間から配る値。以前のファイルには無い)
+                model.SyncSteelPipeHeadThinPipeEI();
             }
 
             // 許容圧縮と許容せん断の規準は同じもの 1 つになった。別々に選べた時期のファイルは圧縮側に揃える。

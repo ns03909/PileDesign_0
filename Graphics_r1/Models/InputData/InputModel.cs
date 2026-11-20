@@ -1732,6 +1732,8 @@ namespace PileDesign.Models.InputData
                 }
 
                 ApplyBucklingLengthToSections(bucklingLengthByPileBody);
+                // 杭頭部の検討式の鋼管薄部 EI3 も、作り直した複写に入れる (2026-11-21)
+                SyncSteelPipeHeadThinPipeEI();
             }
             finally
             {
@@ -1971,6 +1973,67 @@ namespace PileDesign.Models.InputData
                         section.BucklingLength = lk;
                 }
             }
+        }
+
+        /// <summary>
+        /// 鋼管杭の杭頭部 (コンクリート充填鋼管部) の断面に、検討式の鋼管薄部の剛性 EI3 を杭体の区間から入れる
+        /// (<see cref="PileSection.HeadThinPipeEI"/>)。杭体の断面と、土層-杭セットが複写して持つ断面の両方に入れる。
+        /// <para>解析の入口 (<c>CheckInputData.ValidateForAnalysis</c>)・ファイルの読込・土層-杭セットの作り直しで呼ぶ
+        /// (座屈長と同じ。区間の断面を編集しただけでは入れ直さないので、入口で必ず入れ直す)。</para>
+        /// </summary>
+        internal void SyncSteelPipeHeadThinPipeEI()
+        {
+            foreach (var pileBody in PileBodies ?? [])
+            {
+                if (pileBody?.PileBodyType != PileTypeNames.SteelPipe) continue;
+                ApplyHeadThinPipeEI(pileBody.PileBodySegments);
+            }
+            foreach (var soilPile in ElementDivision?.SoilPiles ?? [])
+            {
+                if (soilPile == null || PileBodyAt(soilPile.PileBodyNo)?.PileBodyType != PileTypeNames.SteelPipe) continue;
+                ApplyHeadThinPipeEI(soilPile.PileBodySegments);
+            }
+        }
+
+        /// <summary>
+        /// 区間の並びから、杭頭部の断面 (最初のコンクリート充填鋼管部) に EI3 を入れる。
+        /// EI3 は、杭頭から鋼管の断面変化部 l1 + l2 のすぐ下にある鋼管部 (充填なし) の区間の、腐食後の鋼管の E·I。
+        /// その深さがまだ充填鋼管部の区間の中なら、その下の最初の鋼管部の区間を使う。無ければ 0 (杭頭部の鋼管と同じ)。
+        /// 区間の深さは区間長の累計で数える (SegmentDepth は別の処理が累計して入れる値なので頼らない)。
+        /// </summary>
+        internal static void ApplyHeadThinPipeEI(IList<PileBodySegment>? segments)
+        {
+            if (segments == null || segments.Count == 0) return;
+            int headIndex = -1;
+            for (int i = 0; i < segments.Count; i++)
+            {
+                if (segments[i]?.PileSection?.PileSectionType == PileTypeNames.CftSection) { headIndex = i; break; }
+            }
+            if (headIndex < 0) return;
+            var head = segments[headIndex].PileSection!;
+
+            var (_, sectionChange, _) = SteelPipeSection.HeadZoneDepths(head.PileDiameter, head.CftFillLength, head.CftThickPartLength);
+            double changeDepth = sectionChange / 1000.0;   // m
+            double eiThin = 0.0;
+            double top = 0.0;
+            for (int i = 0; i < segments.Count; i++)
+            {
+                var segment = segments[i];
+                double bottom = top + Math.Max(0.0, segment?.SegmentLength ?? 0.0);
+                var section = segment?.PileSection;
+                if (i > headIndex && bottom > changeDepth + NumericalConstants.COORDINATE_TOLERANCE
+                    && section != null && section.PileSectionType != PileTypeNames.CftSection
+                    && section.TryCreateSteelPipeSection() is { } thin)
+                {
+                    eiThin = thin.E * thin.Iisteel / 1e9;   // N·mm² → kNm²
+                    break;
+                }
+                top = bottom;
+            }
+
+            // 値が変わったときだけ書く (setter が断面のキャッシュを捨てるため)
+            if (Math.Abs(head.HeadThinPipeEI - eiThin) > 1e-9 * Math.Max(1.0, eiThin))
+                head.HeadThinPipeEI = eiThin;
         }
 
         // 地盤根入れ生成メソッド
