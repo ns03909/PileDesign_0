@@ -757,6 +757,20 @@
                                                     <TextBox Text="{Binding PileSection.ConcreteE, Mode=OneWay, Converter={StaticResource ModulusDisplayConverter}}" Width="50"
                                                              TextAlignment="Right" Foreground="{StaticResource ReadOnlyBrush}" IsReadOnly="True"/>
                                                 </StackPanel>
+                                                <!-- 杭頭部の検討式 (合成 EIeq) に使う充填長 l1。0 は未入力で杭径 D とみなす (外部レビュー #10) -->
+                                                <StackPanel Orientation="Horizontal"
+                                                            ToolTip="杭頭部の検討式で、杭頭から 4D の範囲の合成剛性 EIeq を求めるときの充填部の長さです。&#x0a;0 のときは杭径 D とみなします。杭体の区間長とは別の入力です。">
+                                                    <TextBlock Width="150" HorizontalAlignment="Right" Text="充填長 l1 (mm)"/>
+                                                    <TextBox Text="{Binding PileSection.CftFillLength, UpdateSourceTrigger=LostFocus}" Width="50"
+                                                             Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0"
+                                                             AutomationProperties.Name="充填長 l1"
+                                                             GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                             PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                             TextChanged="TextBox_TextChanged"
+                                                             LostFocus="TextBox_LostFocus"/>
+                                                    <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource ReadOnlyBrush}"
+                                                               Text="0 で杭径 D"/>
+                                                </StackPanel>
                                             </StackPanel>
                                         </GroupBox>
                                     </StackPanel>

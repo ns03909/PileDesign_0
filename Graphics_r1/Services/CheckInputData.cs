@@ -731,6 +731,22 @@ namespace PileDesign.Services
                         notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, at,
                             $"杭体{i + 1} 区間{j + 1}: コンクリートのヤング係数 Ec が {sec.ConcreteE:N0} N/mm² と低めです "
                             + $"({LowConcreteE:N0} N/mm² 未満)。単位体積重量 γ・設計基準強度 Fc・ξ を確認してください。"));
+                    // 鋼管杭のコンクリート充填鋼管部: 杭頭部の検討式に使う充填長 l1 と、この区間の長さが違う。
+                    // l1 は杭頭部の M-φ (解析にも使う) の合成剛性 EIeq に効く。未入力なら杭径 D と仮定しているので、
+                    // 区間長と違えば仮定が実際と違うおそれがある (外部レビュー #10 2026-11-20)。1 mm 未満の差は同じとみなす
+                    if (sec.PileBodyType == PileTypeNames.SteelPipe && sec.PileSectionType == PileTypeNames.CftSection
+                        && segments[j].SegmentLength > 0 && sec.EffectiveCftFillLength > 0)
+                    {
+                        double segmentMm = segments[j].SegmentLength * 1000.0;
+                        double l1 = sec.EffectiveCftFillLength;
+                        if (Math.Abs(segmentMm - l1) >= 1.0)
+                            notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, at,
+                                $"杭体{i + 1} 区間{j + 1}: 杭頭部の検討式に使う充填長 l1 = {l1:N0} mm"
+                                + (sec.HasCftFillLengthInput ? "" : " (未入力のため杭径 D と仮定)")
+                                + $" が、この区間 (コンクリート充填鋼管部) の長さ {segmentMm:N0} mm と違います。"
+                                + "充填長は杭頭部の曲げモーメント-曲率関係の剛性に効きます。",
+                                "杭断面ウィンドウの「充填長 l1」に実際の充填長を入力する"));
+                    }
                     if (!sec.IsNodularPile) continue;
                     // 節杭が最上段にあるのは慣例と違うだけで、計算はそのまま成り立つ (情報)
                     if (j == 0)

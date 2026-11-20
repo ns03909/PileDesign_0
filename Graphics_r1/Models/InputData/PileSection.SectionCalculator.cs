@@ -63,6 +63,8 @@ namespace PileDesign.Models.InputData
             {
                 // 杭頭部 (コンクリート充填鋼管部) の合成 EI は杭断面の EI (腐食後) を使う。kNm² → N·mm²
                 CompositeHeadEI = PileSectionType == PileTypeNames.CftSection ? EI * 1e9 : null,
+                // 杭頭部の充填長 l1 (mm)。未入力なら null で、検討式が杭径 D とする (以前と同じ計算)
+                HeadFillLength = PileSectionType == PileTypeNames.CftSection && HasCftFillLengthInput ? CftFillLength : null,
             };
         }
 

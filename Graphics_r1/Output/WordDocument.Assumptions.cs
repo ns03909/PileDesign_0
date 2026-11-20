@@ -150,18 +150,24 @@ namespace PileDesign.Output
                 .ToList();
             if (steelPipeBodies == null || steelPipeBodies.Count == 0) return;
 
-            // 杭頭部 (コンクリート充填鋼管部) の長さは杭径 D と仮定している (入力できない)。採用した長さを書く (外部レビュー #10)
+            // 杭頭部の検討式に使う充填長 l1。入力値か、未入力で杭径 D と仮定したかを杭体ごとに書く (外部レビュー #10)
             var headLengths = steelPipeBodies
                 .Select(x => (x.No, Section: x.Body.PileBodySegments?
                     .Select(seg => seg?.PileSection)
                     .FirstOrDefault(s => s?.PileSectionType == PileTypeNames.CftSection)))
-                .Where(x => x.Section != null && x.Section.PileDiameter > 0)
+                .Where(x => x.Section != null && x.Section.EffectiveCftFillLength > 0)
                 .ToList();
             if (headLengths.Count > 0)
+            {
+                bool anyAssumed = headLengths.Any(x => !x.Section!.HasCftFillLengthInput);
                 AddTableNote(body,
-                    "※ 鋼管杭の杭頭部 (コンクリート充填鋼管部) の長さは、杭頭から杭径 D と仮定した ("
-                    + string.Join("、", headLengths.Select(x => $"杭体No.{x.No}: {x.Section!.PileDiameter:N0} mm"))
-                    + ")。実際の充填長が異なる場合は別途確認すること。");
+                    "※ 鋼管杭の杭頭部 (コンクリート充填鋼管部) の検討式では、杭頭から 4D の範囲の合成剛性 EIeq を"
+                    + "充填長 l1 を用いて求めた ("
+                    + string.Join("、", headLengths.Select(x => $"杭体No.{x.No}: {x.Section!.EffectiveCftFillLength:N0} mm"
+                        + (x.Section.HasCftFillLengthInput ? "" : " (杭径 D と仮定)")))
+                    + ")。"
+                    + (anyAssumed ? "「杭径 D と仮定」は充填長が未入力のもので、実際の充填長が異なる場合は別途確認すること。" : ""));
+            }
 
             // 引張軸力のときの曲げ耐力は原典と違う式 (2026-11-20 利用者の判断。ヘルプ steel-pipe-tension-caution)
             AddTableNote(body,

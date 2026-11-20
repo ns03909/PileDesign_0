@@ -52,6 +52,13 @@ namespace PileDesign.Models.InputData
         /// </summary>
         internal double? CompositeHeadEI { get; init; }
 
+        /// <summary>
+        /// 杭頭部のコンクリート充填部の長さ l1 [mm]。未設定 (null・0 以下) なら杭径 D とする。
+        /// 杭断面の「充填長」の入力 (<see cref="PileSection.EffectiveCftFillLength"/>) を渡す (外部レビュー #10 2026-11-20。
+        /// 以前は l1 = D 固定)。
+        /// </summary>
+        internal double? HeadFillLength { get; init; }
+
         // 許容応力度 (基準 sfc1 = F/1.5 with 局部座屈低減)
         public double sft => F / 1.5;
         public double Sfc1 { get; }
@@ -712,7 +719,7 @@ namespace PileDesign.Models.InputData
         /// 鋼管杭頭部 (コンクリート充填鋼管部) の M-φ 関係を返す。
         /// φ = [0, φ_Md, φ_Mu', φ_u]、M = [0, Md, Mu, Mu]
         /// 杭頭部 EI は L³/EIeq = (L³−(l2+l3)³)/EI1 + ((l2+l3)³−l3³)/EI2 + l3³/EI3 で合成。
-        /// 既定: l1=D (コンクリート充填鋼管部), l2=0 (厚部なし), l3=3D (鋼管のみ)。
+        /// L = 4D、l1 = 充填長 (未入力なら D)、l2 = 0 (厚部なし)、l3 = L − l1 − l2 (鋼管のみ)。<see cref="ComputeEIeqHead"/> を参照。
         /// </summary>
         internal (System.Collections.Generic.List<double> phis, System.Collections.Generic.List<double> moments)
             GetMPhiRelationshipHead(double Nud)
@@ -805,14 +812,27 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 杭頭部の 3 セグメント直列合成 EIeq を計算する。
         /// L³/EIeq = (L³ − (l2+l3)³)/EI1 + ((l2+l3)³ − l3³)/EI2 + l3³/EI3
-        /// 既定: l1 = D (コンクリート充填鋼管部), l2 = 0 (厚部分なし、EI2 = EI3 と仮定), l3 = 3D
+        /// L = 4D、l1 = 充填長 (<see cref="HeadFillLength"/>、未入力なら D)、l2 = 0 (厚部分なし、EI2 = EI3 と仮定)、
+        /// l3 = L − l1 − l2。
+        /// <para>充填長が L 以上なら L 全体が充填部 (l1 = L, l3 = 0) で、EIeq = EI1。L = 4D は θMu の長さと同じで
+        /// 充填長に関わらず固定する。以前は l1 = D・l3 = 3D 固定で、既定値はそのときと同じ値になる。</para>
         /// </summary>
-        private double ComputeEIeqHead()
+        internal double ComputeEIeqHead()
         {
-            double l1 = D;
-            double l2 = 0.0;
-            double l3 = 3.0 * D;
-            double L = l1 + l2 + l3;
+            // 未入力は以前と同じ式で組む (L = l1 + l2 + l3 の和。演算の順を変えると末尾の桁が動く)
+            double l1, l2 = 0.0, l3, L;
+            if (HeadFillLength is double h && h > 0)
+            {
+                L = 4.0 * D;
+                l1 = Math.Min(h, L);
+                l3 = Math.Max(0.0, L - l1 - l2);
+            }
+            else
+            {
+                l1 = D;
+                l3 = 3.0 * D;
+                L = l1 + l2 + l3;
+            }
 
             double EI1 = CompositeHeadEI ?? (E * Iisteel + Ec * Iiconcrete);   // コンクリート充填鋼管部 合成 (杭断面の EI)
             double EI2 = E * Iisteel;                      // 厚部 (本実装ではデフォルト同一)

@@ -870,6 +870,36 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        // 鋼管杭のコンクリート充填鋼管部 (杭頭部) の充填長 l1 (mm)。0 は未入力で、杭径 D とみなす。
+        //
+        // 杭頭部の検討式 (強度と変形性能) の合成 EIeq は、杭頭から L = 4D を
+        // 充填部 l1・厚部 l2 (= 0)・薄部 l3 = L − l1 − l2 に分けて直列に合成する。以前は l1 = D 固定で入力できなかった
+        // (外部レビュー #10 2026-11-20)。杭体の区間長とは別の入力で、区間長と違うときは解析前の注意に出す。
+        private double _cftFillLength;
+
+        /// <summary>充填長 l1 の入力 (mm)。0 は未入力 (杭径 D とみなす)。</summary>
+        public double CftFillLength
+        {
+            get => _cftFillLength;
+            set
+            {
+                double safeValue = value < 0 || !double.IsFinite(value) ? 0.0 : value;
+                if (SetProperty(ref _cftFillLength, safeValue))
+                {
+                    OnPropertyChanged(nameof(EffectiveCftFillLength));
+                    InvalidateAllCaches();
+                }
+            }
+        }
+
+        /// <summary>検討式に使う充填長 l1 (mm)。未入力なら杭径 D。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double EffectiveCftFillLength => CftFillLength > 0 ? CftFillLength : PileDiameter;
+
+        /// <summary>充填長を入力しているか (未入力なら杭径 D を仮定している)。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool HasCftFillLengthInput => CftFillLength > 0;
+
         // コンクリート肉厚
         private double _concreteThickness;
         public double ConcreteThickness
