@@ -59,6 +59,24 @@ namespace PileDesign.Models.InputData
         /// </summary>
         internal double? HeadFillLength { get; init; }
 
+        /// <summary>杭頭部の検討区間の長さ L の杭径に対する倍率 (L = 4D)。合成剛性 EIeq と θMu に使う。</summary>
+        internal const double HeadZoneDiameters = 4.0;
+
+        /// <summary>杭頭部の鋼管厚部の長さ l2 [mm]。入力が無いので 0 (厚部なし、EI2 = EI3)。</summary>
+        internal const double HeadThickPartLength = 0.0;
+
+        /// <summary>
+        /// 杭頭部の検討区間の境の深さ [mm] (杭頭 = パイルキャップ下面から): 充填部の下端 l1、鋼管の断面変化部 l1 + l2、
+        /// 検討区間の下端 L = 4D。要素分割はここに節点を置く (InputModel.SoilPileNodeAltitudes)。
+        /// 合成剛性 <see cref="ComputeEIeqHead"/> と同じ定義から作るので、節点と検討式の区間は食い違わない。
+        /// l2 = 0 の間は断面変化部が充填部の下端と重なる。
+        /// </summary>
+        internal static (double FillEnd, double SectionChange, double ZoneEnd) HeadZoneDepths(double diameter, double fillLength)
+        {
+            double l1 = fillLength > 0 ? fillLength : diameter;
+            return (l1, l1 + HeadThickPartLength, HeadZoneDiameters * diameter);
+        }
+
         // 許容応力度 (基準 sfc1 = F/1.5 with 局部座屈低減)
         public double sft => F / 1.5;
         public double Sfc1 { get; }
@@ -738,7 +756,7 @@ namespace PileDesign.Models.InputData
 
             double phiMd = Md / EIeq;
 
-            double L = 4.0 * D;
+            double L = HeadZoneDiameters * D;
             double thetaMu = ComputeThetaMu(Nud, Mu, L, EIeq);
 
             // Xn 依存量
@@ -820,10 +838,10 @@ namespace PileDesign.Models.InputData
         internal double ComputeEIeqHead()
         {
             // 未入力は以前と同じ式で組む (L = l1 + l2 + l3 の和。演算の順を変えると末尾の桁が動く)
-            double l1, l2 = 0.0, l3, L;
+            double l1, l2 = HeadThickPartLength, l3, L;
             if (HeadFillLength is double h && h > 0)
             {
-                L = 4.0 * D;
+                L = HeadZoneDiameters * D;
                 l1 = Math.Min(h, L);
                 l3 = Math.Max(0.0, L - l1 - l2);
             }

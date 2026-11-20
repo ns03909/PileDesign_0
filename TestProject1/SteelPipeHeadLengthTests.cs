@@ -82,6 +82,58 @@ namespace TestProject1
             Assert.IsTrue(pb[1] < pa[1], $"充填部を長くしたのに解析の M-φ が硬くならない: φ1 {pa[1]} → {pb[1]}");
         }
 
+        // ── 要素分割の節点 ──
+
+        /// <summary>
+        /// 鋼管杭の土層-杭セットは、杭頭 (パイルキャップ下面) から充填部の下端 l1・鋼管の断面変化部 l1 + l2・4D に
+        /// 節点を持つ (利用者の要望 2026-11-20)。l1 は充填長の入力 (未入力なら D)、l2 は 0 なので断面変化部は l1 と重なる。
+        /// 解析と同じ組み立て (GenerateSoilPiles → SoilPileNodeAltitudes) を通して、設計例集3.5 (鋼管杭) で確かめる。
+        /// </summary>
+        [TestMethod]
+        public void NodesArePlacedAtTheHeadZoneBoundaries()
+        {
+            var (input, err) = IntegrationTests.BuildExampleInputModel("Example3_5", "PileExample3_5");
+            if (input == null) throw new AssertInconclusiveException("例題ファイルなし: " + err);
+            var pile = input.PileLayoutItems[0];
+            var head = input.PileBodyAt(pile.PileBodyNo)!.PileBodySegments
+                .Select(s => s.PileSection).First(s => s.PileSectionType == PileTypeNames.CftSection);
+            double d = head.PileDiameter / 1000.0;
+
+            double[] Depths()
+            {
+                input.GenerateSoilPiles();
+                double top = pile.PileHeadZ;
+                return pile.SoilPileAt(input)!.ZDataItems.Select(z => top - z.Z).ToArray();
+            }
+            static void Has(double[] depths, double depth, string what)
+                => Assert.IsTrue(depths.Any(x => Math.Abs(x - depth) < 1e-6),
+                    $"{what} ({depth:F3} m) に節点がありません: {string.Join(", ", depths.Select(x => x.ToString("F3")))}");
+
+            var blank = Depths();
+            Has(blank, d, "充填部の下端 (未入力 = D)");
+            Has(blank, 4 * d, "検討区間の下端 4D");
+
+            head.CftFillLength = 1600;
+            var filled = Depths();
+            Has(filled, 1.6, "充填部の下端 (入力 1,600 mm) = 断面変化部 (l2 = 0)");
+            Has(filled, 4 * d, "検討区間の下端 4D");
+        }
+
+        [TestMethod]
+        public void TheNodeDepthsComeFromTheSameDefinitionAsTheFormula()
+        {
+            var (l1, change, zone) = SteelPipeSection.HeadZoneDepths(800, 0);
+            Assert.AreEqual((800.0, 800.0, 3200.0), (l1, change, zone), "未入力: l1 = D、断面変化部 = l1 (l2 = 0)、L = 4D");
+            Assert.AreEqual((1500.0, 1500.0, 3200.0), SteelPipeSection.HeadZoneDepths(800, 1500));
+            Assert.AreEqual(0.0, SteelPipeSection.HeadThickPartLength, "l2 を入力にしたら、節点と検討式の両方で使っていることを確かめる");
+
+            // 検討式も同じ定数を使う (4.0 * D の書き写しが残っていない)
+            string source = TestSource.Read("Graphics_r1", "Models", "InputData", "SteelPipeSection.cs");
+            string eieq = TestSource.MethodBody(source, "internal double ComputeEIeqHead(");
+            StringAssert.Contains(eieq, "HeadZoneDiameters * D");
+            StringAssert.Contains(eieq, "HeadThickPartLength");
+        }
+
         // ── 解析前の注意 ──
 
         [TestMethod]

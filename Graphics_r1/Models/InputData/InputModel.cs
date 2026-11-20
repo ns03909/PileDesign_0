@@ -1764,7 +1764,7 @@ namespace PileDesign.Models.InputData
 
         /// <summary>
         /// 土層-杭セットの節点の標高を、杭頭から下へ並べて返す (近すぎる点は 1 つにまとめる)。
-        /// 杭区間の境・杭頭部の境 (場所打ち鋼管コンクリート杭は 0.5D、鋼管杭は D)・杭の範囲にある地層の境で区切る。
+        /// 杭区間の境・杭頭部の境 (場所打ち鋼管コンクリート杭は 0.5D、鋼管杭は充填部の下端 l1・断面変化部 l1+l2・4D)・杭の範囲にある地層の境で区切る。
         ///
         /// <para>解析 (<see cref="GenerateSoilPiles"/>) と杭体ウィンドウの仮の土層-杭セットが<b>同じ組み立て</b>を通るための
         /// 唯一の実装。以前は杭体ウィンドウが写しを持っていて、地層の境で区切らなかった。区間の土層はその区間の下端の層で
@@ -1805,21 +1805,38 @@ namespace PileDesign.Models.InputData
                 }
             }
 
-            // 鋼管杭 + 鉄筋定着工法 の場合、杭頭から D (杭径) の位置に分割点を追加
-            // (杭頭部=コンクリート充填鋼管部 ≒ 杭径分の長さ、それ以下=鋼管部 として M-φ 切替)
+            // 鋼管杭: 杭頭部の検討区間の境に分割点を置く。
+            //
+            // コンクリート充填鋼管部があれば、杭頭 (パイルキャップ下面) から
+            //   l1      … コンクリート充填部の下端 (杭断面の「充填長 l1」、未入力なら杭径 D)
+            //   l1 + l2 … 鋼管の断面変化部 (l2 は入力が無く 0。いまは l1 と重なる)
+            //   4D      … 検討区間 L の下端
+            // の 3 か所。杭頭部の検討式の合成剛性 EIeq と同じ定義 (SteelPipeSection.HeadZoneDepths) から取る。
+            // 2026-11-20 までは杭径 D の 1 か所だけで、充填長を入れても節点は D のまま、4D には置いていなかった (利用者の要望)。
+            //
+            // コンクリート充填鋼管部の無い鋼管杭 (検討式を使わない) は、従来どおり杭径 D の 1 か所
             if (pileBody.PileBodyType == PileTypeNames.SteelPipe)
             {
-                var topSection = pileBodySegments
+                var headSection = pileBodySegments
                     .Select(s => s.PileSection)
                     .FirstOrDefault(s => s?.PileSectionType == PileTypeNames.CftSection);
-                double pileDia_m = (topSection?.PileDiameter ?? pileBodySegments[0].PileSection?.PileDiameter ?? 0) / 1000.0;
-                if (pileDia_m > 0)
+                var depths_m = new List<double>();
+                if (headSection != null && headSection.PileDiameter > 0)
                 {
-                    double zD = pileTopAltitude - pileDia_m;
-                    if (zD > pileBottomAltitude + NumericalConstants.COORDINATE_TOLERANCE
-                        && zD < pileTopAltitude - NumericalConstants.COORDINATE_TOLERANCE)
+                    var (fillEnd, sectionChange, zoneEnd) = SteelPipeSection.HeadZoneDepths(headSection.PileDiameter, headSection.CftFillLength);
+                    depths_m.AddRange([fillEnd / 1000.0, sectionChange / 1000.0, zoneEnd / 1000.0]);
+                }
+                else if ((pileBodySegments[0].PileSection?.PileDiameter ?? 0) > 0)
+                {
+                    depths_m.Add(pileBodySegments[0].PileSection!.PileDiameter / 1000.0);
+                }
+                foreach (double depth in depths_m)
+                {
+                    double z = pileTopAltitude - depth;
+                    if (z > pileBottomAltitude + NumericalConstants.COORDINATE_TOLERANCE
+                        && z < pileTopAltitude - NumericalConstants.COORDINATE_TOLERANCE)
                     {
-                        zs.Add(zD);
+                        zs.Add(z);   // 重なる点は下の重複除去で 1 つにまとまる
                     }
                 }
             }
