@@ -146,23 +146,21 @@ namespace PileDesign.FEM
             catch (Exception ex) { Log.Warning(ex, "SetResolvedCombinedMPhi"); }
         }
 
+        /// <summary>
+        /// 初期 EI (E·I)。断面・材料が無ければ 0。
+        /// <para>以前は try/catch で囲み「例外ならゼロ」としていたが、掛け算だけで例外の起きようがなく、
+        /// 解析の呼び出し元 (UpdateBeamMPhi) は同じ値を囲まずに計算している。握りつぶしは外した
+        /// (外部レビュー #12 2026-11-20)。</para>
+        /// </summary>
+        private (double EI0y, double EI0z) InitialEI()
+            => Section?.Material is { } mat ? (mat.E * Section.IY, mat.E * Section.IZ) : (0.0, 0.0);
+
         // 要素中央曲率から接線剛性（EI_eff）を返す
         // 合成: φres=√(φy^2+φz^2) → dM/dφ(φres) を両軸に適用
         // 個別: φy→dMy/dφy, φz→dMz/dφz
         public (double EIy_eff, double EIz_eff) EvaluateEIeff(double phiY, double phiZ)
         {
-            // 初期 EI を取得（null 安全）
-            double EI0y = 0.0;
-            double EI0z = 0.0;
-            try
-            {
-                if (Section?.Material != null)
-                {
-                    EI0y = Section.Material.E * Section.IY;
-                    EI0z = Section.Material.E * Section.IZ;
-                }
-            }
-            catch { /* 無視：フォールバックはゼロ */ }
+            var (EI0y, EI0z) = InitialEI();
 
             // 合成曲線があれば合成で評価
             if (_combinedCurve != null)
@@ -212,18 +210,7 @@ namespace PileDesign.FEM
         // φ→0では初期接線剛性に収束
         public (double EIy_eff, double EIz_eff) EvaluateEIeffSecant(double phiY, double phiZ)
         {
-            // 初期 EI を取得（null 安全）
-            double EI0y = 0.0;
-            double EI0z = 0.0;
-            try
-            {
-                if (Section?.Material != null)
-                {
-                    EI0y = Section.Material.E * Section.IY;
-                    EI0z = Section.Material.E * Section.IZ;
-                }
-            }
-            catch { /* 無視：フォールバックはゼロ */ }
+            var (EI0y, EI0z) = InitialEI();
 
             // 合成曲線があれば合成で評価
             if (_combinedCurve != null)

@@ -481,7 +481,23 @@ namespace PileDesign.ViewModels
                 // 杭非線形ONのときだけ M–φ/M–θ をセット
                 if (loadCase.IsPileNonLinear)
                 {
-                    SetupMPhiFromPileSectionForLoadCase(caseModel, loadCase, loadCombination);
+                    var (linearPileNos, linearElements) = SetupMPhiFromPileSectionForLoadCase(caseModel, loadCase, loadCombination);
+                    if (linearElements > 0)
+                    {
+                        // 非線形を選んでいても、M-φ の無い要素は初期剛性のまま (線形) で解かれる。結果は黙って違うので、
+                        // 完了の知らせに出す (ログだけだと、全体が「完了」に見える)。荷重を刻み直して解き直すたびに
+                        // ここを通るので、同じ文は 1 度だけ積む
+                        string piles = string.Join("・", linearPileNos.Where(n => n > 0).Select(n => $"No.{n}"));
+                        if (linearPileNos.Contains(0)) piles += (piles.Length > 0 ? "・" : "") + "杭が特定できない要素";
+                        string notice = $"{caseTag}: 杭 {piles} の {linearElements} 要素で M-φ 関係を作れず、"
+                            + "この要素は初期剛性のまま (線形で) 解きました。断面の入力を確認してください";
+                        if (!_caseNotices.Contains(notice))
+                        {
+                            _caseNotices.Enqueue(notice);
+                            Log.Warning("[SetupMPhi] {Notice}", notice);
+                            await AddLogAsync($"  ⚠ {notice}");
+                        }
+                    }
                 }
                 // M–θ は常にセット（非線形OFFは剛 KThetaXY=KRigid）
                 SetupNonlinearMThetaForLoadCase(caseModel, loadCase, loadCombination);

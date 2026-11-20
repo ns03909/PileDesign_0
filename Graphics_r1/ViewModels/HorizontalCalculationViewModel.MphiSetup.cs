@@ -28,16 +28,24 @@ namespace PileDesign.ViewModels
         // 荷重ケースの代表軸力Nで PileSection.GetMPhi/MPhiRelationship を呼び、各梁にセット
         // こちらも安全なヘルパに統一（例外発生源を除去）
         // v6: InputModel.PileBodies ではなく SoilPile.PileBodySegments を使用
-        private void SetupMPhiFromPileSectionForLoadCase(AnaModel model, LoadCase loadCase, LoadCombination? loadCombination)
+        /// <returns>
+        /// M-φ を付けられなかった杭の要素 (杭番号と要素数)。該当なしなら空。
+        /// <para>曲線の無い要素は <see cref="Beam.EvaluateEIeffSecant"/> が初期 EI を返すので、非線形を選んでいても
+        /// 線形 (初期剛性) のまま解かれる。以前は数えるだけで、どこにも出していなかった (外部レビュー #12 2026-11-20)。
+        /// 基礎梁・剛な接続部は杭の要素ではない (M-φ を持たない) ので数えない。</para>
+        /// </returns>
+        private (IReadOnlyList<int> PileNos, int Elements) SetupMPhiFromPileSectionForLoadCase(AnaModel model, LoadCase loadCase, LoadCombination? loadCombination)
         {
+            var linearPileNos = new SortedSet<int>();
+            int linearElements = 0;
 
             if (model == null)
             {
-                return;
+                return ([], 0);
             }
             if (!loadCase.IsPileNonLinear)
             {
-                return;
+                return ([], 0);
             }
 
             int totalBeams = model.Beams.Count;
@@ -101,6 +109,7 @@ namespace PileDesign.ViewModels
                 if (soilPile == null && !soilPileByPileBodyNo.TryGetValue(pb, out soilPile))
                 {
                     skippedNoSoilPile++;
+                    MarkLinear(ownerPile);
                     continue;
                 }
 
@@ -108,6 +117,7 @@ namespace PileDesign.ViewModels
                 if (seg < 0 || seg >= soilPile.PileBodySegments.Count)
                 {
                     skippedInvalidSeg++;
+                    MarkLinear(ownerPile);
                     continue;
                 }
 
@@ -115,6 +125,7 @@ namespace PileDesign.ViewModels
                 if (section == null)
                 {
                     skippedNoSection++;
+                    MarkLinear(ownerPile);
                     continue;
                 }
 
@@ -160,6 +171,7 @@ namespace PileDesign.ViewModels
                 if (curve is null)
                 {
                     skippedNoCurve++;
+                    MarkLinear(ownerPile);
                     continue;
                 }
 
@@ -167,6 +179,14 @@ namespace PileDesign.ViewModels
                 successCount++;
             }
 
+            return (linearPileNos.ToList(), linearElements);
+
+            // 杭が特定できない要素は 0 (知らせでは「杭が特定できない要素」と書く)
+            void MarkLinear(PileLayoutDataItem? owner)
+            {
+                linearElements++;
+                linearPileNos.Add(owner?.No ?? 0);
+            }
         }
 
         // M-φ 曲線の解決は Services.MphiCurveResolver に集約（初期セットアップ／ステップ毎再解決で共用）。

@@ -17,6 +17,13 @@ namespace PileDesign.Services
     /// </summary>
     internal static class MphiCurveResolver
     {
+        /// <summary>
+        /// テスト用: true を返した断面は曲線を解決できなかったことにする。M-φ を実際に作れない断面を入力で
+        /// 作るのは難しいので、作れなかったときの知らせをこの入口で確かめる。解析は Task.Run の先で走るので、
+        /// 非同期の流れに付いていく AsyncLocal にしている (並列に走る他のテストには漏れない)。
+        /// </summary>
+        internal static readonly System.Threading.AsyncLocal<Func<PileSection, bool>?> FailForTesting = new();
+
         /// <param name="section">杭断面（null なら解決不能）</param>
         /// <param name="axialN_kN">軸力 [kN]（PileSection.GetMPhiRelationship と同じ単位規約）</param>
         /// <param name="isPileTop">杭頭要素なら true（杭中間部特別扱いの分岐に使用）</param>
@@ -24,6 +31,7 @@ namespace PileDesign.Services
             PileSection? section, double axialN_kN, bool isPileTop)
         {
             if (section == null) return null;
+            if (FailForTesting.Value?.Invoke(section) == true) return null;
 
             // 場所打ち鋼管コンクリート杭の杭中間部: ひび割れ後勾配の延長で終局曲率を再定義する
             // ポリリニア固有の補正を適用（ファイバー M-φ オプション ON 時は補正せず共通経路＝ファイバー曲線）。

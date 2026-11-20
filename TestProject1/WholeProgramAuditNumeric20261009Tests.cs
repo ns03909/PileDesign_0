@@ -58,12 +58,12 @@ namespace TestProject1
         public void MPhi_IsBuiltFromThePilesOwnSoilPileSet()
         {
             string src = TestSource.Read("Graphics_r1", "ViewModels", "HorizontalCalculationViewModel.MphiSetup.cs");
-            foreach (var sig in new[] { "private void SetupMPhiFromPileSectionForLoadCase(", "private void SetupMPhiByCurrentAxialForMiddleBeam(" })
+            foreach (var sig in new[] { "private (IReadOnlyList<int> PileNos, int Elements) SetupMPhiFromPileSectionForLoadCase(", "private void SetupMPhiByCurrentAxialForMiddleBeam(" })
             {
                 string body = TestSource.MethodBody(src, sig);
                 StringAssert.Contains(body, ".SoilPileAt(InputModel)", $"{sig} が杭自身の土層-杭セットを引いていません");
             }
-            StringAssert.Contains(TestSource.MethodBody(src, "private void SetupMPhiFromPileSectionForLoadCase("), "pileByBeam.TryGetValue(beam, out var ownerPile)",
+            StringAssert.Contains(TestSource.MethodBody(src, "private (IReadOnlyList<int> PileNos, int Elements) SetupMPhiFromPileSectionForLoadCase("), "pileByBeam.TryGetValue(beam, out var ownerPile)",
                 "ケース開始時の M-φ が、要素の属する杭の軸力を使っていません");
         }
 
