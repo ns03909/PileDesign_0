@@ -150,6 +150,26 @@ namespace PileDesign.Output
                 .ToList();
             if (steelPipeBodies == null || steelPipeBodies.Count == 0) return;
 
+            // 杭頭部 (コンクリート充填鋼管部) の長さは杭径 D と仮定している (入力できない)。採用した長さを書く (外部レビュー #10)
+            var headLengths = steelPipeBodies
+                .Select(x => (x.No, Section: x.Body.PileBodySegments?
+                    .Select(seg => seg?.PileSection)
+                    .FirstOrDefault(s => s?.PileSectionType == PileTypeNames.CftSection)))
+                .Where(x => x.Section != null && x.Section.PileDiameter > 0)
+                .ToList();
+            if (headLengths.Count > 0)
+                AddTableNote(body,
+                    "※ 鋼管杭の杭頭部 (コンクリート充填鋼管部) の長さは、杭頭から杭径 D と仮定した ("
+                    + string.Join("、", headLengths.Select(x => $"杭体No.{x.No}: {x.Section!.PileDiameter:N0} mm"))
+                    + ")。実際の充填長が異なる場合は別途確認すること。");
+
+            // 引張軸力のときの曲げ耐力は原典と違う式 (2026-11-20 利用者の判断。ヘルプ steel-pipe-tension-caution)
+            AddTableNote(body,
+                "※ 鋼管杭 (杭中間部・杭下部) の引張軸力のときの曲げ耐力は、「基礎部材の強度と変形性能」の式と異なる。"
+                + "安全限界 (8.23) の軸力の比は、引張では柱座屈が生じないため引張の降伏軸力 sNut で除し、"
+                + "損傷限界は曲げの引張縁 (1.5·sft − 軸応力) と圧縮縁 (1.5·sfc1 + 軸応力) の小さい方とした。"
+                + "曲げの強度は局部座屈による低減を考慮した値 (sσcy1・sfc1) とした。圧縮軸力のときは同書の式による。");
+
             if (!ConcreteModelOptions.ConsiderSteelPipeColumnBuckling)
             {
                 AddTableNote(body,

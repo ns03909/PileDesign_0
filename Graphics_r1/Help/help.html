@@ -987,8 +987,8 @@
                                 <th style="text-align: center;border: 1px solid white; width: 30%;min-width: 100px;">
                                     杭基礎の設計フロー
                                 </th>
-                                <th style="text-align: center;border: 1px solid white; width: 5%;min-width: 50px;">適用範囲</th>
-                                <th style="text-align: center;border: 1px solid white; width: 60%;min-width: 100px;">適用</th>
+                                <th style="text-align: center;border: 1px solid white; width: 10%;min-width: 70px;">対応</th>
+                                <th style="text-align: center;border: 1px solid white; width: 55%;min-width: 100px;">本プログラムでの扱い</th>
                                 <th style="text-align: center;border: 1px solid white; width: 10%;min-width: 100px;">
                                     基礎指針'19
                                 </th>
@@ -997,109 +997,86 @@
                         <tbody>
                             <tr>
                                 <td style="border: 1px solid white;">杭基礎の基本設定</td>
-                                <td style="text-align: center;border: 1px solid white; color: gray;">✗</td>
-                                <td style="text-align: center;border: 1px solid white; color: gray;">（設計者が把握します。）</td>
+                                <td style="text-align: center;border: 1px solid white; white-space: nowrap; color: #E8F0F8;">利用者が別途検討</td>
+                                <td style="border: 1px solid white; color: #E8F0F8;">（設計者が把握します。）</td>
                                 <td style="border: 1px solid white;">6.1節</td>
                             </tr>
                             <tr>
                                 <td style="border: 1px solid white;">荷重の設定</td>
-                                <td style="text-align: center;border: 1px solid white;">✓</td>
-                                <td style="border: 1px solid white;">
-                                    上部構造から基礎に伝達される荷重のうち、慣性力は「荷重条件」で入力します。<br>
-                                    杭頭鉛直力は「杭軸力」シートで入力します。<br>
-                                    基礎指針のa法、b法に基づいた地盤変位は「地盤」入力ウィンドウで計算されます。
-                                </td>
+                                <td style="text-align: center;border: 1px solid white; white-space: nowrap; ">対応</td>
+                                <td style="border: 1px solid white;">上部構造から基礎に伝達される荷重のうち、慣性力は「荷重条件」で入力します。<br>杭頭鉛直力は「杭軸力」シートで入力します。<br>基礎指針のa法、b法に基づいた地盤変位は「地盤」入力ウィンドウで計算されます。<br><a href="#section-loadcase-input" style="color: white;">詳しく</a></td>
                                 <td style="border: 1px solid white;">4章</td>
                             </tr>
                             <tr>
                                 <td style="border: 1px solid white;">杭種・杭径・杭長・杭材・工法の設定</td>
-                                <td style="text-align: center; border: 1px solid white;color: gray;">✗</td>
-                                <td style="text-align: center; border: 1px solid white;color: gray;">（設計者が適切に選定します。）</td>
+                                <td style="text-align: center;border: 1px solid white; white-space: nowrap; color: #E8F0F8;">利用者が別途検討</td>
+                                <td style="border: 1px solid white; color: #E8F0F8;">（設計者が適切に選定します。）</td>
                                 <td style="border: 1px solid white;">2章、6章</td>
                             </tr>
                             <tr>
                                 <td style="border: 1px solid white;">液状化に対する検討</td>
-                                <td style="text-align: center;border: 1px solid white;">✓</td>
-                                <td style="border: 1px solid white;">
-                                    地盤ウィンドウにおいて検討します。<br>
-                                    FL値の確認、杭周地盤の反力係数低減率α、βの計算等を行います。
-                                </td>
+                                <td style="text-align: center;border: 1px solid white; white-space: nowrap; ">一部対応</td>
+                                <td style="border: 1px solid white;">地盤ウィンドウにおいて検討します。<br>FL値の確認、杭周地盤の反力係数低減率α、βの計算等を行います。<br>側方流動は扱いません。液状化の有無で杭軸力を変えることはできません。<br><a href="#h-地盤の液状化" style="color: white;">詳しく</a></td>
                                 <td style="border: 1px solid white;">3.2節</td>
                             </tr>
                             <tr>
                                 <td style="border: 1px solid white;">地盤の鉛直支持力の算定（杭体の圧縮耐力の算定）</td>
-                                <td style="text-align: center;border: 1px solid white;">✓</td>
-                                <td style="border: 1px solid white;">「地盤・杭」セットごとに、検討します。</td>
+                                <td style="text-align: center;border: 1px solid white; white-space: nowrap; ">対応</td>
+                                <td style="border: 1px solid white;">「地盤・杭」セットごとに、検討します。<br><a href="#h-鉛直支持力と沈下" style="color: white;">詳しく</a></td>
                                 <td style="border: 1px solid white;">6.2節、6.6節</td>
                             </tr>
                             <tr>
                                 <td style="border: 1px solid white;">負の摩擦力に対する検討</td>
-                                <td style="text-align: center; border: 1px solid white;color: gray;">✗</td>
-                                <td style="text-align: center; border: 1px solid white;color: gray;">✗</td>
+                                <td style="text-align: center;border: 1px solid white; white-space: nowrap; color: #E8F0F8;">未対応</td>
+                                <td style="border: 1px solid white; color: #E8F0F8;">扱いません。</td>
                                 <td style="border: 1px solid white;">3.1節、6.4節</td>
                             </tr>
                             <tr>
                                 <td style="border: 1px solid white;">地盤の引抜抵抗の算定</td>
-                                <td style="text-align: center;border: 1px solid white;">✓</td>
-                                <td style="border: 1px solid white;">「地盤・杭」セットごとに、検討します。</td>
+                                <td style="text-align: center;border: 1px solid white; white-space: nowrap; ">対応</td>
+                                <td style="border: 1px solid white;">「地盤・杭」セットごとに、検討します。<br><a href="#h-引抜抵抗力" style="color: white;">詳しく</a></td>
                                 <td style="border: 1px solid white;">6.5節、6.6節</td>
                             </tr>
                             <tr>
                                 <td style="border: 1px solid white;">杭頭沈下量の算定（杭の鉛直支持力算定用）</td>
-                                <td style="text-align: center;border: 1px solid white;">✓</td>
-                                <td style="border: 1px solid white;">
-                                    単杭の荷重-沈下関係は、「地盤・杭」セットごとに、検討します。<br>
-                                    群杭としての沈下量は、任意矩形荷重面もしくは各杭ごとの等価十字荷重面に対して<br>
-                                    成層多層地盤におけるSteinnbrenerの近似解による検討を行います。
-                                </td>
+                                <td style="text-align: center;border: 1px solid white; white-space: nowrap; ">一部対応</td>
+                                <td style="border: 1px solid white;">単杭の荷重-沈下関係は、「地盤・杭」セットごとに、検討します。<br>群杭としての沈下量は、任意矩形荷重面もしくは各杭ごとの等価十字荷重面に対して<br>成層多層地盤におけるSteinbrennerの近似解による検討を行います。<br>ブロック破壊により沈下性状が決まる杭は扱いません。<br><a href="#h-単杭の沈下" style="color: white;">詳しく</a></td>
                                 <td style="border: 1px solid white;">6.3節</td>
                             </tr>
                             <tr>
                                 <td style="border: 1px solid white;">鉛直荷重に対する杭の設計</td>
-                                <td style="text-align: center;border: 1px solid white;">✓</td>
+                                <td style="text-align: center;border: 1px solid white; white-space: nowrap; ">対応</td>
                                 <td style="border: 1px solid white;">「地盤・杭」セットごとに、検討します。</td>
                                 <td style="border: 1px solid white;">6.1節</td>
                             </tr>
                             <tr>
-                                <td style="border: 1px solid white;">
-                                    地盤の水平方向特性<br>
-                                    ・水平地盤反力係数<br>
-                                    ・水平地盤反力度の算定
-                                </td>
-                                <td style="text-align: center;border: 1px solid white;">✓</td>
-                                <td style="border: 1px solid white;">「地盤・杭」セットごとに、設定します。</td>
+                                <td style="border: 1px solid white;">地盤の水平方向特性<br>・水平地盤反力係数<br>・水平地盤反力度の算定</td>
+                                <td style="text-align: center;border: 1px solid white; white-space: nowrap; ">対応</td>
+                                <td style="border: 1px solid white;">「地盤・杭」セットごとに、設定します。<br><a href="#h-杭の水平地盤反力係数" style="color: white;">詳しく</a></td>
                                 <td style="border: 1px solid white;">6.6節</td>
                             </tr>
                             <tr>
-                                <td style="border: 1px solid white;">
-                                    杭基礎の地震時応力の算定（レベル1荷重）<br>
-                                    【単杭の静的非線形解析】<br>
-                                    液状化地盤では応答変位法
-                                </td>
-                                <td style="text-align: center;border: 1px solid white;">✓</td>
-                                <td style="border: 1px solid white;">すべて【群杭フレーム静的非線形解析】で行います。</td>
+                                <td style="border: 1px solid white;">杭基礎の地震時応力の算定（レベル1荷重）<br>【単杭の静的非線形解析】<br>液状化地盤では応答変位法</td>
+                                <td style="text-align: center;border: 1px solid white; white-space: nowrap; ">対応</td>
+                                <td style="border: 1px solid white;">すべて【群杭フレーム静的非線形解析】で行います。<br><a href="#h-Step-8-水平解析の実行" style="color: white;">詳しく</a></td>
                                 <td style="border: 1px solid white;">6.6節</td>
                             </tr>
                             <tr>
                                 <td style="border: 1px solid white;">性能グレードの設定</td>
-                                <td style="text-align: center; border: 1px solid white;color: gray;">✗</td>
-                                <td style="text-align: center; color: gray;">（設計者が適切に設定します。）</td>
+                                <td style="text-align: center;border: 1px solid white; white-space: nowrap; color: #E8F0F8;">利用者が別途検討</td>
+                                <td style="border: 1px solid white; color: #E8F0F8;">（設計者が適切に設定します。）</td>
                                 <td style="border: 1px solid white;">6.6節</td>
                             </tr>
                             <tr>
-                                <td style="border: 1px solid white;">
-                                    杭基礎の地震時応力の算定（レベル2荷重）<br>
-                                    【群杭フレーム静的非線形解析】<br>
-                                    １種地盤以外は応答変位法
-                                </td>
-                                <td style="text-align: center;border: 1px solid white;">✓</td>
-                                <td style="border: 1px solid white;">すべて【群杭フレーム静的非線形解析】で行います。</td>
+                                <td style="border: 1px solid white;">杭基礎の地震時応力の算定（レベル2荷重）<br>【群杭フレーム静的非線形解析】<br>１種地盤以外は応答変位法</td>
+                                <td style="text-align: center;border: 1px solid white; white-space: nowrap; ">対応</td>
+                                <td style="border: 1px solid white;">すべて【群杭フレーム静的非線形解析】で行います。<br><a href="#h-Step-8-水平解析の実行" style="color: white;">詳しく</a></td>
                                 <td style="border: 1px solid white;">6.6節</td>
                             </tr>
                             <tr>
                                 <td style="border: 1px solid white;">杭頭接合部の設計</td>
-                                <td style="text-align: center;border: 1px solid white;">✓</td>
-                                <td style="border: 1px solid white;">行う予定です。</td>
+                                <td style="text-align: center;border: 1px solid white; white-space: nowrap; ">一部対応</td>
+                                <td style="border: 1px solid white;">杭頭工法の回転ばね（M-θ）と、杭頭部・定着部の断面の検定を行います。<br>基礎梁側の接合部の設計は、設計者が別途検討します。<br><a href="#h-杭頭工法の検討式" style="color: white;">詳しく</a></td>
                                 <td style="border: 1px solid white;">6.6節</td>
                             </tr>
                         </tbody>
@@ -1111,6 +1088,34 @@
                         <figcaption>基礎指針'19　図6.6.9(a)</figcaption>
                     </figure>
                 </section>
+
+                <h3 id="h-計算できないこと">計算できないこと・別途確認が必要なこと</h3>
+                <p>個々の技術説明に書いてある制約を、ここにまとめます。該当する検討では、各項目の詳細を確かめてください。</p>
+                <table class="table-doc">
+                    <caption style="text-align: center">本プログラムで扱わない・仮定を置いている項目</caption>
+                    <tr><th style="width:22%;">対象</th><th>扱い</th><th style="width:14%;">詳細</th></tr>
+                    <tr><td>負の摩擦力</td><td>扱いません。</td><td>―</td></tr>
+                    <tr><td>液状化</td><td>側方流動は扱いません。液状化の有無で杭軸力を変えることはできません（同じ値を使います）。
+                        液状化の判定をしていない地盤は、液状化区間なしとして扱います（解析前の注意に出します）。</td>
+                        <td><a href="#h-地盤の液状化">地盤の液状化</a></td></tr>
+                    <tr><td>沈下</td><td>ブロック破壊により沈下性状が決まる杭は扱いません。</td>
+                        <td><a href="#h-鉛直支持力と沈下">鉛直支持力と沈下</a></td></tr>
+                    <tr><td>既製コンクリート杭</td><td>カタログにない断面（任意の断面）は入力できません。PHC 節杭の HS タイプ（標準 HS／拡頭 HS）は扱いません。
+                        カタログに無い量（BF.S パイルの先端軸部の耐力など）は、仮定を置いて断面計算で補っています。</td>
+                        <td><a href="#section-nodular-pile">PHC節杭</a></td></tr>
+                    <tr><td>鋼管杭</td><td>杭頭部（コンクリート充填部）の長さは杭径 D と仮定しています（入力できません）。
+                        鋼管厚部の長さ $l_2$ は 0 として扱います。杭頭部の検討式による M-φ は解析（FEM）に組み込まず、解析では鋼管コンクリート断面の M-φ を使います。
+                        この検討式の内訳は計算書（Word）の表に出しません。引張軸力のときの曲げ耐力は原典と違う式で求めます。</td>
+                        <td><a href="#h-未対応項目-将来対応">扱っていない項目</a>・<a href="#steel-pipe-tension-caution">原典との違い</a></td></tr>
+                    <tr><td>高支持力杭工法</td><td>適用範囲の外の値は、範囲の上下限に丸めて計算を続けます（解析前の注意と計算書に入力値と計算に使った値を示します）。
+                        Smart-MAGNUM の一軸圧縮強度は $q_u = 2C_u$ と換算しています。</td>
+                        <td><a href="#section-smart-magnum">Smart-MAGNUM</a>・<a href="#section-hybrid-kneading">Hybrid ニーディング</a></td></tr>
+                    <tr><td>解析の収束</td><td>収束しなかったケースは検定で「未収束」とし、OK・NG に数えません。基準を緩めて受理したケースは「OK(緩和受理)」と示します。
+                        単杭沈下は、収束しなくなった点で荷重-沈下曲線を打ち切ることがあります（警告に出します）。</td>
+                        <td><a href="#faq-nonconvergence">収束しない場合</a></td></tr>
+                    <tr><td>要素分割</td><td>分割が粗いと応答が大きめに出ます。1 段細かくして結果が変わらないことを確かめてください。</td>
+                        <td><a href="#h-Step-7-杭要素分割">杭要素分割</a></td></tr>
+                </table>
 
                 <h3 id="h-画面の例">画面の例</h3>
                 <p>例題を読み込み、杭要素分割 → 水平解析 → 検定 と進む流れです（基礎指針'19 計算例9）。</p>
@@ -1484,6 +1489,37 @@
                 <li>（時間がかかる場合があるので）最低限の荷重ケースのみを選択して水平解析を行います。</li>
                 <li>水平解析が完了すると、解析結果メニューの<img class="button-icon" src="icons/AnalysisResultVisilbe.svg" alt="">杭・梁要素 解析結果ボタンで、画面上で結果を確認できるほか、<img class="button-icon" src="icons/Graph.svg" alt="">グラフ出力ウィンドウ、<img class="button-icon" src="icons/Table.svg" alt="">テーブル出力ウィンドウで確認できます。</li>
                 <li>各杭の応力状態（曲げモーメント、せん断力、変位等）を確認できます。</li>
+            </ol>
+
+            <h3 id="h-Step-9-収束状態の確認">Step 9: 収束状態の確認</h3>
+            <p class="indent-level-3" style="color:#555; font-size:0.9em;">
+                <em>なぜ必要？</em> 収束していない荷重ケースの応答値は釣り合っていない状態の値で、検定に使えません。検定の前に、どのケースが解けたかを確かめます。
+            </p>
+            <ol>
+                <li>水平解析ウィンドウの解析サマリーで、各ケースの状態（収束 / 緩和受理 / 未収束 / 物理的未収束）を確かめます（<a href="#convergence-log">解析ログ</a>）。</li>
+                <li>未収束・物理的未収束のケースがあれば、<a href="#faq-nonconvergence">収束しない場合の手順</a>で原因を切り分けます。</li>
+                <li>緩和受理のケースは、通常の許容値を満たした結果と同じ意味ではありません。残差の大きさを確かめてから使います。</li>
+            </ol>
+
+            <h3 id="h-Step-10-検定">Step 10: 検定（検定不能・適用範囲外の確認を含む）</h3>
+            <p class="indent-level-3" style="color:#555; font-size:0.9em;">
+                <em>なぜ必要？</em> 応答値と限界値を比べ、杭が要求を満たすかを判定します。OK・NG のほかに、判定していない項目があります。
+            </p>
+            <ol>
+                <li><a href="#section-dashboard">解析結果ダッシュボード</a>で、OK / NG の件数と最大検定比を確かめます。</li>
+                <li>「未収束」「適用範囲外」「検定不能」の件数が 0 でなければ、その項目は OK にも NG にも数えていません。ダッシュボードの状態の説明に沿って、原因の場所を確かめます。</li>
+                <li>詳細は<a href="#h-検定ウィンドウ">検定</a>ウィンドウで、杭・荷重ケースごとに確かめます。</li>
+                <li>鉛直支持力・沈下も検討する場合は、<a href="#section-settlement-single">単杭沈下解析</a>（基礎梁を考える場合は基礎梁考慮）・<a href="#section-settlement-group">群杭沈下解析</a>を行うと、ダッシュボードの「鉛直支持力・沈下」の行に入ります。</li>
+            </ol>
+
+            <h3 id="h-Step-11-計算書の確認">Step 11: 計算書の出力と確認</h3>
+            <p class="indent-level-3" style="color:#555; font-size:0.9em;">
+                <em>なぜ必要？</em> 計算書には、結果の前提（入力についての注意・工法の適用範囲・緩和受理など）が結果と一緒に載ります。出力した後に読み返します。
+            </p>
+            <ol>
+                <li><a href="#h-計算書出力">計算書出力</a>で Word の計算書を作ります。</li>
+                <li>「計算条件・仮定」章の「入力についての注意」と、検定の章のまとめ（未収束・緩和受理・工法の適用範囲）を確かめます。</li>
+                <li>入力を変えた後は、再解析してから出力します（変更前の条件の結果のまま出力していないか）。</li>
             </ol>
 
             <section class="selection-window">
@@ -3116,6 +3152,8 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                     そのため、基本設定を保存した時点で<strong>表示中の水平解析の結果は「再解析が必要」</strong>
                     の扱いになります（画面下の結果セットの表示が橙色になります）。結果そのものは消えないので、
                     再解析するまでは変更前の値が表示され続けます。
+                    色だけでなく、グラフ・表・解析結果ダッシュボードの上に「表示中の解析結果は ○○ 実行時の入力によるものです（入力が変更されています。…）」と
+                    文字で出し、工程の帯の「水平解析」から解析の画面へ進めます。計算書にも、解析のあとに条件を変えた項目を注意として書きます。
                     沈下解析の結果も削除されません（2026-09-20 に水平解析と同じ扱いに揃えました）。
                     こちらも「沈下解析の再実行が必要」の印が付くだけです。
                     許容値は 3 通りとも同じで、収束の近くでは残差が桁で落ちるため、
@@ -8170,7 +8208,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 どの解析をやり直せばよいかが書かれています。計算書をそのまま出力するときの確認にも同じ内容が出ます。
             </p>
 
-            <h5><img class="heading-icon" src="icons/Dashboard.svg" alt="">解析結果ダッシュボード</h5>
+            <h5 id="section-dashboard"><img class="heading-icon" src="icons/Dashboard.svg" alt="">解析結果ダッシュボード</h5>
             <p>
                 解析が終わったあとに「検定は通ったか、通っていないならどの杭か」を 1 画面で確かめるパネルです。
                 リボン「ツール」タブの「<strong>解析結果ダッシュボード</strong>」ボタン（または工程の帯の「検定」）から開きます。
@@ -8191,6 +8229,18 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     これらが 1 件でもあれば「すべて OK」とは出さず、
                     注意の色で件数を出します。NG があるときは NG を先に出します。
                     検定を組み立てられなかったときは「判定できません」と出します（「表示を更新」を押すか、解析をやり直してください）。</li>
+            </ul>
+            <table class="table-doc">
+                <caption style="text-align: center">判定の状態の意味と、次に確かめる場所</caption>
+                <tr><th>状態</th><th>意味</th><th>結果を使えるか</th><th>次に確かめる場所</th></tr>
+                <tr><td>OK / NG</td><td>応答値と限界値を比べた結果</td><td>使えます</td><td>NG なら検定ウィンドウで杭・荷重ケースを特定する</td></tr>
+                <tr><td>OK(緩和受理)</td><td>収束基準を緩めて受理したステップを含むケースの結果</td><td>残差を確かめてから使う</td><td><a href="#convergence-relaxed-criterion">緩和基準</a>、計算書の検定のまとめ（ステップと残差の倍率）</td></tr>
+                <tr><td>未収束</td><td>解析が収束しなかったケース。応答値は釣り合っていない</td><td>使えません</td><td><a href="#faq-nonconvergence">収束しない場合</a>、水平解析の解析ログ</td></tr>
+                <tr><td>適用範囲外</td><td>限界値の算定式（工法）の適用範囲の外</td><td>判定には使えません</td><td>杭体の断面・工法の入力、各工法の適用範囲</td></tr>
+                <tr><td>検定不能</td><td>検定に要るデータ（解析結果・断面・限界曲線）が欠けている</td><td>使えません</td><td>理由の欄。多くは解析の未実施・やり直し</td></tr>
+                <tr><td>収束不明</td><td>収束状態の記録が無い古い保存ファイルの結果</td><td>再解析するまで使えません</td><td>水平解析をやり直す</td></tr>
+            </table>
+            <ul>
                 <li><strong>杭ごとの最大検定比</strong>: 杭 1 本につき最も厳しい項目を 1 行にした一覧です（列は杭・判定・検定比・検定項目）。
                     NG の杭を先頭に、検定比の降順で並びます。選んだ行の対象・応答値・限界値・荷重条件は一覧の下の欄に出ます
                     （開いたときは先頭の、最も厳しい杭を選んでいます。表示を更新しても、選んでいた杭は選んだままです）。
@@ -12688,7 +12738,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                         コンクリート部 ${}_cM_d$ を軸力 $N_{dd}$ に応じて加算する。
                     </p>
                     <p>
-                        現実装の <strong>杭頭部の長さは杭径 D</strong> と仮定 (将来は入力可能化予定)。
+                        現実装の <strong>杭頭部の長さは杭径 D</strong> と仮定 (入力できません。将来は入力可能化予定)。採用した長さは杭断面ウィンドウの諸元 (「杭頭部の長さ (仮定)」) と、計算書の「計算条件・仮定」章に示します。実際の充填長と違う場合は別途確認してください。
                     </p>
                     <div class="formula-block">
                         <div class="formula-left">

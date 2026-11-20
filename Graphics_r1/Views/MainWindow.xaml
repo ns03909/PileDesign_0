@@ -3158,7 +3158,7 @@
 
                                                     <DataGridTextColumn Binding="{Binding GroupPileFactor, StringFormat=N3}" Width="50"  MinWidth="50">
                                                         <DataGridTextColumn.Header>
-                                                            <StackPanel>
+                                                            <StackPanel ToolTip="群杭係数 ξ: 基準水平地盤反力係数 kh0 に掛ける低減係数 (前方杭・後方杭とも、その杭の地盤ばねの初期の硬さに効く)。&#10;杭の並び (杭間隔比と杭本数) で決まる。基礎指針'19 図6.6.16。「群杭係数グラフ確認」で読み取り「モデルの全杭に適用」で書き込む (自動では入らない)">
                                                                 <TextBlock Text="群杭" TextAlignment="Center"/>
                                                                 <TextBlock Text="係数" TextAlignment="Center"
                                                                    HorizontalAlignment="Center"/>
@@ -3174,7 +3174,7 @@
 
                                                     <DataGridTextColumn Binding="{Binding PileSpacingFactor, StringFormat=N3}" Width="50"  MinWidth="50">
                                                         <DataGridTextColumn.Header>
-                                                            <StackPanel>
+                                                            <StackPanel ToolTip="杭間隔比 R/B: 杭中心間隔 ÷ 杭径。後方杭の塑性水平地盤反力度 py (地盤ばねの上限) に効く。前方杭には効かない。&#10;0 (未入力) は群杭の影響を考えない (単杭と同じ) 扱いで、解析前の確認で知らせる。配置から求めた間隔と大きく違うときも知らせる">
                                                                 <TextBlock Text="杭間隔" TextAlignment="Center"/>
                                                                 <TextBlock Text="比" TextAlignment="Center"
                                                                    HorizontalAlignment="Center"/>

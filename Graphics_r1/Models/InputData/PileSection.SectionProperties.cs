@@ -266,6 +266,13 @@ namespace PileDesign.Models.InputData
                     new Spec("鋼管ヤング係数", "Es", $"{PipeEs:N0}", "N/mm2"));
             }
 
+            // 鋼管杭の杭頭部 (コンクリート充填鋼管部) は、杭頭から杭径 D の長さと仮定している (入力できない)。
+            // 実際の充填長と違いうるので、採用した長さを諸元に出す (外部レビュー #10 2026-11-20)
+            if (PileSectionType == PileTypeNames.CftSection)
+                SelectedPileSectionSpecification.Add(
+                    new Spec("杭頭部の長さ (仮定)", "", $"{PileDiameter:N0}", "mm",
+                        "杭頭から杭径 D の長さと仮定 (入力できません)。実際の充填長と違う場合は別途確認してください"));
+
             if (PileSectionType != PileTypeNames.SteelPipe)
                 SelectedPileSectionSpecification.Add(
                     new Spec("コンクリート外径", "Dc", $"{ConcreteOutDia:N0}", "mm"));

@@ -688,7 +688,7 @@
                     <TabItem Header="液状化">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="レベル1荷重検討用地表面加速度(m/s²)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                                <TextBlock Text="レベル1荷重検討用地表面加速度(m/s²)" ToolTip="m/s² で入力します (350 gal = 3.5 m/s²、0.35 g ≒ 3.43 m/s²)。液状化の判定に使います" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
                                        Width="250" />
                                 <TextBox x:Name="TextBoxGroundAcceleration1" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50"
                                          Text="{Binding GroundInput.GroundAcceleration1, StringFormat='{}{0:0.000}'}"
@@ -721,7 +721,7 @@
                                 </TextBox>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="レベル2荷重検討用地表面加速度(m/s²)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                                <TextBlock Text="レベル2荷重検討用地表面加速度(m/s²)" ToolTip="m/s² で入力します (350 gal = 3.5 m/s²、0.35 g ≒ 3.43 m/s²)。液状化の判定に使います" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
                                     Width="250" />
                                 <TextBox x:Name="TextBoxGroundAcceleration2" HorizontalAlignment="Left" Height="25"
                                          VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
@@ -1248,7 +1248,7 @@
                     <GroupBox Header="液状化" Grid.Column="1">
                         <StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="レベル1荷重検討用地表面加速度(m/s²)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                                <TextBlock Text="レベル1荷重検討用地表面加速度(m/s²)" ToolTip="m/s² で入力します (350 gal = 3.5 m/s²、0.35 g ≒ 3.43 m/s²)。液状化の判定に使います" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
                                        Width="250" />
                                 <TextBox x:Name="TextBoxGroundAcceleration1" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="50"
                                          Text="{Binding GroundInput.GroundAcceleration1, StringFormat='{}{0:0.000}'}"
@@ -1256,7 +1256,7 @@
                                          PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" KeyDown="TextBox_Common_KeyDown"/>
                             </StackPanel>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="レベル2荷重検討用地表面加速度(m/s²)" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
+                                <TextBlock Text="レベル2荷重検討用地表面加速度(m/s²)" ToolTip="m/s² で入力します (350 gal = 3.5 m/s²、0.35 g ≒ 3.43 m/s²)。液状化の判定に使います" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center"
                                     Width="250" />
                                 <TextBox x:Name="TextBoxGroundAcceleration2" HorizontalAlignment="Left" Height="25"
                                          VerticalAlignment="Center" Width="50" HorizontalContentAlignment="Right"
@@ -1763,7 +1763,7 @@
                                                         </Style>
                                                     </DataGridTextColumn.ElementStyle>
                                                     <DataGridTextColumn.Header>
-                                                        <StackPanel>
+                                                        <StackPanel ToolTip="全重量を kN/m³ で入力します (t/m³ の 1.8 → 17.7 kN/m³)。水中重量ではなく全重量です">
                                                             <TextBlock Text="単位" TextAlignment="Center"/>
                                                             <TextBlock Text="体積" TextAlignment="Center"/>
                                                             <TextBlock Text="重量" TextAlignment="Center" HorizontalAlignment="Center"/>
@@ -1869,7 +1869,7 @@
                                                         </Style>
                                                     </DataGridTextColumn.ElementStyle>
                                                     <DataGridTextColumn.Header>
-                                                        <StackPanel>
+                                                        <StackPanel ToolTip="kN/m² で入力します (N/mm² の 7 → 7,000 kN/m²)。目安 Es = 700N kN/m²。基準水平地盤反力係数 kh0 は Es に比例します">
                                                             <TextBlock Text="変形" TextAlignment="Center"/>
                                                             <TextBlock Text="係数" TextAlignment="Center"/>
                                                             <!-- 応力の次元なので kN/m^2。計算書 (WordDocument.GroundGraphs.cs) も
