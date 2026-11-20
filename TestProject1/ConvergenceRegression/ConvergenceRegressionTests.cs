@@ -126,6 +126,27 @@ namespace TestProject1
         [DataRow("Example3_8_1", "PileExample3_8", 4, 8)] // 設計例集3.8: 場所打ち鋼管コンクリート杭 φ2200
         public void ConvergenceMatchesSnapshot(
             string groundName, string pileName, int level1Steps, int level2Steps)
+            => RunAndCompare(groundName, pileName, level1Steps, level2Steps, snapshotName: groundName, customize: null);
+
+        /// <summary>
+        /// 基礎梁のあるモデル。上の例題はどれも基礎梁を持たず、基礎梁と杭頭の剛な接続部 (M-φ を持たない梁) の
+        /// 剛性の扱いが網に掛かっていなかった。2026-11-20 まで、杭の非線形を ON にするとこれらの梁だけ
+        /// 係数行列の剛性が 1/20 になっており (外部レビュー #12)、直すと反復が 30〜75% 減り、関東 計算例8 の剛床では
+        /// 曲げモーメントが 4% 動いた。どれも例題の杭配置に、同じ行・同じ列の隣どうしを結ぶ基礎梁を足したもの
+        /// (<see cref="FoundationBeamFixture.ConnectNeighbours"/>)。
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("Example10", "PileExample10", 4, 16, FoundationBeamConnectionMode.RigidBody)]
+        [DataRow("Example9", "PileExample9", 4, 8, FoundationBeamConnectionMode.RigidFloor)]
+        [DataRow("ExampleK8", "PileExampleK8", 4, 8, FoundationBeamConnectionMode.RigidFloor)]
+        public void ConvergenceWithFoundationBeamsMatchesSnapshot(
+            string groundName, string pileName, int level1Steps, int level2Steps, FoundationBeamConnectionMode mode)
+            => RunAndCompare(groundName, pileName, level1Steps, level2Steps,
+                snapshotName: $"{groundName}_FoundationBeams_{mode}",
+                customize: m => FoundationBeamFixture.ConnectNeighbours(m, mode));
+
+        private static void RunAndCompare(
+            string groundName, string pileName, int level1Steps, int level2Steps, string snapshotName, Action<InputModel>? customize)
         {
             var options = new HeadlessHorizontalRunner.RunOptions
             {
@@ -134,6 +155,7 @@ namespace TestProject1
                 LiquefactionMode = PileDesign.ViewModels.HorizontalCalculationViewModel.LiquefactionOptionType.Yes,
                 UseLineSearch = true,
                 Parallelism = 1,  // 確定性のため逐次実行
+                Customize = customize,
             };
 
             ConvergenceSnapshot actual;
@@ -147,7 +169,7 @@ namespace TestProject1
                 return;
             }
 
-            string snapshotPath = Path.Combine(SnapshotsDir, $"{groundName}.json");
+            string snapshotPath = Path.Combine(SnapshotsDir, $"{snapshotName}.json");
 
             // UPDATE_SNAPSHOTS=1 のときはスナップショットを書き出して終了
             // 非決定的な変動を吸収するため、3 回実行して per-case の MAX を採用 (反復数のみ)。
@@ -192,7 +214,7 @@ namespace TestProject1
             }
             var expected = ConvergenceSnapshot.Load(snapshotPath);
 
-            AssertCompatible(expected, actual, groundName);
+            AssertCompatible(expected, actual, snapshotName);
         }
 
         /// <summary>

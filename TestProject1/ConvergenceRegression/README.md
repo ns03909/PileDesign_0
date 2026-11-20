@@ -113,6 +113,22 @@ $env:UPDATE_SNAPSHOTS = "1"; dotnet test TestProject1 --filter "FullyQualifiedNa
 
 その後 `UPDATE_SNAPSHOTS=1` で再生成。
 
+### 基礎梁ありの例題 (2026-11-20)
+
+上の例題はどれも基礎梁を持たないので、基礎梁と杭頭の剛な接続部 (M-φ を持たない梁) を含むモデルを
+`ConvergenceWithFoundationBeamsMatchesSnapshot` で別に見ます。例題の杭配置に、同じ行・同じ列の隣どうしを
+結ぶ基礎梁を足したものです ([FoundationBeamFixture.cs](FoundationBeamFixture.cs))。スナップショットは
+`{例題}_FoundationBeams_{接続方式}.json`。
+
+| 例題 + 基礎梁          | 接続方式 | 反復 (L1 + L2) |
+| ---------------------- | -------- | -------------- |
+| Example10              | 剛体     | 247            |
+| Example9               | 剛床     | 140            |
+| ExampleK8              | 剛床     | 313            |
+
+足したきっかけは外部レビュー #12。それまで、杭の非線形を ON にするとこれらの梁だけ係数行列の剛性が
+初期の 5% になっていた (内力は 100%)。直す前の反復はそれぞれ 874・310・490 で、この網なら ×1.5 の許容を超えて落ちる。
+
 ## 現行カバレッジ (2026-05-19 時点)
 
 | 例題                            | L1 反復/ステップ | L2 反復/ステップ | 残差   |
