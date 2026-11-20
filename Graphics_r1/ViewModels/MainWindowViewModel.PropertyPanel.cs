@@ -343,7 +343,7 @@ namespace PileDesign.ViewModels
             SelectedItemProperties.Add(new("群杭係数 ξ", $"{pile.GroupPileFactor:F3}", "",
                 PropertyInputType.Number,
                 MakeDoubleCommit(() => pile.GroupPileFactor, v => pile.GroupPileFactor = v)));
-            SelectedItemProperties.Add(new("杭間隔比 R/B", $"{pile.PileSpacingFactor:F3}"));
+            SelectedItemProperties.Add(new("杭間隔比 R/B", pile.ConsidersPileSpacing ? $"{pile.PileSpacingFactor:F3}" : "考慮しない"));
             SelectedItemProperties.Add(new("ΔZc", $"{pile.FoundationBeamDeltaZc:F3}", "m",
                 PropertyInputType.Number,
                 MakeDoubleCommit(() => pile.FoundationBeamDeltaZc, v => pile.FoundationBeamDeltaZc = v)));
@@ -614,7 +614,8 @@ namespace PileDesign.ViewModels
                 }));
 
             // 杭間隔比（読み取り専用）
-            SelectedItemProperties.Add(new("杭間隔比 R/B", CommonDoubleOrVarious(piles.Select(p => p.PileSpacingFactor))));
+            SelectedItemProperties.Add(new("杭間隔比 R/B", piles.All(p => !p.ConsidersPileSpacing) ? "考慮しない"
+                : piles.All(p => p.ConsidersPileSpacing) ? CommonDoubleOrVarious(piles.Select(p => p.PileSpacingFactor)) : "(various)"));
 
             // ΔZc
             SelectedItemProperties.Add(new("ΔZc",

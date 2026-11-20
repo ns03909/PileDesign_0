@@ -166,11 +166,15 @@ namespace TestProject1
             pile.PileSpacingFactor = 0.5;
             Assert.IsTrue(Blockers(m).Any(b => b.StartsWith($"杭 No.{pile.No}: 杭間隔比 R/B = 0.5 が 1 未満です")), Show(Blockers(m)));
 
-            foreach (double ok in new[] { 0.0, 1.0 })
-            {
-                pile.PileSpacingFactor = ok;
-                Assert.IsFalse(Blockers(m).Any(b => b.Contains("杭間隔比")), $"R/B = {ok} で止めています:\n" + Show(Blockers(m)));
-            }
+            pile.PileSpacingFactor = 1.0;
+            Assert.IsFalse(Blockers(m).Any(b => b.Contains("杭間隔比")), "R/B = 1 で止めています:\n" + Show(Blockers(m)));
+
+            // R/B = 0 は「R/B 考慮」しだい (2026-11-20 から。以前は 0 = 群杭の影響なしとして止めなかった)
+            pile.PileSpacingFactor = 0.0;
+            Assert.IsTrue(Blockers(m).Any(b => b.Contains("R/B を考慮する設定ですが、R/B が入力されていません")),
+                "考慮するのに R/B = 0 を止めていません:\n" + Show(Blockers(m)));
+            pile.ConsidersPileSpacing = false;
+            Assert.IsFalse(Blockers(m).Any(b => b.Contains("杭間隔比")), "考慮しないのに R/B = 0 で止めています:\n" + Show(Blockers(m)));
         }
 
         [TestMethod]

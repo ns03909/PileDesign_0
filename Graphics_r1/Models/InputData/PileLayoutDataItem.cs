@@ -181,11 +181,56 @@ namespace PileDesign.Models.InputData
 
         // 杭間隔比
         private double _pileSpacingFactor;
+        /// <summary>
+        /// 杭間隔比 R/B (杭の中心間隔 ÷ 杭径)。後方杭の塑性水平地盤反力 py に効く。
+        /// 使うかどうかは <see cref="ConsidersPileSpacing"/> で決める。
+        ///
+        /// <para>「考慮する」を明示して選んでいない杭で、正の値から 0 以下に消したときは、そのとき「考慮する」
+        /// (消す前の値から決まっていた設定) を確定させる。黙って「考慮しない」に変わると入れ忘れを捕まえられないため
+        /// (考慮するのに未入力として解析の前に止める)。読み込みでは R/B は既定の 0 から入るので、この規則は働かない
+        /// (読み込み結果が保存ファイルの項目の順に左右されない。PerturbedModel_ReadsTheSameInAnyKeyOrder)。</para>
+        /// </summary>
         public double PileSpacingFactor
         {
             get => _pileSpacingFactor;
-            set => SetProperty(ref _pileSpacingFactor, value);
+            set
+            {
+                bool wasSpaced = _pileSpacingFactor > 0;
+                if (!SetProperty(ref _pileSpacingFactor, value)) return;
+                if (_considersPileSpacing == null && wasSpaced && !(value > 0))
+                    _considersPileSpacing = true;
+                OnPropertyChanged(nameof(ConsidersPileSpacing));
+            }
         }
+
+        // 杭間隔比 R/B を考慮するか。null = 明示して選んでいない (以前の保存ファイル・新しい杭)
+        private bool? _considersPileSpacing;
+        /// <summary>
+        /// 杭間隔比 R/B による群杭の影響 (後方杭の py の低減) を考慮するか。
+        /// false なら R/B の値によらず単杭と同じ扱い (R/B = 0 と同じ)。true なら R/B を 1 以上で入力する (未入力は解析の前に止める)。
+        ///
+        /// <para>明示して選んでいない杭 (この設定を持たない以前の保存ファイル・新しい杭) は R/B から決める:
+        /// R/B &gt; 0 なら「考慮する」、0 以下なら「考慮しない」。以前の R/B の意味のままなので、以前のファイルの計算結果は変わらない。
+        /// 保存すると、そのときの値を明示した設定として書く。</para>
+        ///
+        /// <para>2026-11-20 まで、R/B = 0 が「未入力」と「群杭の影響を考えない」の両方を表していて、入力忘れと意図を
+        /// 区別できなかった (外部レビュー #14)。群杭係数 ξ (kh0 に掛かる) はこの設定と関係なく使う。</para>
+        /// </summary>
+        public bool ConsidersPileSpacing
+        {
+            get => _considersPileSpacing ?? (_pileSpacingFactor > 0);
+            set
+            {
+                bool before = ConsidersPileSpacing;
+                bool wasExplicit = _considersPileSpacing.HasValue;
+                _considersPileSpacing = value;
+                if (before != value || !wasExplicit) OnPropertyChanged();
+            }
+        }
+
+        /// <summary>解析に使う R/B。考慮しないなら 0 (単杭と同じ扱い)。</summary>
+        [JsonIgnore]
+        public double EffectivePileSpacingFactor => ConsidersPileSpacing ? PileSpacingFactor : 0.0;
 
         // 常時軸力
         private double _axialForceVL0;
@@ -968,6 +1013,9 @@ namespace PileDesign.Models.InputData
                 AxialForce = this.AxialForce,
                 AxialForceIncrement = this.AxialForceIncrement,
             };
+            // 「R/B 考慮」は明示したかどうか (null) も含めて写す。値で写すと、明示していない杭が明示した杭になり、
+            // そのあと R/B を変えたときの決まり方が元の杭と違ってしまう
+            copy._considersPileSpacing = _considersPileSpacing;
 
             // ObservableCollection の deep copy (要素は double / bool で値型)
             // setter 経由で代入すると変動軸力同期 (OnAbsoluteL?Changed) が走る点に注意。

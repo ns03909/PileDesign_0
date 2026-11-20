@@ -46,7 +46,8 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 全杭が ξ = 1・R/B = 0 なら、注意は「群杭の影響を考えずに計算します」の 1 行にまとめる (以前は杭ごとに「未入力です」を 1 行ずつ)。
+        /// 全杭が R/B を考慮しない (以前のファイルの R/B = 0) なら、知らせは 1 行にまとめる (以前は杭ごとに「未入力です」を 1 行ずつ)。
+        /// 2026-11-20 から「R/B 考慮」で明示して選ぶので、知らせは情報 (結果への注意ではない)。
         /// </summary>
         [TestMethod]
         public void TheNoGroupEffectNotice_IsOneLine()
@@ -55,11 +56,13 @@ namespace TestProject1
             if (model == null) { Assert.Inconclusive("例題を組めません"); return; }
             var notices = CheckInputData.CollectInputWarnings(model).Where(m => m.Contains("R/B", System.StringComparison.Ordinal)).ToList();
             Assert.AreEqual(1, notices.Count, "R/B の注意が 1 行にまとまっていません:\n" + string.Join("\n", notices));
-            StringAssert.Contains(notices[0], "群杭の影響を考えずに");
+            StringAssert.Contains(notices[0], "全杭で杭間隔比 R/B を考慮しない設定です");
+            Assert.IsTrue(CheckInputData.CollectInputWarningDiagnostics(model).Where(d => d.Message.Contains("R/B を考慮しない"))
+                .All(d => d.Severity == PileDesign.Common.DiagnosticSeverity.Info), "利用者が選んだ設定を結果への注意にしています");
 
-            // 一部の杭だけ R/B = 0 なら、その杭の番号を挙げる
+            // 一部の杭だけ考慮しないなら、その杭の番号を挙げる
             model.PileLayoutItems[0].PileSpacingFactor = 3.0;
-            notices = CheckInputData.CollectInputWarnings(model).Where(m => m.Contains("R/B が 0", System.StringComparison.Ordinal)).ToList();
+            notices = CheckInputData.CollectInputWarnings(model).Where(m => m.Contains("R/B を考慮しない杭があります", System.StringComparison.Ordinal)).ToList();
             Assert.AreEqual(1, notices.Count);
             StringAssert.Contains(notices[0], "杭 No.");
         }

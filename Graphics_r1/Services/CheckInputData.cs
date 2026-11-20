@@ -81,27 +81,27 @@ namespace PileDesign.Services
                     if (p.GroupPileFactor > 1.0)
                         warnings.Add(Diagnostic.Notice(affects, at, $"杭 No.{p.No}: 群杭係数 ξ = {p.GroupPileFactor:N3} が 1 を超えています " +
                                      "(群杭は水平地盤反力を下げる側なので 1 以下が通常)。"));
-                    if (!(p.PileSpacingFactor > 0)) spacingUnset.Add(p);
+                    if (!p.ConsidersPileSpacing) spacingUnset.Add(p);
                 }
 
-                // 杭間隔比 R/B が 0 (未入力・群杭の影響を考えない) の杭は 1 行にまとめて知らせる。
-                // 入れ忘れか、群杭の影響を考えない意図かは区別できない。全杭が ξ = 1・R/B = 0 なら、
-                // 群杭の影響を考えない計算として一貫しているので、そう言う (同梱の計算例の多くがこれ)。
-                // 以前は杭ごとに「未入力です」を 1 行ずつ出していた
+                // 杭間隔比 R/B を考慮しない杭は 1 行にまとめて知らせる (情報。利用者が選んだ設定なので結果への注意にはしない)。
+                // 2026-11-20 までは R/B = 0 が「未入力」と「考慮しない」の両方を表し、区別できないので注意として出していた。
+                // いまは杭配置の「R/B 考慮」で明示して選ぶ。考慮するのに未入力の杭は解析の前に止める (CollectPileSpacingProblems)。
+                // 以前の保存ファイルの R/B = 0 の杭は「考慮しない」として読む (PileLayoutDataItem.PileSpacingFactor)
                 if (spacingUnset.Count > 0)
                 {
                     var all = inputModel.PileLayoutItems.Where(x => x != null).ToList();
-                    bool consistentNoGroup = spacingUnset.Count == all.Count && all.All(x => x.GroupPileFactor == 1.0);
                     string list = string.Join(", ", spacingUnset.Select(x => x.No).OrderBy(n => n).Take(10))
                         + (spacingUnset.Count > 10 ? " ほか" : "");
-                    warnings.Add(consistentNoGroup
-                        ? Diagnostic.Notice(affects, DiagnosticTarget.Nowhere,
-                            "全杭で群杭係数 ξ = 1・杭間隔比 R/B = 0 のため、群杭の影響を考えずに (単杭と同じ扱いで) 計算します。",
-                            "群杭の影響を考えるときは、杭配置に ξ と R/B (杭の中心間隔 ÷ 杭径) を入力する")
-                        : Diagnostic.Notice(affects, DiagnosticTarget.Pile(spacingUnset[0].No),
-                            $"杭間隔比 R/B が 0 (未入力) の杭があります (杭 No.{list})。"
+                    warnings.Add(spacingUnset.Count == all.Count
+                        ? Diagnostic.Notice(DiagnosticSeverity.Info, DiagnosticTarget.Nowhere,
+                            "全杭で杭間隔比 R/B を考慮しない設定です。後方杭の塑性水平地盤反力 py は、群杭の影響を考えない (単杭と同じ) 扱いで計算します"
+                            + (all.All(x => x.GroupPileFactor == 1.0) ? " (群杭係数 ξ もすべて 1)。" : "。"),
+                            "群杭の影響を考えるときは、杭配置の「R/B 考慮」にチェックを入れ、R/B (杭の中心間隔 ÷ 杭径) を入力する")
+                        : Diagnostic.Notice(DiagnosticSeverity.Info, DiagnosticTarget.Pile(spacingUnset[0].No),
+                            $"杭間隔比 R/B を考慮しない杭があります (杭 No.{list})。"
                             + "これらの杭の後方杭の塑性水平地盤反力 py は、群杭の影響を考えない (単杭と同じ) 扱いで計算します。",
-                            "群杭の影響を考えるときは、杭配置に R/B (杭の中心間隔 ÷ 杭径) を入力する"));
+                            "群杭の影響を考えるときは、杭配置の「R/B 考慮」にチェックを入れ、R/B を入力する"));
                 }
             }
 

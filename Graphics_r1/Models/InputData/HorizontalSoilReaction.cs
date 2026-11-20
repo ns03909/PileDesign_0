@@ -471,7 +471,7 @@ namespace PileDesign.Models.InputData
         public static GroupPileEffect For(PileLayoutDataItem pile)
             => pile == null
                 ? None
-                : new GroupPileEffect { Xi = pile.GroupPileFactor, ROnB = pile.PileSpacingFactor, BetaL = 1.0 };
+                : new GroupPileEffect { Xi = pile.GroupPileFactor, ROnB = pile.EffectivePileSpacingFactor, BetaL = 1.0 };   // R/B を考慮しない杭は 0 (単杭と同じ)
 
         /// <summary>この要素の液状化低減率 βL を付けた写しを返す。</summary>
         public GroupPileEffect WithLiquefaction(double betaL)

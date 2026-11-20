@@ -1352,7 +1352,7 @@ namespace PileDesign.Views
             if (vm.IsPileTopLevelVisible) sb.Append($"Z={pileLocation.PileHeadZ:N3}, ");
             if (vm.IsConnectionNodeZVisible) sb.Append($"Zc={pileLocation.Point3D.Z:N3}, ");
             if (vm.IsGroupPileFactorLabelVisible) sb.Append($"ξ={pileLocation.GroupPileFactor:N3}, ");
-            if (vm.IsPileDiaSpacingRatioLabelVisible) sb.Append($"R/B={pileLocation.PileSpacingFactor:N3}, ");
+            if (vm.IsPileDiaSpacingRatioLabelVisible) sb.Append(pileLocation.ConsidersPileSpacing ? $"R/B={pileLocation.PileSpacingFactor:N3}, " : "R/B=考慮しない, ");
 
             // 前後杭ラベル
             if (vm.IsFrontPileLabelVisible)

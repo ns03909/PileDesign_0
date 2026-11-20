@@ -273,9 +273,15 @@ namespace PileDesign.ViewModels
             }
             ValidationMessage = "";
             double newValue = PileSpacingDiaRatio.Value;
-            _mainWindowViewModel.TryApplyInputEdit(InputModel.PileLayoutItems.Any(p => p.PileSpacingFactor != newValue), () =>
+            // R/B を全杭に書き込むのは考慮するため。「R/B 考慮」も立てる (外したままだと書き込んだ値が使われない)
+            _mainWindowViewModel.TryApplyInputEdit(
+                InputModel.PileLayoutItems.Any(p => p.PileSpacingFactor != newValue || !p.ConsidersPileSpacing), () =>
             {
-                foreach (var item in InputModel.PileLayoutItems) item.PileSpacingFactor = newValue;
+                foreach (var item in InputModel.PileLayoutItems)
+                {
+                    item.PileSpacingFactor = newValue;
+                    item.ConsidersPileSpacing = true;
+                }
             });
         }
 

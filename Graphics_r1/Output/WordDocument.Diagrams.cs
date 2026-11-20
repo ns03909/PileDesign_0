@@ -828,7 +828,7 @@ diameterSelector,
                         $"杭体No:{pileLayoutItem.PileBodyNo}\n" +
                         $"地盤No:{pileLayoutItem.GroundNo}\n" +
                         $"({pileLayoutItem.X:N2},{pileLayoutItem.Y:N2},{pileLayoutItem.Z:N2})\n" +
-                        $"R/B:{pileLayoutItem.PileSpacingFactor:N2}\n" +
+                        (pileLayoutItem.ConsidersPileSpacing ? $"R/B:{pileLayoutItem.PileSpacingFactor:N2}\n" : "R/B:考慮しない\n") +
                         $"ξ:{pileLayoutItem.GroupPileFactor:N2}";
             return mark;
         }

@@ -255,20 +255,35 @@ namespace PileDesign.Services
         /// <summary>
         /// 杭間隔比 R/B (中心間隔 ÷ 杭径) が 1 未満の杭。杭どうしが重なる間隔で、後方杭の py の式
         /// (基礎指針'19 表6.6.3・表6.6.4 の κ・µ・λ) の範囲の外になる (µ は R/B &lt; 2/3 で負)。
-        /// 0 以下は「未入力 (群杭の影響なし)」として警告 (<see cref="CollectInputWarningDiagnostics"/>) にとどめる。
+        /// R/B を考慮する (<see cref="PileLayoutDataItem.ConsidersPileSpacing"/>) のに未入力 (0 以下・数値でない) の杭も止める
+        /// (2026-11-20 までは「未入力か、考慮しない意図か」を区別できず注意にとどめていた。外部レビュー #14)。
+        /// 考慮しない杭は R/B の値を使わないので見ない。
         /// </summary>
         internal static List<Diagnostic> CollectPileSpacingProblems(InputModel inputModel)
         {
             var problems = new List<Diagnostic>();
+            var unset = new List<PileLayoutDataItem>();
             foreach (var p in inputModel?.PileLayoutItems ?? [])
             {
-                if (p == null) continue;
+                if (p == null || !p.ConsidersPileSpacing) continue;
                 double r = p.PileSpacingFactor;
-                if (!(r > 0 && r < 1)) continue;
+                if (!(r > 0) || !double.IsFinite(r)) { unset.Add(p); continue; }
+                if (!(r < 1)) continue;
                 problems.Add(Diagnostic.InputAt(DiagnosticTarget.Pile(p.No),
                     $"杭間隔比 R/B = {r:0.###} が 1 未満です (杭どうしが重なる間隔です)。"
-                    + "R/B は杭の中心間隔 ÷ 杭径で、1 以上で入力してください (群杭の影響を考えないなら 0)。"
+                    + "R/B は杭の中心間隔 ÷ 杭径で、1 以上で入力してください (群杭の影響を考えないなら「R/B 考慮」のチェックを外す)。"
                     + "1 未満では後方杭の塑性水平地盤反力 py の係数が式の範囲の外になり、負にもなります。"));
+            }
+            if (unset.Count > 0)
+            {
+                // 場所 (先頭の杭) は InputAt が文頭に付ける。2 本以上なら残りを文に並べる
+                string others = unset.Count > 1
+                    ? "（ほかに杭 No." + string.Join("・", unset.Skip(1).Take(10).Select(p => p.No)) + (unset.Count > 11 ? $" ほか {unset.Count - 11} 本" : "") + " も）"
+                    : "";
+                problems.Add(Diagnostic.InputAt(DiagnosticTarget.Pile(unset[0].No),
+                    $"杭間隔比 R/B を考慮する設定ですが、R/B が入力されていません{others}。"
+                    + "杭配置で R/B (杭の中心間隔 ÷ 杭径) を入力するか、群杭の影響を考えないなら「R/B 考慮」のチェックを外してください。")
+                    with { MoreTargets = unset.Skip(1).Select(p => DiagnosticTarget.Pile(p.No)).ToList() });
             }
             return problems;
         }
@@ -291,8 +306,9 @@ namespace PileDesign.Services
             var mismatched = new List<(PileLayoutDataItem Pile, double[] Candidates)>();
             foreach (var p in piles)
             {
+                if (!p.ConsidersPileSpacing) continue;           // 考慮しない杭は R/B を使わない
                 double r = p.PileSpacingFactor;
-                if (!(r >= 1) || !double.IsFinite(r)) continue; // 未入力 (0 以下) と 1 未満は別に知らせる
+                if (!(r >= 1) || !double.IsFinite(r)) continue; // 未入力 (0 以下) と 1 未満は解析の前に止める
                 double b = (inputModel!.PileBodyAt(p.PileBodyNo)?.PileBodySegments?.FirstOrDefault()?.PileSection?.PileDiameter ?? 0) / 1000.0;
                 if (!(b > 0) || !double.IsFinite(b)) continue;
 

@@ -104,7 +104,14 @@ namespace TestProject1
             new("杭配置", "地盤の番号", "99 (無い地盤)", m => Rejected(() => m.PileLayoutItems[0].GroundNo, () => m.PileLayoutItems[0].GroundNo = 99, 99), Stage.Block),
             new("杭配置", "群杭係数 ξ", "0", m => Rejected(() => m.PileLayoutItems[0].GroupPileFactor, () => m.PileLayoutItems[0].GroupPileFactor = 0, 0), Stage.Block),
             new("杭配置", "群杭係数 ξ", "1.5", m => Rejected(() => m.PileLayoutItems[0].GroupPileFactor, () => m.PileLayoutItems[0].GroupPileFactor = 1.5, 1.5), Stage.Warn | Stage.Report),
-            new("杭配置", "杭間隔比 R/B", "0 (未入力)", m => Rejected(() => m.PileLayoutItems[0].PileSpacingFactor, () => m.PileLayoutItems[0].PileSpacingFactor = 0, 0), Stage.Warn | Stage.Report),
+            // 「R/B 考慮」にチェックがあるまま R/B を消した (入れ忘れ)。2026-11-20 までは R/B = 0 が「考慮しない」と区別できず注意だった
+            new("杭配置", "杭間隔比 R/B", "0 (R/B 考慮のまま未入力)", m =>
+            {
+                var p = m.PileLayoutItems[0];
+                p.PileSpacingFactor = 2.0;   // 例題の R/B によらず「考慮する」にしてから消す
+                p.ConsidersPileSpacing = true;
+                return Rejected(() => p.PileSpacingFactor, () => p.PileSpacingFactor = 0, 0);
+            }, Stage.Block),
             new("杭配置", "杭間隔比 R/B", "0.5 (杭が重なる)", m => Rejected(() => m.PileLayoutItems[0].PileSpacingFactor, () => m.PileLayoutItems[0].PileSpacingFactor = 0.5, 0.5), Stage.Block),
             new("杭配置", "杭間隔比 R/B", "100 (杭配置の中心間隔 ÷ 杭径と大きく違う)", m => Rejected(() => m.PileLayoutItems[0].PileSpacingFactor, () => m.PileLayoutItems[0].PileSpacingFactor = 100, 100), Stage.Warn | Stage.Report),
             new("杭配置", "杭の位置", "隣の杭と同じ", m =>

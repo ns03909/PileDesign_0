@@ -139,9 +139,9 @@ namespace PileDesign.ViewModels
             string nValue = CommonNum(reactions.Select(r => r.NValue), "F1");
 
             string xi = CommonNum(reactionPiles.Select(p => p.GroupPileFactor), "F3");
-            string spacing = reactionPiles.Count > 0 && reactionPiles.All(p => !(p.PileSpacingFactor > 0))
-                ? "未入力 (群杭の影響なし)"
-                : CommonNum(reactionPiles.Select(p => p.PileSpacingFactor), "F3");
+            string spacing = reactionPiles.Count > 0 && reactionPiles.All(p => !p.ConsidersPileSpacing)
+                ? "考慮しない (群杭の影響なし)"
+                : CommonNum(reactionPiles.Select(p => p.EffectivePileSpacingFactor), "F3");
 
             SelectedPileSegmentDetails =
                 $"地盤層: {name}\n" +

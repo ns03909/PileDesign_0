@@ -3172,6 +3172,15 @@
                                                         </DataGridTextColumn.ElementStyle>
                                                     </DataGridTextColumn>
 
+                                                    <DataGridCheckBoxColumn Binding="{Binding ConsidersPileSpacing, UpdateSourceTrigger=PropertyChanged}" Width="40" MinWidth="40">
+                                                        <DataGridCheckBoxColumn.Header>
+                                                            <StackPanel ToolTip="杭間隔比 R/B による群杭の影響 (後方杭の py の低減) を考慮するか。&#10;チェックを入れたら右の R/B を 1 以上で入力する (未入力は解析の前に止める)。外すと R/B の値によらず単杭と同じ扱い。&#10;群杭係数 ξ はこの設定と関係なく使う。以前の保存ファイルは、R/B = 0 の杭を「考慮しない」として読む">
+                                                                <TextBlock Text="R/B" TextAlignment="Center"/>
+                                                                <TextBlock Text="考慮" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                            </StackPanel>
+                                                        </DataGridCheckBoxColumn.Header>
+                                                    </DataGridCheckBoxColumn>
+
                                                     <DataGridTextColumn Binding="{Binding PileSpacingFactor, StringFormat=N3}" Width="50"  MinWidth="50">
                                                         <DataGridTextColumn.Header>
                                                             <StackPanel ToolTip="杭間隔比 R/B: 杭中心間隔 ÷ 杭径。後方杭の塑性水平地盤反力度 py (地盤ばねの上限) に効く。前方杭には効かない。&#10;0 (未入力) は群杭の影響を考えない (単杭と同じ) 扱いで、解析前の確認で知らせる。配置から求めた間隔と大きく違うときも知らせる">

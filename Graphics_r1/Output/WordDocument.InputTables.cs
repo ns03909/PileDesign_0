@@ -701,7 +701,8 @@ namespace PileDesign.Output
                 dataRow.Append(CreateTableCell([$"{pileLayoutData.GroundNo}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{pileLayoutData.SoilPileAltNo}"], fontSize, "right"));
                 dataRow.Append(CreateTableCell([$"{pileLayoutData.GroupPileFactor:N3}"], fontSize, "right"));
-                dataRow.Append(CreateTableCell([$"{pileLayoutData.PileSpacingFactor:N3}"], fontSize, "right"));
+                // R/B を考慮しない杭は値ではなくそう書く (値が残っていても解析には使わない。外部レビュー #14)
+                dataRow.Append(CreateTableCell([pileLayoutData.ConsidersPileSpacing ? $"{pileLayoutData.PileSpacingFactor:N3}" : "考慮しない"], fontSize, "right"));
                 table.Append(dataRow);
             }
 
