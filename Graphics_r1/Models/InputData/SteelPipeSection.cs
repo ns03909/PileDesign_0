@@ -62,19 +62,24 @@ namespace PileDesign.Models.InputData
         /// <summary>杭頭部の検討区間の長さ L の杭径に対する倍率 (L = 4D)。合成剛性 EIeq と θMu に使う。</summary>
         internal const double HeadZoneDiameters = 4.0;
 
-        /// <summary>杭頭部の鋼管厚部の長さ l2 [mm]。入力が無いので 0 (厚部なし、EI2 = EI3)。</summary>
-        internal const double HeadThickPartLength = 0.0;
+        /// <summary>
+        /// 杭頭部の鋼管厚部の長さ l2 [mm] (充填部の下端から鋼管の断面変化部まで)。0 は厚部なし。
+        /// 杭断面の「鋼管厚部の長さ l2」の入力 (<see cref="PileSection.CftThickPartLength"/>) を渡す
+        /// (2026-11-21。以前は 0 固定)。厚部の剛性 EI2 は、いまは薄部 EI3 と同じ値を使う。
+        /// </summary>
+        internal double HeadThickPartLength { get; init; }
 
         /// <summary>
         /// 杭頭部の検討区間の境の深さ [mm] (杭頭 = パイルキャップ下面から): 充填部の下端 l1、鋼管の断面変化部 l1 + l2、
         /// 検討区間の下端 L = 4D。要素分割はここに節点を置く (InputModel.SoilPileNodeAltitudes)。
-        /// 合成剛性 <see cref="ComputeEIeqHead"/> と同じ定義から作るので、節点と検討式の区間は食い違わない。
-        /// l2 = 0 の間は断面変化部が充填部の下端と重なる。
+        /// 合成剛性 <see cref="ComputeEIeqHead"/> と同じ定義 (l1 は未入力なら D) から作るので、節点と検討式の区間は食い違わない。
+        /// 返すのは実際の位置で、L を超えても切り詰めない (検討式の側は L で打ち切る)。l2 = 0 なら断面変化部は充填部の下端と重なる。
         /// </summary>
-        internal static (double FillEnd, double SectionChange, double ZoneEnd) HeadZoneDepths(double diameter, double fillLength)
+        internal static (double FillEnd, double SectionChange, double ZoneEnd) HeadZoneDepths(double diameter, double fillLength, double thickPartLength)
         {
             double l1 = fillLength > 0 ? fillLength : diameter;
-            return (l1, l1 + HeadThickPartLength, HeadZoneDiameters * diameter);
+            double l2 = thickPartLength > 0 ? thickPartLength : 0.0;
+            return (l1, l1 + l2, HeadZoneDiameters * diameter);
         }
 
         // 許容応力度 (基準 sfc1 = F/1.5 with 局部座屈低減)
@@ -737,7 +742,7 @@ namespace PileDesign.Models.InputData
         /// 鋼管杭頭部 (コンクリート充填鋼管部) の M-φ 関係を返す。
         /// φ = [0, φ_Md, φ_Mu', φ_u]、M = [0, Md, Mu, Mu]
         /// 杭頭部 EI は L³/EIeq = (L³−(l2+l3)³)/EI1 + ((l2+l3)³−l3³)/EI2 + l3³/EI3 で合成。
-        /// L = 4D、l1 = 充填長 (未入力なら D)、l2 = 0 (厚部なし)、l3 = L − l1 − l2 (鋼管のみ)。<see cref="ComputeEIeqHead"/> を参照。
+        /// L = 4D、l1 = 充填長 (未入力なら D)、l2 = 鋼管厚部の長さ (0 は厚部なし)、l3 = L − l1 − l2 (鋼管のみ)。<see cref="ComputeEIeqHead"/> を参照。
         /// </summary>
         internal (System.Collections.Generic.List<double> phis, System.Collections.Generic.List<double> moments)
             GetMPhiRelationshipHead(double Nud)
@@ -830,24 +835,28 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 杭頭部の 3 セグメント直列合成 EIeq を計算する。
         /// L³/EIeq = (L³ − (l2+l3)³)/EI1 + ((l2+l3)³ − l3³)/EI2 + l3³/EI3
-        /// L = 4D、l1 = 充填長 (<see cref="HeadFillLength"/>、未入力なら D)、l2 = 0 (厚部分なし、EI2 = EI3 と仮定)、
-        /// l3 = L − l1 − l2。
-        /// <para>充填長が L 以上なら L 全体が充填部 (l1 = L, l3 = 0) で、EIeq = EI1。L = 4D は θMu の長さと同じで
-        /// 充填長に関わらず固定する。以前は l1 = D・l3 = 3D 固定で、既定値はそのときと同じ値になる。</para>
+        /// L = 4D、l1 = 充填長 (<see cref="HeadFillLength"/>、未入力なら D)、l2 = 鋼管厚部の長さ (<see cref="HeadThickPartLength"/>、
+        /// 0 は厚部なし)、l3 = L − l1 − l2。
+        /// <para>L = 4D は θMu の長さと同じで、充填長に関わらず固定する。l1・l2 は L の中に収まるよう打ち切る
+        /// (充填長が L 以上なら L 全体が充填部で EIeq = EI1)。以前は l1 = D・l2 = 0・l3 = 3D 固定で、既定値はそのときと同じ値になる。</para>
+        /// <para>EI2 (厚部) は、いまは EI3 と同じ鋼管の値なので、l2 は EIeq を変えない (節点の位置だけが変わる)。</para>
         /// </summary>
         internal double ComputeEIeqHead()
         {
-            // 未入力は以前と同じ式で組む (L = l1 + l2 + l3 の和。演算の順を変えると末尾の桁が動く)
-            double l1, l2 = HeadThickPartLength, l3, L;
-            if (HeadFillLength is double h && h > 0)
+            // どちらも未入力なら以前と同じ式で組む (L = l1 + l2 + l3 の和。演算の順を変えると末尾の桁が動く)
+            double l1, l2, l3, L;
+            bool hasFill = HeadFillLength is double h && h > 0;
+            if (hasFill || HeadThickPartLength > 0)
             {
                 L = HeadZoneDiameters * D;
-                l1 = Math.Min(h, L);
+                l1 = Math.Min(hasFill ? HeadFillLength!.Value : D, L);
+                l2 = Math.Min(Math.Max(0.0, HeadThickPartLength), L - l1);
                 l3 = Math.Max(0.0, L - l1 - l2);
             }
             else
             {
                 l1 = D;
+                l2 = 0.0;
                 l3 = 3.0 * D;
                 L = l1 + l2 + l3;
             }

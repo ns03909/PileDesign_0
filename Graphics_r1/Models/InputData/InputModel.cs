@@ -1809,7 +1809,7 @@ namespace PileDesign.Models.InputData
             //
             // コンクリート充填鋼管部があれば、杭頭 (パイルキャップ下面) から
             //   l1      … コンクリート充填部の下端 (杭断面の「充填長 l1」、未入力なら杭径 D)
-            //   l1 + l2 … 鋼管の断面変化部 (l2 は入力が無く 0。いまは l1 と重なる)
+            //   l1 + l2 … 鋼管の断面変化部 (杭断面の「鋼管厚部の長さ l2」。0 なら l1 と重なる)
             //   4D      … 検討区間 L の下端
             // の 3 か所。杭頭部の検討式の合成剛性 EIeq と同じ定義 (SteelPipeSection.HeadZoneDepths) から取る。
             // 2026-11-20 までは杭径 D の 1 か所だけで、充填長を入れても節点は D のまま、4D には置いていなかった (利用者の要望)。
@@ -1823,7 +1823,7 @@ namespace PileDesign.Models.InputData
                 var depths_m = new List<double>();
                 if (headSection != null && headSection.PileDiameter > 0)
                 {
-                    var (fillEnd, sectionChange, zoneEnd) = SteelPipeSection.HeadZoneDepths(headSection.PileDiameter, headSection.CftFillLength);
+                    var (fillEnd, sectionChange, zoneEnd) = SteelPipeSection.HeadZoneDepths(headSection.PileDiameter, headSection.CftFillLength, headSection.CftThickPartLength);
                     depths_m.AddRange([fillEnd / 1000.0, sectionChange / 1000.0, zoneEnd / 1000.0]);
                 }
                 else if ((pileBodySegments[0].PileSection?.PileDiameter ?? 0) > 0)

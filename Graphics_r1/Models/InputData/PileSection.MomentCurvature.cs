@@ -112,7 +112,7 @@ namespace PileDesign.Models.InputData
                 // (MphiCacheKeyCompletenessTests が検出)。
                 // コンクリート充填鋼管部の杭頭 M-φ (SteelPipeSection) は合成 EI から作るので、Ec・主筋の断面積・鋼管の E も効く (2026-10-08)
                 // 合成 EIeq は充填長 l1 でも変わる (2026-11-20 に入力にした)
-                _ => $"OTHER|{PileBodyType}|{PileSectionType}|{PipeGrade}|{PipeDia}|{PipeTs}|{CorrosionDepth}|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{ConcreteGamma}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|Ec={ConcreteE:R}|Ag={MainBarAg:R}|Er={MainBarEr:R}|Es={PipeEs:R}|lk={EffectiveBucklingLength:F3}|l1={CftFillLength:R}|N={axialNRounded}"
+                _ => $"OTHER|{PileBodyType}|{PileSectionType}|{PipeGrade}|{PipeDia}|{PipeTs}|{CorrosionDepth}|{ConcreteOutDia}|{ConcreteGsi}|{ConcreteFc}|{ConcreteGamma}|{MainBarDr}|{MainBarNum}|{MainBarSpec}|{MainBarSize}|Ec={ConcreteE:R}|Ag={MainBarAg:R}|Er={MainBarEr:R}|Es={PipeEs:R}|lk={EffectiveBucklingLength:F3}|l1={CftFillLength:R}|l2={CftThickPartLength:R}|N={axialNRounded}"
             };
 
             return $"{key}|{cmo}";

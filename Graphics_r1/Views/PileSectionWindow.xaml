@@ -771,6 +771,20 @@
                                                     <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource ReadOnlyBrush}"
                                                                Text="0 で杭径 D"/>
                                                 </StackPanel>
+                                                <!-- 杭頭部の検討式 (合成 EIeq) と節点の位置に使う鋼管厚部の長さ l2。0 は厚部なし -->
+                                                <StackPanel Orientation="Horizontal"
+                                                            ToolTip="コンクリート充填部の下端から鋼管の断面変化部 (厚い鋼管が薄い鋼管に変わる位置) までの長さです。&#x0a;杭頭から l1 + l2 の位置に節点を置き、杭頭部の検討式の合成剛性 EIeq に使います。0 のときは厚部なしとみなします。">
+                                                    <TextBlock Width="150" HorizontalAlignment="Right" Text="鋼管厚部の長さ l2 (mm)"/>
+                                                    <TextBox Text="{Binding PileSection.CftThickPartLength, UpdateSourceTrigger=LostFocus}" Width="50"
+                                                             Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0"
+                                                             AutomationProperties.Name="鋼管厚部の長さ l2"
+                                                             GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                             PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                             TextChanged="TextBox_TextChanged"
+                                                             LostFocus="TextBox_LostFocus"/>
+                                                    <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource ReadOnlyBrush}"
+                                                               Text="0 で厚部なし"/>
+                                                </StackPanel>
                                             </StackPanel>
                                         </GroupBox>
                                     </StackPanel>

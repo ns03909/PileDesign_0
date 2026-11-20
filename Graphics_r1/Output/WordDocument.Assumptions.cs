@@ -164,7 +164,8 @@ namespace PileDesign.Output
                     "※ 鋼管杭の杭頭部 (コンクリート充填鋼管部) の検討式では、杭頭から 4D の範囲の合成剛性 EIeq を"
                     + "充填長 l1 を用いて求めた ("
                     + string.Join("、", headLengths.Select(x => $"杭体No.{x.No}: {x.Section!.EffectiveCftFillLength:N0} mm"
-                        + (x.Section.HasCftFillLengthInput ? "" : " (杭径 D と仮定)")))
+                        + (x.Section.HasCftFillLengthInput ? "" : " (杭径 D と仮定)")
+                        + (x.Section.CftThickPartLength > 0 ? $"、鋼管厚部の長さ l2 = {x.Section.CftThickPartLength:N0} mm" : "")))
                     + ")。"
                     + (anyAssumed ? "「杭径 D と仮定」は充填長が未入力のもので、実際の充填長が異なる場合は別途確認すること。" : ""));
             }
