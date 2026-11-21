@@ -186,6 +186,27 @@ namespace PileDesign.Models.InputData
         public double HeadPileDiameter
             => (HeadFillSegment ?? PileBodySegments?.FirstOrDefault())?.PileSection?.PileDiameter ?? 0.0;
 
+        /// <summary>杭頭部の鋼管の外径 (mm、腐食前)。図の注記に使う。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double HeadPipeDiameter
+            => (HeadFillSegment ?? PileBodySegments?.FirstOrDefault())?.PileSection?.PipeDia ?? 0.0;
+
+        /// <summary>杭頭部 (l1・l2) の鋼管の肉厚 (mm、腐食前)。図の壁の厚さに使う。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double HeadPipeThickness
+            => (HeadFillSegment ?? PileBodySegments?.FirstOrDefault())?.PileSection?.PipeTs ?? 0.0;
+
+        /// <summary>
+        /// 断面変化部より下 (杭頭の区間のすぐ下の区間) の鋼管の肉厚 (mm、腐食前)。EI3 の鋼管。
+        /// 下の区間が無ければ杭頭部と同じ。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double LowerPipeThickness
+            => PileBodySegments?.FirstOrDefault(s => s?.HeadZoneRole == HeadZoneRole.None)?.PileSection?.PipeTs ?? HeadPipeThickness;
+
         /// <summary>
         /// l1・l2 (mm) を入れてよいか。だめなら理由 (画面の赤枠に出す)。
         /// 厚い鋼管の区間 l1 + l2 は 4D 以下 (検討式の範囲)。l2 は充填部の下端から測るので、充填部が無ければ 0。
@@ -248,6 +269,18 @@ namespace PileDesign.Models.InputData
                 var thick = new PileBodySegment { HeadZoneRole = HeadZoneRole.ThickPart, SegmentLength = l2 / 1000.0 };
                 segments.Insert(at, thick);
                 thick.PileSection = template.DeepCopy();
+            }
+
+            // 杭頭の区間より下に「コンクリート充填鋼管部」が残っていたら「鋼管部」にする (鋼管はそのまま)。
+            // 1 区間だけの充填鋼管杭に l1・l2 を入れると、元の区間が下の区間として充填のまま残っていた (利用者の指摘 2026-11-22)。
+            // 充填部は杭頭の区間だけ (図 8.3 の形)。残すと、l1 = 0 のときに読み直しで 1 区間目が充填部とみなされる (EnsureHeadZoneRoles)
+            foreach (var s in segments.Where(s => s.HeadZoneRole == HeadZoneRole.None && s.PileSection?.PileSectionType == PileTypeNames.CftSection))
+            {
+                var pipe = s.PileSection.DeepCopy();
+                pipe.PileSectionType = PileTypeNames.SteelPipeSection;
+                pipe.CftFillLength = 0.0;
+                pipe.CftThickPartLength = 0.0;
+                s.PileSection = pipe;
             }
 
             SyncHeadZoneSections();

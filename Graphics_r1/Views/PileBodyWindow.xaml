@@ -213,7 +213,7 @@
                       Visibility="{Binding IsSteelPipeBody, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <StackPanel>
                     <TextBlock TextWrapping="Wrap" Margin="0,0,0,4" Foreground="{StaticResource ReadOnlyBrush}"
-                               Text="l1・l2 を入れると、杭体区間の上の 2 区間 (コンクリート充填鋼管部・同じ鋼管の鋼管部) を作り直します。杭の全長は変えず、その下の区間の長さで差を調整します。l1 + l2 は 4D 以下です。"/>
+                               Text="l1・l2 を入れると、杭体区間の上の 2 区間 (コンクリート充填鋼管部・同じ鋼管の鋼管部) を作り直します。l1 + l2 は 4D 以下です。"/>
                     <StackPanel Orientation="Horizontal" Margin="0,2,0,0"
                                 ToolTip="パイルキャップ下面からコンクリート充填部の下端までの長さです。0 は充填部なし (杭頭の区間を作りません)。">
                         <TextBlock Width="220" VerticalAlignment="Center" Text="充填長 l1 (mm)"/>
@@ -235,6 +235,9 @@
                     <!-- l1・l2・l3 と EI1〜EI3 の区間の図 (基礎部材の強度と変形性能 図 8.3 にならう) -->
                     <ctrl:SteelPipeHeadZoneDiagram Margin="0,8,0,0" HorizontalAlignment="Left"
                         PileDiameter="{Binding HeadPileDiameter}"
+                        PipeDiameter="{Binding HeadPipeDiameter, Mode=OneWay}"
+                        HeadPipeThickness="{Binding HeadPipeThickness, Mode=OneWay}"
+                        LowerPipeThickness="{Binding LowerPipeThickness, Mode=OneWay}"
                         FillLength="{Binding HeadFillLength, Mode=OneWay}"
                         ThickPartLength="{Binding HeadThickPartLength, Mode=OneWay}"
                         AutomationProperties.Name="杭頭部の区間の図 (l1・l2・l3 と EI1〜EI3)"
@@ -284,7 +287,9 @@
                                 </DataGridTextColumn.EditingElementStyle>
                             </DataGridTextColumn>
                             
-                            <DataGridTextColumn  Width="0.5*" Binding="{Binding SegmentDepth, UpdateSourceTrigger=PropertyChanged}" 
+                            <!-- 下端深さは区間長の累計なので 0.4 + 0.2 = 0.6000000000000001 のような端数が出る。
+                                 読み取り専用の列なので表示だけ丸める (書き戻さない。値そのものは変えない) -->
+                            <DataGridTextColumn  Width="0.5*" Binding="{Binding SegmentDepth, Mode=OneWay, StringFormat={}{0:0.######}}"
                                                 IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                 <DataGridTextColumn.Header>
                                     <StackPanel>

@@ -61,6 +61,15 @@ namespace PileDesign.ViewModels
         /// <summary>杭頭部の杭径 D (mm)。図に使う。</summary>
         public double HeadPileDiameter => PileBody?.HeadPileDiameter ?? 0.0;
 
+        /// <summary>杭頭部の鋼管の外径 (mm、腐食前)。図の注記に使う。</summary>
+        public double HeadPipeDiameter => PileBody?.HeadPipeDiameter ?? 0.0;
+
+        /// <summary>杭頭部の鋼管の肉厚 (mm)。図の壁の厚さに使う。</summary>
+        public double HeadPipeThickness => PileBody?.HeadPipeThickness ?? 0.0;
+
+        /// <summary>断面変化部より下の鋼管の肉厚 (mm)。図の壁の厚さに使う。</summary>
+        public double LowerPipeThickness => PileBody?.LowerPipeThickness ?? 0.0;
+
         /// <summary>充填長 l1 (mm)。0 は充填部なし。</summary>
         public double HeadFillLength
         {
@@ -94,6 +103,9 @@ namespace PileDesign.ViewModels
         {
             OnPropertyChanged(nameof(IsSteelPipeBody));
             OnPropertyChanged(nameof(HeadPileDiameter));
+            OnPropertyChanged(nameof(HeadPipeDiameter));
+            OnPropertyChanged(nameof(HeadPipeThickness));
+            OnPropertyChanged(nameof(LowerPipeThickness));
             OnPropertyChanged(nameof(HeadFillLength));
             OnPropertyChanged(nameof(HeadThickPartLength));
         }
@@ -1233,6 +1245,7 @@ namespace PileDesign.ViewModels
                 CurrentBody.PileBodySegments[i].No = i + 1;
             }
             OnRecalculateDataGridPileBodyCompleted(EventArgs.Empty); // イベントを発生させる
+            NotifyHeadZone(); // 下の区間の鋼管 (図の EI3 の肉厚) が変わりうる
         }
 
 

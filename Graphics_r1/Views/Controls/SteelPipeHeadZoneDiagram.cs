@@ -8,14 +8,14 @@ namespace PileDesign.Views.Controls
 {
     /// <summary>
     /// 鋼管杭の杭頭部 (コンクリート充填鋼管部) の、等価曲げ剛性 EIeq の算定に使う区間の図
-    /// (「基礎部材の強度と変形性能」図 8.3 にならう)。杭断面ウィンドウの充填長 l1・l2 (充填部下端〜鋼管の断面変化部) の入力欄の下に置く。
+    /// (「基礎部材の強度と変形性能」図 8.3 にならう)。杭体ウィンドウの充填長 l1・l2 (充填部下端〜鋼管の断面変化部) の入力欄の下に置く。
     ///
     /// <para>EI1 (鋼管 + 充填コンクリート)・EI2 (鋼管の厚部)・EI3 (断面変化部より下の鋼管) の区間が、杭頭から
     /// L = 4D のどこにあるかを、入力した l1・l2 で描く。文章だけでは EI3 がどこの剛性か分かりにくかった (利用者の声、2026-11-21)。</para>
     ///
     /// <para>区間の位置は計算と同じ <see cref="SteelPipeSection.HeadZoneDepths"/> から取り、計算と同じく L で打ち切る
     /// (<see cref="Zones"/>)。図と計算で区間が食い違わないよう、ここで別の定義を持たない。縦は L を基準にした縮尺、
-    /// 横 (杭径・肉厚) は模式。</para>
+    /// 横は模式。ただし壁の厚さは選んだ鋼管の肉厚の比を誇張して描く (杭頭部と下の区間の違いが分かるように。利用者の要望 2026-11-22)。</para>
     /// </summary>
     public class SteelPipeHeadZoneDiagram : FrameworkElement
     {
@@ -30,6 +30,39 @@ namespace PileDesign.Views.Controls
         public static readonly DependencyProperty ThickPartLengthProperty = DependencyProperty.Register(
             nameof(ThickPartLength), typeof(double), typeof(SteelPipeHeadZoneDiagram),
             new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender));
+
+        public static readonly DependencyProperty PipeDiameterProperty = DependencyProperty.Register(
+            nameof(PipeDiameter), typeof(double), typeof(SteelPipeHeadZoneDiagram),
+            new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender));
+
+        public static readonly DependencyProperty HeadPipeThicknessProperty = DependencyProperty.Register(
+            nameof(HeadPipeThickness), typeof(double), typeof(SteelPipeHeadZoneDiagram),
+            new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender));
+
+        public static readonly DependencyProperty LowerPipeThicknessProperty = DependencyProperty.Register(
+            nameof(LowerPipeThickness), typeof(double), typeof(SteelPipeHeadZoneDiagram),
+            new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender));
+
+        /// <summary>鋼管の外径 (mm、腐食前)。肉厚の比に使う。0 なら <see cref="PileDiameter"/>。</summary>
+        public double PipeDiameter { get => (double)GetValue(PipeDiameterProperty); set => SetValue(PipeDiameterProperty, value); }
+
+        /// <summary>杭頭部 (l1・l2) の鋼管の肉厚 (mm)。0 なら模式の厚さで描く。</summary>
+        public double HeadPipeThickness { get => (double)GetValue(HeadPipeThicknessProperty); set => SetValue(HeadPipeThicknessProperty, value); }
+
+        /// <summary>断面変化部より下 (l3) の鋼管の肉厚 (mm)。0 なら模式の厚さで描く。</summary>
+        public double LowerPipeThickness { get => (double)GetValue(LowerPipeThicknessProperty); set => SetValue(LowerPipeThicknessProperty, value); }
+
+        /// <summary>図の肉厚の誇張倍率。実際の比 (t/D ≒ 1〜3%) のままでは壁が 1〜2 px になり厚さの違いが見えない。</summary>
+        internal const double WallExaggeration = 3.0;
+
+        /// <summary>
+        /// 杭の幅 <paramref name="pileWidth"/> px に対する壁の厚さ (px)。肉厚 t と外径 D の比を
+        /// <see cref="WallExaggeration"/> 倍し、細すぎ・太すぎを抑える。t・D が無ければ <paramref name="fallback"/>。
+        /// </summary>
+        internal static double WallPixels(double thickness, double diameter, double pileWidth, double fallback)
+            => thickness > 0 && diameter > 0
+                ? Math.Clamp(thickness / diameter * pileWidth * WallExaggeration, 1.5, pileWidth * 0.3)
+                : fallback;
 
         /// <summary>
         /// l1 = 0 を「充填部なし」として図を描かないか (杭体ウィンドウ。既定 true)。
@@ -49,7 +82,7 @@ namespace PileDesign.Views.Controls
         public SteelPipeHeadZoneDiagram()
         {
             Width = 640;
-            Height = 290;
+            Height = 314;
             SnapsToDevicePixels = true;
         }
 
@@ -131,8 +164,15 @@ namespace PileDesign.Views.Controls
                 return;
             }
 
+            // 出典を図の題に書く (利用者の要望 2026-11-22)
+            Label("基礎部材の強度と変形性能　図8.3", 8, 10, 11.5);
+
             // 配置: 左に剛性の式、中央に杭、右に寸法線と記号の説明 (「基礎部材の強度と変形性能」図 8.3 にならう)
-            const double pileX = 150, pileW = 64, capTop = 8, capH = 42, embed = 18, wallThick = 9, wallThin = 4.5;
+            const double pileX = 150, pileW = 64, capTop = 30, capH = 42, embed = 18;
+            // 壁の厚さは選んだ鋼管の肉厚から (誇張して) 描く。杭頭部と下の区間で肉厚が同じなら段差は描かない
+            double diameterForWall = PipeDiameter > 0 ? PipeDiameter : PileDiameter;
+            double wallThick = WallPixels(HeadPipeThickness, diameterForWall, pileW, 9);
+            double wallThin = WallPixels(LowerPipeThickness, diameterForWall, pileW, 4.5);
             double top = capTop + capH;                  // パイルキャップ下面。l1・L はここから測る
             double head = top - embed;                   // 杭頭はパイルキャップの中に入り込む
             double zoneH = ActualHeight > 0 ? ActualHeight - top - 34 : 220;
@@ -168,7 +208,7 @@ namespace PileDesign.Views.Controls
                 dc.DrawRectangle(SteelBrush, Thin, new Rect(pileX + pileW - thick, yFrom, thick, yTo - yFrom));
             }
             Walls(head, y2, wallThick);
-            double taper = l3 > 0 ? Math.Min(8, (yEnd - y2) / 3) : 0;
+            double taper = l3 > 0 && Math.Abs(wallThick - wallThin) > 0.01 ? Math.Min(8, (yEnd - y2) / 3) : 0;
             if (taper > 0)
             {
                 foreach (int side in new[] { 0, 1 })
@@ -244,7 +284,11 @@ namespace PileDesign.Views.Controls
                 Rich(line, xLegend, yLegend, 10.5);
                 yLegend += 19;
             }
-            Label("寸法は mm。縦は L を基準にした縮尺、横は模式", 8, yEnd + 10, 9.5, Muted);
+            static string T(double v) => v.ToString("0.#", CultureInfo.InvariantCulture);
+            string wallNote = HeadPipeThickness > 0
+                ? $"。鋼管の肉厚: 杭頭部 t = {T(HeadPipeThickness)}、下の区間 t = {T(LowerPipeThickness > 0 ? LowerPipeThickness : HeadPipeThickness)} (図は {WallExaggeration:0} 倍に誇張)"
+                : "";
+            Label("寸法は mm。縦は L を基準にした縮尺、横は模式" + wallNote, 8, yEnd + 10, 9.5, Muted);
         }
     }
 }

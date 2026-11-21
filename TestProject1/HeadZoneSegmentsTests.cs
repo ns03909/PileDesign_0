@@ -75,6 +75,41 @@ namespace TestProject1
             Assert.AreEqual(HeadZoneRole.None, body.PileBodySegments[0].HeadZoneRole);
         }
 
+        /// <summary>
+        /// 全長 1 区間の「コンクリート充填鋼管部」に l1・l2 を入れると、残った下の区間は「鋼管部」になる
+        /// (利用者の指摘 2026-11-22: 3 区間目が充填鋼管部のまま残っていた)。鋼管はそのまま。
+        /// 残すと l1 = 0 に戻したとき、読み直しで 1 区間目が充填部とみなされてしまう。
+        /// </summary>
+        [TestMethod]
+        public void TheLowerSegmentStopsBeingFilled()
+        {
+            var body = Make((15.0, Pipe(12.7, PileTypeNames.CftSection)));
+            Assert.IsNull(body.SetHeadZone(400, 200));
+            var segs = body.PileBodySegments;
+            Assert.AreEqual(3, segs.Count);
+            Assert.AreEqual(PileTypeNames.SteelPipeSection, segs[2].PileSection.PileSectionType, "下の区間が充填鋼管部のまま");
+            Assert.AreEqual((800.0, 12.7), (segs[2].PileSection.PipeDia, segs[2].PileSection.PipeTs), "下の区間の鋼管を変えた");
+            Assert.AreEqual(PileTypeNames.CftSection, segs[0].PileSection.PileSectionType);
+            Assert.AreEqual(14.4, segs[2].SegmentLength, 1e-9);
+            Assert.AreEqual(12.7, body.LowerPipeThickness);
+
+            // l1 = 0 に戻しても充填鋼管部は残らず、読み直しても充填部にならない
+            Assert.IsNull(body.SetHeadZone(0, 0));
+            body.EnsureHeadZoneRoles();
+            Assert.AreEqual(0.0, body.HeadFillLength);
+        }
+
+        /// <summary>図の壁の厚さは選んだ鋼管の肉厚から (誇張して) 描く (利用者の要望 2026-11-22)。厚いほど太く、無ければ模式の厚さ。</summary>
+        [TestMethod]
+        public void TheDiagramWallFollowsThePipeThickness()
+        {
+            double thick = PileDesign.Views.Controls.SteelPipeHeadZoneDiagram.WallPixels(19, 800, 64, 9);
+            double thin = PileDesign.Views.Controls.SteelPipeHeadZoneDiagram.WallPixels(9, 800, 64, 4.5);
+            Assert.IsTrue(thick > thin, $"厚い鋼管の壁 {thick} px が薄い鋼管 {thin} px より太くない");
+            Assert.AreEqual(19.0 / 800 * 64 * 3, thick, 1e-9);
+            Assert.AreEqual(9.0, PileDesign.Views.Controls.SteelPipeHeadZoneDiagram.WallPixels(0, 800, 64, 9), "肉厚が無いときは模式の厚さ");
+        }
+
         [TestMethod]
         public void InvalidValuesAreRejected_AndNothingChanges()
         {
