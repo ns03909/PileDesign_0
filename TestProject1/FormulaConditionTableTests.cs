@@ -82,5 +82,46 @@ namespace TestProject1
             // 「約 9 m が境」: 8.5 m では局部座屈系、9.5 m では柱座屈系
             Assert.IsTrue(Pipe(12, 8.5).Sfc2 > Pipe(12, 8.5).Sfc1 && Pipe(12, 9.5).Sfc2 < Pipe(12, 9.5).Sfc1, "境が約 9 m ではありません");
         }
+
+        private static string N0(double v) => v.ToString("#,0", CultureInfo.InvariantCulture).Replace(",", "{,}");
+
+        /// <summary>基準水平地盤反力係数 kh0 の計算例が、地盤ばねの組立と同じ式・同じ掛け方 (ξ・βLq) と一致する。</summary>
+        [TestMethod]
+        public void TheKh0ExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-kh0"];
+            var item = new HorizontalSoilReactionItem();
+            item.SetParameters("砂", "砂質土", 18, b: 0.6, e0: 700 * 10, zTop: -1, zBtm: -2,
+                xi: 1.0, rOnB: 0, nValue: 10, phi: 30, cu: 0, sigmaZPrimeTop: 18, sigmaZPrimeBtm: 36);
+
+            double kh0 = item.GetKh0For(GroupPileEffect.None);
+            double xi08 = item.GetKh0For(new GroupPileEffect { Xi = 0.8, ROnB = 0, BetaL = 1.0 });
+            double liq = item.GetKh0For(new GroupPileEffect { Xi = 0.8, ROnB = 0, BetaL = 1.0 }.WithLiquefaction(0.5));
+            StringAssert.Contains(table, $"= {N0(kh0)}$ kN/m³", "ξ = 1 の kh0 が表と違います");
+            StringAssert.Contains(table, $"$\\xi = 0.8$ で ${N0(xi08)}$", "ξ = 0.8 の kh0 が表と違います");
+            StringAssert.Contains(table, $"$\\beta_{{Lq}} = 0.5$ なら ${N0(liq)}$ kN/m³", "液状化ケースの kh0 が表と違います");
+
+            // 手入力の kh0 にも ξ・βLq が掛かる (表の「採用値」の行)
+            item.Kh0 = 10000; item.IsKh0Manual = true;
+            Assert.AreEqual(10000 * 0.8 * 0.5, item.GetKh0For(new GroupPileEffect { Xi = 0.8, ROnB = 0, BetaL = 0.5 }), 1e-9);
+        }
+
+        /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
+        [TestMethod]
+        public void ThePyExamplesMatchTheImplementation()
+        {
+            string table = Tables()["cond-py"];
+            // 砂質土 φ = 30°、σz' = 50
+            double sandFront = HorizontalSoilReactionItem.GetPy("砂質土", true, 0.6, -5, 2.5, 30, 0, 50);
+            double sandRear = HorizontalSoilReactionItem.GetPy("砂質土", false, 0.6, -5, 2.5, 30, 0, 50);
+            StringAssert.Contains(table, $"前方杭 $p_y = 3 \\times 3 \\times 50 = {F1(sandFront)}$");
+            StringAssert.Contains(table, $"$p_y = {F1(sandRear)}$ kN/m²");
+            // 粘性土 cu = 50、B = 1 (深さは面 0 から測る)
+            double F(bool front, double rOnB, double z) => HorizontalSoilReactionItem.GetPy("粘性土", front, 1.0, -z, rOnB, 0, 50, 0);
+            StringAssert.Contains(table, $"$z = 1$ m で ${F1(F(true, 0, 1))}$、$z = 3$ m で ${F1(F(true, 0, 3))}$");
+            StringAssert.Contains(table, $"は ${F1(F(false, 2, 1))}$ と ${F1(F(false, 2, 3))}$ kN/m²");
+            // R/B 未入力の後方杭は前方杭と同じ
+            Assert.AreEqual(sandFront, HorizontalSoilReactionItem.GetPy("砂質土", false, 0.6, -5, 0, 30, 0, 50), 1e-9);
+        }
     }
 }
