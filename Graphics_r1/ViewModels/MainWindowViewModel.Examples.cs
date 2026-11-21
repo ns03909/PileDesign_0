@@ -365,6 +365,8 @@ namespace PileDesign.ViewModels
             if (generation != ProjectGeneration || version != InputEditVersion)
                 throw new System.InvalidOperationException("計算例の読み込み中に入力が変更されました。もう一度読み込んでください。");
             var ground = new GroundLayerViewModel(this);
+            // 計算例は白紙の入力 (地域係数は既定値) から組み立てるので、いま開いているプロジェクトの Z では計算しない
+            ground.RegionalFactorOverride = FundamentalInput.DefaultRegionalFactor;
             GroundExampleLoader.ApplyToGroundInput(ground.GroundInput, data);
             ground.Update();
             return ground.GroundInput.DeepCopy();

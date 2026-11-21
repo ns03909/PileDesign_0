@@ -363,6 +363,22 @@ namespace PileDesign.ViewModels
                 $"許容沈下量を {value:0.###} mm へ変更");
         }
 
+        /// <summary>
+        /// 地域係数 Z。地盤変位 (水平解析の強制変位) に効くので、変えたら解析結果は「再解析が必要」になり、
+        /// OK のときにすべての地盤の地盤変位を計算し直す (<see cref="OnOk"/>)。
+        /// </summary>
+        [ObservableProperty]
+        private double _regionalFactor = FundamentalInput.DefaultRegionalFactor;
+
+        partial void OnRegionalFactorChanged(double value)
+        {
+            HandleAnalysisOptionChanged(
+                value,
+                () => InputModel.FundamentalInput.RegionalFactor,
+                v => InputModel.FundamentalInput.RegionalFactor = v,
+                $"地域係数 Z を {value:0.0##} へ変更 (地盤変位を計算し直す)");
+        }
+
         /// <summary>許容沈下量の入力欄を編集できるか (検定を有効にしたときだけ)。</summary>
         public bool CanEditAllowableSettlement => EvaluateSettlement;
 
@@ -751,6 +767,7 @@ namespace PileDesign.ViewModels
             ConsiderPileHeadRotation = InputModel.FundamentalInput.ConsiderPileHeadRotation;
             EvaluateSettlement = InputModel.FundamentalInput.EvaluateSettlement;
             AllowableSettlement_mm = InputModel.FundamentalInput.AllowableSettlement_mm;
+            RegionalFactor = InputModel.FundamentalInput.RegionalFactor;
             ScUltimateShearBeta1 = InputModel.FundamentalInput.ScUltimateShearBeta1;
             ScUltimateShearBeta2 = InputModel.FundamentalInput.ScUltimateShearBeta2;
         }
@@ -801,6 +818,11 @@ namespace PileDesign.ViewModels
                 }
                 _pendingDiscardReasons.Clear();
             }
+
+            // 地域係数を変えたら、すべての地盤の地盤変位を計算し直す (地盤ごとに計算して保存しているため)。
+            // 開いたときの値と比べる。途中で変えて戻しただけなら計算し直さない
+            if (InputModel.FundamentalInput.RegionalFactor != PrevFundamentalInput.RegionalFactor)
+                GroundLayerViewModel.RecalculateAllGrounds(_mainWindowViewModel);
 
             AppliedChanges = true;
             RequestClose?.Invoke(this, EventArgs.Empty);
@@ -882,6 +904,9 @@ namespace PileDesign.ViewModels
                     break;
                 case nameof(FundamentalInput.AllowableSettlement_mm):
                     AllowableSettlement_mm = InputModel.FundamentalInput.AllowableSettlement_mm;
+                    break;
+                case nameof(FundamentalInput.RegionalFactor):
+                    RegionalFactor = InputModel.FundamentalInput.RegionalFactor;
                     break;
                 case nameof(FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete):
                     UseUltimateStrain5000ForSteelPipeConcrete = InputModel.FundamentalInput.UseUltimateStrain5000ForSteelPipeConcrete;

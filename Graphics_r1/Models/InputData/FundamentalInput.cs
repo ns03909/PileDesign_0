@@ -48,6 +48,24 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _seismicGrade, value);
         }
 
+        /// <summary>地域係数 Z の既定値 (この項目の無い以前のファイル・計算例)。</summary>
+        public const double DefaultRegionalFactor = 1.0;
+
+        /// <summary>
+        /// 地域係数 Z。地盤変位の算定 (基礎指針'19 式 (4.5.3) の α = 1 + L·Z·Cα·T0/ΣH) と、
+        /// 応答スペクトル法の加速度 L·Z·Sa0(T) に掛ける。0.1〜2.0 に丸める。
+        ///
+        /// <para>2026-11-21 まで入力欄が無く、算定で 1.0 に固定していた。同日にいったん地盤ごとの入力にしたが、
+        /// 建設地で 1 つに決まる値なので利用者の要望で基本設定へ移した。地盤変位は地盤ごとに計算して保存するので、
+        /// 基本設定で変えたらすべての地盤の地盤変位を計算し直す (<c>FundamentalViewModel</c> の OK)。</para>
+        /// </summary>
+        private double _regionalFactor = DefaultRegionalFactor;
+        public double RegionalFactor
+        {
+            get => _regionalFactor;
+            set => SetFiniteClampedDouble(ref _regionalFactor, value, min: 0.1, max: 2.0, fallback: DefaultRegionalFactor);
+        }
+
         // 場所打ち鉄筋コンクリート杭の杭頭 安全限界回転角 θu (rad)。
         //
         // 杭頭固定の場合、場所打ち鉄筋コンクリート杭に限り θu ≤ 1/100 とする規定による。

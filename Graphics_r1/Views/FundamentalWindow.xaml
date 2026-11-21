@@ -55,6 +55,23 @@
                     </ComboBox.ItemTemplate> "-->
             </Grid>
 
+            <GroupBox Header="地盤変位の地域係数" Margin="0,0,0,10" Padding="6">
+                <StackPanel>
+                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,6"
+                               Text="地盤変位の算定（固有周期ののび α = 1 + L·Z·Cα·T0/ΣH）と、応答スペクトル法の加速度 L·Z·Sa0(T) に掛けます（既定 1.0）。告示の値は 0.7〜1.0 です。変えると、保存したときにすべての地盤の地盤変位を計算し直します。"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="地域係数 Z" Grid.Column="0" VerticalAlignment="Center"/>
+                        <TextBox x:Name="TextBoxRegionalFactor" Style="{StaticResource ValidatedTextBoxStyle}"
+                                 Text="{Binding RegionalFactor, StringFormat={}{0:0.0##}, UpdateSourceTrigger=LostFocus}"
+                                 Grid.Column="1" Margin="0,0,0,4"/>
+                    </Grid>
+                </StackPanel>
+            </GroupBox>
+
             <GroupBox Header="杭頭の安全限界回転角" Margin="0,0,0,10" Padding="6">
                 <StackPanel>
                     <TextBlock TextWrapping="Wrap" Margin="0,0,0,6"

@@ -1111,16 +1111,13 @@
                   HorizontalContentAlignment="Right"
                   PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" KeyDown="TextBox_Common_KeyDown"/>
                             </StackPanel>
-                            <!-- 地域係数 Z (2026-11-21 まで 1.0 固定。自動計算モード時のみ表示) -->
+                            <!-- 地域係数 Z は基本設定の入力 (プロジェクトで 1 つ)。ここでは値と入力する場所だけ見せる -->
                             <StackPanel Orientation="Horizontal"
                                         Visibility="{Binding IsAutoDisplacementMode, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                <TextBlock Text="地域係数 Z" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="200"
-                                           ToolTip="地盤変位の算定 (固有周期ののび α) と応答スペクトル法の加速度 L·Z·Sa0(T) に掛けます。既定 1.0。告示の値は 0.7〜1.0"/>
-                                <TextBox x:Name="TextBoxRegionalFactor"
-                  Text="{Binding GroundInput.RegionalFactor, StringFormat='{}{0:0.0##}'}" VerticalAlignment="Center" Height="25" Width="50"
-                  HorizontalContentAlignment="Right"
-                  Style="{StaticResource ValidatedTextBoxStyle}"
-                  PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" KeyDown="TextBox_Common_KeyDown"/>
+                                <TextBlock Text="地域係数 Z" HorizontalAlignment="Left" Height="25" VerticalAlignment="Center" Width="200"/>
+                                <TextBlock VerticalAlignment="Center" Height="25" Padding="0,4,0,0"
+                                           Text="{Binding RegionalFactor, StringFormat='{}{0:0.0##} (基本設定で入力)'}"
+                                           ToolTip="地盤変位の算定 (固有周期ののび α) と応答スペクトル法の加速度 L·Z·Sa0(T) に掛けます。&#x0a;プロジェクトで 1 つの値なので、基本設定の「地盤変位の地域係数」で入力します (既定 1.0)。"/>
                             </StackPanel>
 
                             <!-- 任意入力のテーブルは右ペインの「任意地盤変位」タブに配置 -->

@@ -72,6 +72,36 @@ namespace PileDesign.ViewModels
         }
 
         // コンストラクタ内: 末尾の Update() 呼び出し前に購読済みになるように GroundInput の代入経路を通っていればOK
+        /// <summary>
+        /// 地盤変位の算定に使う地域係数 Z。基本設定 (<see cref="FundamentalInput.RegionalFactor"/>) の値で、
+        /// <see cref="RegionalFactorOverride"/> があればそちらを使う。
+        /// </summary>
+        public double RegionalFactor
+            => RegionalFactorOverride ?? InputModel?.FundamentalInput?.RegionalFactor ?? FundamentalInput.DefaultRegionalFactor;
+
+        /// <summary>
+        /// 基本設定とは別の Z で計算するとき (計算例は白紙の入力から組み立てるので、いま開いている
+        /// プロジェクトの Z ではなく既定値で計算する)。null なら基本設定の値。
+        /// </summary>
+        internal double? RegionalFactorOverride { get; set; }
+
+        /// <summary>
+        /// 入力モデルのすべての地盤の地盤変位を、いまの基本設定の地域係数で計算し直す。
+        /// 地盤変位は地盤ごとに計算して保存しているので、基本設定で Z を変えたらこれを呼ぶ。
+        /// </summary>
+        internal static void RecalculateAllGrounds(MainWindowViewModel mainWindowViewModel)
+        {
+            var grounds = mainWindowViewModel?.CurrentInputModel?.GroundsInput;
+            if (grounds == null || grounds.Count == 0) return;
+            var vm = new GroundLayerViewModel(mainWindowViewModel!);
+            foreach (var ground in grounds)
+            {
+                if (ground == null) continue;
+                vm.GroundInput = ground;   // 写しではなくモデルの地盤そのものを計算し直す
+                vm.Update();
+            }
+        }
+
         public GroundLayerViewModel(MainWindowViewModel mainWindowViewModel)
         {
             _mainWindowViewModel = mainWindowViewModel ?? throw new ArgumentNullException(nameof(mainWindowViewModel));
@@ -130,7 +160,6 @@ namespace PileDesign.ViewModels
             nameof(GroundInput.GroundAcceleration2),
             nameof(GroundInput.ShallowSoilType),
             nameof(GroundInput.CalculationMethod),
-            nameof(GroundInput.RegionalFactor),
         ];
 
         // 相互換算（標高ZとGL深さ）の同期
@@ -2256,8 +2285,8 @@ namespace PileDesign.ViewModels
                 // 地震荷重により決まる係数
                 double L = (levelIndex == 0) ? 0.2 : 1.0;
 
-                // 地域係数 (地盤ウィンドウの入力。2026-11-21 までは 1.0 に固定していた)
-                double Z = GroundInput.RegionalFactor;
+                // 地域係数 (基本設定の入力。2026-11-21 までは 1.0 に固定していた)
+                double Z = RegionalFactor;
 
                 // Gs1/Gs2/Impedance/T2/XiE/Beta は応答スペクトル法のみで使用 — 他算定法では 0 にクリア
                 GroundInput.Gs1Levels[levelIndex] = 0.0;

@@ -396,7 +396,7 @@ namespace PileDesign.ViewModels
             // その場合は基盤 Sa0 のみ表示。
             bool hasSurface = GroundInput.Gs1Levels[0] > 0 || GroundInput.Gs1Levels[1] > 0;
             // 地域係数 Z (算定と同じ値。以前は算定もグラフも 1.0 固定)
-            double z = GroundInput.RegionalFactor;
+            double z = RegionalFactor;
 
             // Level 1 基盤 (薄水色)
             {

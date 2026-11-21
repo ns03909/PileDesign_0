@@ -156,8 +156,8 @@ namespace TestProject1
             Assert.IsTrue(kept, "自前のテンプレートを上書きしています");
 
             string fundamental = TestSource.Read("Graphics_r1", "Views", "FundamentalWindow.xaml");
-            Assert.AreEqual(7, System.Text.RegularExpressions.Regex.Matches(fundamental, "Style=\"\\{StaticResource ValidatedTextBoxStyle\\}\"").Count,
-                "基本設定の限界値・許容沈下量・β の欄に、エラーの文を出すスタイルが付いていません");
+            Assert.AreEqual(8, System.Text.RegularExpressions.Regex.Matches(fundamental, "Style=\"\\{StaticResource ValidatedTextBoxStyle\\}\"").Count,
+                "基本設定の限界値・許容沈下量・β・地域係数 Z の欄に、エラーの文を出すスタイルが付いていません");
         }
     }
 }
