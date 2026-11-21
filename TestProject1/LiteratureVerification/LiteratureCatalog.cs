@@ -32,6 +32,33 @@ namespace TestProject1.LiteratureVerification
 
         public static IReadOnlyList<LiteratureCheck> All => _all.Value;
 
+        /// <summary>
+        /// 照合した箇所 (出典・箇所) ごとの分野・比較対象・入力条件 (外部レビュー #28 2026-11-21)。
+        /// カタログに箇所を足したらここにも足す (無いと <see cref="VerificationTableTests"/> が落ちる)。
+        /// </summary>
+        public static readonly IReadOnlyDictionary<(string Source, string Section), SectionInfo> SectionInfos =
+            new Dictionary<(string, string), SectionInfo>
+            {
+                [(Shishin19, "計算例2 例表2.2")] = new(VerificationArea.GroundDisplacement,
+                    "地盤ウィンドウで計算例2 を読み込んで求めた地盤変位 (Dmax·U*) の地表面の値",
+                    "計算例2 の地盤 (液状化なし)、レベル2"),
+                [(Shishin19, "計算例1 例表1.2")] = new(VerificationArea.Liquefaction,
+                    "地盤ウィンドウで計算例1 を読み込んで求めた、補正 N 値からの繰返しせん断ひずみ γcy",
+                    "計算例1 の地盤、レベル1、GL-3.0〜-7.0 m の 5 点"),
+                [(SmartMagnum, "p.10 先端支持力係数 α 対比表")] = new(VerificationArea.TipBearing,
+                    "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+                    "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"),
+                [(SmartMagnum, "p.10 計算例")] = new(VerificationArea.TipBearing,
+                    "α と長期許容先端支持力 Rpa",
+                    "礫質地盤、下杭 φ1200 (節付き)、Den 1.9 m、Don 1.2 m、LL 1.0 m、Nu 36、Nl 47.5"),
+                [(HybridKneading, "p.3 先端支持力係数 α 対比表")] = new(VerificationArea.TipBearing,
+                    "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+                    "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"),
+                [(MkPileRing785, "解表5.2 杭径の検討用試験体")] = new(VerificationArea.PileShear,
+                    "エムケーパイルリング785 を選んだ場所打ち RC 断面の使用限界・損傷限界せん断力",
+                    "試験体 No.4 (杭径 400 mm、Fc 29.8、D13) と No.12 (杭径 700 mm、Fc 36.6、D25)。杭径は指針の適用範囲 (800〜2600 mm) の外で、指針が式の検証に使った値。告示1113 の区分(1)"),
+            };
+
         private static IReadOnlyList<LiteratureCheck> Build()
         {
             var list = new List<LiteratureCheck>();

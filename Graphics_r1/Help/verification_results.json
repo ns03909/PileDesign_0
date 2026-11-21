@@ -1,4 +1,5 @@
 {
+  "programVersion": "1.0.40-beta",
   "summary": {
     "count": 49,
     "okCount": 49,
@@ -37,7 +38,10 @@
       "tolerance": "±1.5%",
       "diffPercent": -0.45,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "GroundDisplacement",
+      "target": "地盤ウィンドウで計算例2 を読み込んで求めた地盤変位 (Dmax·U*) の地表面の値",
+      "condition": "計算例2 の地盤 (液状化なし)、レベル2"
     },
     {
       "kind": "AcademicStandard",
@@ -50,7 +54,10 @@
       "tolerance": "倍半分",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "Liquefaction",
+      "target": "地盤ウィンドウで計算例1 を読み込んで求めた、補正 N 値からの繰返しせん断ひずみ γcy",
+      "condition": "計算例1 の地盤、レベル1、GL-3.0〜-7.0 m の 5 点"
     },
     {
       "kind": "AcademicStandard",
@@ -63,7 +70,10 @@
       "tolerance": "倍半分",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "Liquefaction",
+      "target": "地盤ウィンドウで計算例1 を読み込んで求めた、補正 N 値からの繰返しせん断ひずみ γcy",
+      "condition": "計算例1 の地盤、レベル1、GL-3.0〜-7.0 m の 5 点"
     },
     {
       "kind": "AcademicStandard",
@@ -76,7 +86,10 @@
       "tolerance": "倍半分",
       "diffPercent": -50,
       "ok": true,
-      "note": "チャート読み取り (図3.2.6) のため文献が倍半分を許容"
+      "note": "チャート読み取り (図3.2.6) のため文献が倍半分を許容",
+      "area": "Liquefaction",
+      "target": "地盤ウィンドウで計算例1 を読み込んで求めた、補正 N 値からの繰返しせん断ひずみ γcy",
+      "condition": "計算例1 の地盤、レベル1、GL-3.0〜-7.0 m の 5 点"
     },
     {
       "kind": "AcademicStandard",
@@ -89,7 +102,10 @@
       "tolerance": "倍半分",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "Liquefaction",
+      "target": "地盤ウィンドウで計算例1 を読み込んで求めた、補正 N 値からの繰返しせん断ひずみ γcy",
+      "condition": "計算例1 の地盤、レベル1、GL-3.0〜-7.0 m の 5 点"
     },
     {
       "kind": "AcademicStandard",
@@ -102,7 +118,10 @@
       "tolerance": "倍半分",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "Liquefaction",
+      "target": "地盤ウィンドウで計算例1 を読み込んで求めた、補正 N 値からの繰返しせん断ひずみ γcy",
+      "condition": "計算例1 の地盤、レベル1、GL-3.0〜-7.0 m の 5 点"
     },
     {
       "kind": "CertifiedMethod",
@@ -115,7 +134,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0.04,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -128,7 +150,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0.24,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -141,7 +166,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0.17,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -154,7 +182,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0.16,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -167,7 +198,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0.12,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -180,7 +214,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0.1,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -193,7 +230,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0.09,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -206,7 +246,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -219,7 +262,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0.08,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -232,7 +278,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0.05,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -245,7 +294,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0.03,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -258,7 +310,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0.02,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -271,7 +326,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0.07,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -284,7 +342,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -297,7 +358,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0.05,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)",
+      "condition": "対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -310,7 +374,10 @@
       "tolerance": "切り捨て一致",
       "diffPercent": 0.15,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "α と長期許容先端支持力 Rpa",
+      "condition": "礫質地盤、下杭 φ1200 (節付き)、Den 1.9 m、Don 1.2 m、LL 1.0 m、Nu 36、Nl 47.5"
     },
     {
       "kind": "CertifiedMethod",
@@ -323,7 +390,10 @@
       "tolerance": "±1%",
       "diffPercent": 0.17,
       "ok": true,
-      "note": "カタログ表記 1.10×10⁴ kN"
+      "note": "カタログ表記 1.10×10⁴ kN",
+      "area": "TipBearing",
+      "target": "α と長期許容先端支持力 Rpa",
+      "condition": "礫質地盤、下杭 φ1200 (節付き)、Den 1.9 m、Don 1.2 m、LL 1.0 m、Nu 36、Nl 47.5"
     },
     {
       "kind": "CertifiedMethod",
@@ -336,7 +406,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -349,7 +422,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -362,7 +438,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -375,7 +454,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -388,7 +470,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -401,7 +486,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -414,7 +502,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -427,7 +518,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -440,7 +534,10 @@
       "tolerance": "±0.5",
       "diffPercent": -0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -453,7 +550,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -466,7 +566,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -479,7 +582,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -492,7 +598,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -505,7 +614,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -518,7 +630,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -531,7 +646,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -544,7 +662,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -557,7 +678,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -570,7 +694,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -583,7 +710,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -596,7 +726,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -609,7 +742,10 @@
       "tolerance": "±0.5",
       "diffPercent": 0,
       "ok": true,
-      "note": null
+      "note": null,
+      "area": "TipBearing",
+      "target": "先端支持力係数 α の式 (SoilPile.HybridAlpha)",
+      "condition": "拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質"
     },
     {
       "kind": "CertifiedMethod",
@@ -622,7 +758,10 @@
       "tolerance": "±0.5%",
       "diffPercent": 0,
       "ok": true,
-      "note": "QAL = Lfs·Ac/κ (κ = 4/3)"
+      "note": "QAL = Lfs·Ac/κ (κ = 4/3)",
+      "area": "PileShear",
+      "target": "エムケーパイルリング785 を選んだ場所打ち RC 断面の使用限界・損傷限界せん断力",
+      "condition": "試験体 No.4 (杭径 400 mm、Fc 29.8、D13) と No.12 (杭径 700 mm、Fc 36.6、D25)。杭径は指針の適用範囲 (800〜2600 mm) の外で、指針が式の検証に使った値。告示1113 の区分(1)"
     },
     {
       "kind": "CertifiedMethod",
@@ -635,7 +774,10 @@
       "tolerance": "±0.5%",
       "diffPercent": -0.06,
       "ok": true,
-      "note": "QAs = sfs·Ac/κ (せん断補強筋を考慮しない式)"
+      "note": "QAs = sfs·Ac/κ (せん断補強筋を考慮しない式)",
+      "area": "PileShear",
+      "target": "エムケーパイルリング785 を選んだ場所打ち RC 断面の使用限界・損傷限界せん断力",
+      "condition": "試験体 No.4 (杭径 400 mm、Fc 29.8、D13) と No.12 (杭径 700 mm、Fc 36.6、D25)。杭径は指針の適用範囲 (800〜2600 mm) の外で、指針が式の検証に使った値。告示1113 の区分(1)"
     },
     {
       "kind": "CertifiedMethod",
@@ -648,7 +790,10 @@
       "tolerance": "±0.5%",
       "diffPercent": 0,
       "ok": true,
-      "note": "QAL = Lfs·Ac/κ (κ = 4/3)"
+      "note": "QAL = Lfs·Ac/κ (κ = 4/3)",
+      "area": "PileShear",
+      "target": "エムケーパイルリング785 を選んだ場所打ち RC 断面の使用限界・損傷限界せん断力",
+      "condition": "試験体 No.4 (杭径 400 mm、Fc 29.8、D13) と No.12 (杭径 700 mm、Fc 36.6、D25)。杭径は指針の適用範囲 (800〜2600 mm) の外で、指針が式の検証に使った値。告示1113 の区分(1)"
     },
     {
       "kind": "CertifiedMethod",
@@ -661,7 +806,101 @@
       "tolerance": "±0.5%",
       "diffPercent": -0.02,
       "ok": true,
-      "note": "QAs = sfs·Ac/κ (せん断補強筋を考慮しない式)"
+      "note": "QAs = sfs·Ac/κ (せん断補強筋を考慮しない式)",
+      "area": "PileShear",
+      "target": "エムケーパイルリング785 を選んだ場所打ち RC 断面の使用限界・損傷限界せん断力",
+      "condition": "試験体 No.4 (杭径 400 mm、Fc 29.8、D13) と No.12 (杭径 700 mm、Fc 36.6、D25)。杭径は指針の適用範囲 (800〜2600 mm) の外で、指針が式の検証に使った値。告示1113 の区分(1)"
+    }
+  ],
+  "scope": [
+    {
+      "area": "Liquefaction",
+      "name": "液状化判定 (FL・繰返しせん断ひずみ)",
+      "automatedCount": 5,
+      "figureSections": [
+        "基礎指針'19 計算例1",
+        "基礎指針'19 計算例3",
+        "設計例 3.4 ― SC杭 液状化"
+      ],
+      "notVerified": "自動照合は計算例1 の γcy の 5 点だけ。FL・液状化による地盤反力係数の低減率 βL は図・表での比較のみ。"
+    },
+    {
+      "area": "GroundDisplacement",
+      "name": "地盤変位 (応答変位法)",
+      "automatedCount": 1,
+      "figureSections": [
+        "基礎指針'19 計算例2",
+        "基礎指針'19 計算例3",
+        "設計例 3.1 ― SC杭, PRC杭",
+        "設計例 3.2 ― PHC杭",
+        "関東支部 計算例8"
+      ],
+      "notVerified": "自動照合は計算例2 の地表面の 1 点だけ。深さ方向の分布は図での比較のみ。応答スペクトル法 (MDOF・等価線形化) の地盤変位は照合していない (検証ページの計算例3 は「確認中」)。"
+    },
+    {
+      "area": "LateralResponse",
+      "name": "杭の水平解析 (非線形の応力・変位)",
+      "automatedCount": 0,
+      "figureSections": [
+        "基礎指針'19 計算例9",
+        "基礎指針'19 計算例10",
+        "設計例 3.1 ― SC杭, PRC杭",
+        "設計例 3.2 ― PHC杭",
+        "設計例 3.3 ― 場所打ち杭",
+        "設計例 3.4 ― SC杭 液状化",
+        "関東支部 計算例8"
+      ],
+      "notVerified": "文献の数値との自動照合はない。図での比較と、同梱の例題の結果を固定する回帰テスト (変化の見張りで、文献との一致を保証するものではない) のみ。基礎梁あり・剛床以外の接合条件・群杭効果の組合せは、例題にない組み合わせが多い。"
+    },
+    {
+      "area": "PileFlexure",
+      "name": "杭体の曲げ耐力・M-φ 関係",
+      "automatedCount": 0,
+      "figureSections": [
+        "基礎指針'19 計算例9",
+        "基礎指針'19 計算例10"
+      ],
+      "notVerified": "文献の数値との自動照合はない。既製杭はメーカーのカタログの Mcr・Mu との突合テスト (PrecastCatalogCrackMomentTests) がある。場所打ち杭・鋼管杭 (杭頭部の検討式を含む) の耐力は図での比較のみ。"
+    },
+    {
+      "area": "PileShear",
+      "name": "杭体のせん断耐力",
+      "automatedCount": 4,
+      "figureSections": [],
+      "notVerified": "自動照合はエムケーパイルリング785 (場所打ち RC 杭) の使用限界・損傷限界の 4 件だけ。ほかの杭種・工法と終局限界のせん断耐力は文献の数値と照合していない。"
+    },
+    {
+      "area": "TipBearing",
+      "name": "鉛直支持力 (杭先端)",
+      "automatedCount": 39,
+      "figureSections": [
+        "基礎指針'19 計算例8",
+        "設計例 3.1 ― SC杭, PRC杭",
+        "関東支部 計算例8"
+      ],
+      "notVerified": "自動照合は Smart-MAGNUM・Hybrid ニーディングの先端支持力係数 α と計算例の Rpa だけ。基礎指針の一般式による支持力と引抜き抵抗は図・表での比較のみ。ほかの工法は照合していない。"
+    },
+    {
+      "area": "Settlement",
+      "name": "沈下 (単杭・群杭・即時・圧密)",
+      "automatedCount": 0,
+      "figureSections": [
+        "基礎指針'19 計算例5",
+        "基礎指針'19 計算例6",
+        "基礎指針'19 計算例7",
+        "基礎指針'19 計算例8",
+        "基礎構造の設計 計算例7",
+        "設計例 3.3 ― 場所打ち杭",
+        "関東支部 計算例8"
+      ],
+      "notVerified": "文献の数値との自動照合はない。図・表での比較のみ。"
+    },
+    {
+      "area": "PileHeadMethod",
+      "name": "杭頭工法 (FT・キャプテン・キャプリングなど)",
+      "automatedCount": 0,
+      "figureSections": [],
+      "notVerified": "文献・カタログとの照合はない。各工法の資料の式を実装し、式の形・境界の連続性を単体テストで確かめているだけ。"
     }
   ]
 }

@@ -96,13 +96,18 @@ namespace TestProject1.LiteratureVerification
             string html = VerificationTableWriter.ToAcademicHtmlBlock(results);
             string methodsHtml = VerificationTableWriter.ToMethodsHtmlBlock(results);
             string md = VerificationTableWriter.ToMarkdownBlock(results);
+            string scopeHtml = VerificationTableWriter.ToScopeHtmlBlock(results);
 
             var targets = new (string Path, string Begin, string End, string Block, string Label)[]
             {
                 (HtmlPath, VerificationTableWriter.HtmlBegin, VerificationTableWriter.HtmlEnd, html, "Graphics_r1/Help/verification.html"),
+                (HtmlPath, VerificationTableWriter.ScopeHtmlBegin, VerificationTableWriter.ScopeHtmlEnd, scopeHtml, "Graphics_r1/Help/verification.html (検証の範囲)"),
                 (MethodsHtmlPath, VerificationTableWriter.MethodsHtmlBegin, VerificationTableWriter.MethodsHtmlEnd, methodsHtml, "Graphics_r1/Help/verification_methods.html"),
                 (ReadmePath, VerificationTableWriter.MarkdownBegin, VerificationTableWriter.MarkdownEnd, md, "README.md"),
             };
+
+            // 版の文字は比べない (版を上げただけでは表は古くならない。書き直すのは値か表の形が変わったとき)
+            static string Comparable(string text) => VerificationTableWriter.WithoutVersion(text);
 
             var stale = new List<string>();
             foreach (var t in targets)
@@ -110,11 +115,11 @@ namespace TestProject1.LiteratureVerification
                 Assert.IsTrue(File.Exists(t.Path), $"{t.Label} がありません");
                 string? current = VerificationTableWriter.ExtractBetween(File.ReadAllText(t.Path, Encoding.UTF8), t.Begin, t.End);
                 Assert.IsNotNull(current, $"{t.Label} に自動生成の印がありません: {t.Begin}");
-                if (current != t.Block) stale.Add(t.Label);
+                if (Comparable(current) != Comparable(t.Block)) stale.Add(t.Label);
             }
 
             string currentJson = File.Exists(JsonPath) ? File.ReadAllText(JsonPath, Encoding.UTF8).Replace("\r\n", "\n") : "";
-            if (currentJson != json) stale.Add("Graphics_r1/Help/verification_results.json");
+            if (Comparable(currentJson) != Comparable(json)) stale.Add("Graphics_r1/Help/verification_results.json");
 
             if (IsUpdateMode)
             {
@@ -127,6 +132,48 @@ namespace TestProject1.LiteratureVerification
                 "検証の表がカタログの結果と違います: " + string.Join(", ", stale) + "\n" +
                 "→ UPDATE_VERIFICATION_TABLE=1 を付けて VerificationTableTests を実行すると更新されます。\n" +
                 "  (PowerShell) $env:UPDATE_VERIFICATION_TABLE=\"1\"; dotnet test TestProject1/TestProject1.csproj --filter FullyQualifiedName~VerificationTableTests");
+        }
+
+        /// <summary>照合した箇所ごとに、分野・比較対象・入力条件がある (外部レビュー #28)。</summary>
+        [TestMethod]
+        public void EverySection_HasItsTargetAndCondition()
+        {
+            var missing = LiteratureCatalog.All
+                .Select(c => (c.Source, c.Section)).Distinct()
+                .Where(k => !LiteratureCatalog.SectionInfos.ContainsKey(k))
+                .Select(k => $"{k.Source} / {k.Section}")
+                .ToList();
+            Assert.AreEqual(0, missing.Count, "LiteratureCatalog.SectionInfos に無い箇所があります:\n" + string.Join("\n", missing));
+
+            var unused = LiteratureCatalog.SectionInfos.Keys
+                .Where(k => !LiteratureCatalog.All.Any(c => c.Source == k.Source && c.Section == k.Section))
+                .Select(k => $"{k.Source} / {k.Section}")
+                .ToList();
+            Assert.AreEqual(0, unused.Count, "照合の無い箇所の説明が残っています (箇所の名前を変えた?):\n" + string.Join("\n", unused));
+
+            foreach (var info in LiteratureCatalog.SectionInfos.Values)
+                Assert.IsTrue(info.Target.Length > 0 && info.Condition.Length > 0, "比較対象か入力条件が空です");
+        }
+
+        /// <summary>
+        /// 検証の範囲の表は、分野を 1 つずつ持ち、図・表で比べたとする節は検証ウィンドウに実在する。
+        /// 節の見出しを変えると、範囲の表が無い節を指したまま残る。
+        /// </summary>
+        [TestMethod]
+        public void TheScopeCoversEveryArea_AndNamesRealSections()
+        {
+            var areas = VerificationScope.Rows.Select(r => r.Area).ToList();
+            CollectionAssert.AreEquivalent(Enum.GetValues<VerificationArea>().ToList(), areas, "検証の範囲の表の分野が enum と 1 対 1 でありません");
+
+            string html = File.ReadAllText(HtmlPath, Encoding.UTF8);
+            var titles = System.Text.RegularExpressions.Regex.Matches(html, "section-title-cell-center\">([^<]+)<")
+                .Select(m => System.Net.WebUtility.HtmlDecode(m.Groups[1].Value).Trim()).ToHashSet();
+            Assert.IsTrue(titles.Count >= 15, $"(前提) 検証ウィンドウの節を読めていない: {titles.Count}");
+            var unknown = VerificationScope.Rows.SelectMany(r => r.FigureSections).Distinct().Where(s => !titles.Contains(s)).ToList();
+            Assert.AreEqual(0, unknown.Count, "検証の範囲が、検証ウィンドウに無い節を挙げています: " + string.Join(", ", unknown));
+
+            // 自動照合の件数は分野ごとに数えて全件になる
+            Assert.AreEqual(_results.Value.Count, VerificationTableWriter.ScopeRows(_results.Value).Sum(r => r.Count));
         }
 
         private static void WriteBetween(string path, string begin, string end, string block)

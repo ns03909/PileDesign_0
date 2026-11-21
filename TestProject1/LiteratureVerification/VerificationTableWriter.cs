@@ -27,6 +27,29 @@ namespace TestProject1.LiteratureVerification
         public const string MethodsHtmlEnd = "<!-- verification-methods:end -->";
         public const string MarkdownBegin = "<!-- verification-table:begin (自動生成: VerificationTableTests が書く。手で編集しない) -->";
         public const string MarkdownEnd = "<!-- verification-table:end -->";
+        public const string ScopeHtmlBegin = "<!-- verification-scope:begin (自動生成: VerificationTableTests が書く。手で編集しない) -->";
+        public const string ScopeHtmlEnd = "<!-- verification-scope:end -->";
+
+        /// <summary>
+        /// 表を書き出したプログラムの版 (外部レビュー #28)。表と照合結果が変わらなければ書き直さないので、
+        /// 「この値を出した版」であって最新の版ではない。比べるときは版の文字を除く (版を上げただけで表が古い扱いにならないように)。
+        /// </summary>
+        public static string ProgramVersion => PileDesign.Common.AppInfo.Version;
+
+        private const string VersionOpen = "<span class=\"program-version\">";
+
+        /// <summary>版の文字を除いた形 (比較用)。HTML の span・Markdown の版・JSON の programVersion の 3 形。</summary>
+        public static string WithoutVersion(string text)
+        {
+            text = System.Text.RegularExpressions.Regex.Replace(text, "<span class=\"program-version\">[^<]*</span>", "<span class=\"program-version\"></span>");
+            text = System.Text.RegularExpressions.Regex.Replace(text, "書き出したプログラムの版: `[^`]*`", "書き出したプログラムの版: ``");
+            text = System.Text.RegularExpressions.Regex.Replace(text, "\"programVersion\": \"[^\"]*\"", "\"programVersion\": \"\"");
+            return text;
+        }
+
+        private static SectionInfo InfoOf(LiteratureCheck c) =>
+            LiteratureCatalog.SectionInfos.TryGetValue((c.Source, c.Section), out var info) ? info
+                : throw new InvalidOperationException($"LiteratureCatalog.SectionInfos に箇所がありません: {c.Source} / {c.Section}");
 
         public static List<LiteratureCheckResult> Evaluate(IEnumerable<LiteratureCheck> checks) =>
             checks.Select(c => new LiteratureCheckResult(c, c.Program())).ToList();
@@ -42,6 +65,7 @@ namespace TestProject1.LiteratureVerification
             var methods = OfKind(results, SourceKind.CertifiedMethod);
             var doc = new
             {
+                programVersion = ProgramVersion,
                 summary = new
                 {
                     count = results.Count,
@@ -63,6 +87,17 @@ namespace TestProject1.LiteratureVerification
                     diffPercent = r.RelativeDiffPercent is double d ? Math.Round(d, 2) : (double?)null,
                     ok = r.Ok,
                     note = r.Check.Note,
+                    area = InfoOf(r.Check).Area.ToString(),
+                    target = InfoOf(r.Check).Target,
+                    condition = InfoOf(r.Check).Condition,
+                }).ToArray(),
+                scope = ScopeRows(results).Select(row => new
+                {
+                    area = row.Row.Area.ToString(),
+                    name = row.Row.Name,
+                    automatedCount = row.Count,
+                    figureSections = row.Row.FigureSections,
+                    notVerified = row.Row.NotVerified,
                 }).ToArray(),
             };
             return JsonSerializer.Serialize(doc, new JsonSerializerOptions
@@ -82,6 +117,7 @@ namespace TestProject1.LiteratureVerification
             string lead =
                 $"学会の指針・計算例に数値として書かれている {results.Count} 項目を本プログラムで計算し、{ok} 項目が文献の許容内でした。" +
                 "この一覧はテスト (<code>VerificationTableTests</code>) が毎回計算して書き出したもので、テストが通る限り表と実装は一致しています。" +
+                VersionSentence +
                 "認定工法 (杭先端の支持力・せん断耐力の算定) のカタログとの照合は <a href=\"verification_methods.html\">別ページ</a> にあります。";
             return HtmlBlock(HtmlBegin, HtmlEnd, lead, results);
         }
@@ -93,9 +129,13 @@ namespace TestProject1.LiteratureVerification
             int ok = results.Count(r => r.Ok);
             string lead =
                 $"認定工法のカタログ・設計マニュアルに数値として書かれている {results.Count} 項目を本プログラムで計算し、{ok} 項目がカタログの表記と一致しました。" +
-                "この一覧はテスト (<code>VerificationTableTests</code>) が毎回計算して書き出したもので、テストが通る限り表と実装は一致しています。";
+                "この一覧はテスト (<code>VerificationTableTests</code>) が毎回計算して書き出したもので、テストが通る限り表と実装は一致しています。" +
+                VersionSentence;
             return HtmlBlock(MethodsHtmlBegin, MethodsHtmlEnd, lead, results);
         }
+
+        private static string VersionSentence =>
+            $"値はプログラムの版 {VersionOpen}{H(ProgramVersion)}</span> で書き出したもので、以後の版でもテストが毎回同じ照合を行い、許容を外れればテストが失敗します。";
 
         private static string HtmlBlock(string begin, string end, string lead, IReadOnlyList<LiteratureCheckResult> results)
         {
@@ -109,8 +149,16 @@ namespace TestProject1.LiteratureVerification
                 sb.Append($"            <div class=\"item-title\">{H(group.Key)}　<span class=\"summary-count\">{gOk} / {group.Count()} 項目</span></div>\n");
                 sb.Append("            <table class=\"comparison-table\">\n");
                 sb.Append("                <tr><th>箇所</th><th>項目</th><th>文献値</th><th>プログラム値</th><th>差</th><th>許容</th><th>判定</th></tr>\n");
+                string? lastSection = null;
                 foreach (var r in group)
                 {
+                    if (r.Check.Section != lastSection)
+                    {
+                        // 箇所ごとに、何を比べたか (比較対象) と、どの条件で比べたか (入力条件) (外部レビュー #28)
+                        var info = InfoOf(r.Check);
+                        sb.Append($"                <tr class=\"section-meta\"><td colspan=\"7\" style=\"text-align:left\"><b>{H(r.Check.Section)}</b>　比較対象: {H(info.Target)}　／　入力条件: {H(info.Condition)}</td></tr>\n");
+                        lastSection = r.Check.Section;
+                    }
                     string unit = string.IsNullOrEmpty(r.Check.Unit) ? "" : " " + r.Check.Unit;
                     string diff = r.RelativeDiffPercent is double d ? d.ToString("+0.0;-0.0;0.0", CultureInfo.InvariantCulture) + "%" : "—";
                     string verdict = r.Ok ? "<span class=\"match\">一致</span>" : "<span class=\"diff\">不一致</span>";
@@ -131,6 +179,36 @@ namespace TestProject1.LiteratureVerification
             return sb.ToString();
         }
 
+        // ── 検証の範囲 (外部レビュー #28) ──
+
+        /// <summary>分野ごとの行と、その分野の自動照合の件数。</summary>
+        public static IEnumerable<(VerificationScope.Row Row, int Count)> ScopeRows(IReadOnlyList<LiteratureCheckResult> results) =>
+            VerificationScope.Rows.Select(row => (row, results.Count(r => InfoOf(r.Check).Area == row.Area)));
+
+        /// <summary>検証ウィンドウ (verification.html) の「検証の範囲」。</summary>
+        public static string ToScopeHtmlBlock(IReadOnlyList<LiteratureCheckResult> results)
+        {
+            var sb = new StringBuilder();
+            sb.Append(ScopeHtmlBegin).Append('\n');
+            sb.Append("            <p class=\"summary-lead\">照合の件数が多くても、すべての杭種・境界条件・非線形の経路を検証したことにはなりません。")
+              .Append("分野ごとに、文献の数値と自動で照合しているもの・設計例と図や表で比べたもの (このページの各節)・照合していない範囲を示します。</p>\n");
+            sb.Append("            <table class=\"comparison-table scope-table\">\n");
+            sb.Append("                <tr><th>分野</th><th>文献の数値との自動照合</th><th>設計例との図・表による比較</th><th>照合していない範囲</th></tr>\n");
+            foreach (var (row, count) in ScopeRows(results))
+            {
+                string figures = row.FigureSections.Length == 0 ? "なし" : string.Join("<br>", row.FigureSections.Select(H));
+                sb.Append("                <tr>")
+                  .Append($"<td style=\"text-align:left\">{H(row.Name)}</td>")
+                  .Append($"<td>{count} 件</td>")
+                  .Append($"<td style=\"text-align:left\">{figures}</td>")
+                  .Append($"<td style=\"text-align:left\">{H(row.NotVerified)}</td>")
+                  .Append("</tr>\n");
+            }
+            sb.Append("            </table>\n");
+            sb.Append("            ").Append(ScopeHtmlEnd);
+            return sb.ToString();
+        }
+
         // ── Markdown (README) ──
 
         public static string ToMarkdownBlock(IReadOnlyList<LiteratureCheckResult> all)
@@ -142,7 +220,19 @@ namespace TestProject1.LiteratureVerification
             sb.Append(MarkdownBegin).Append('\n');
             sb.Append($"文献に数値として書かれている **{all.Count} 項目**を計算し、**{all.Count(r => r.Ok)} 項目**が文献の許容内です")
               .Append("（`TestProject1/LiteratureVerification/LiteratureCatalog.cs` が出典と値を持ち、")
-              .Append("`VerificationTableTests` が照合してこの表を書き出します）。\n\n");
+              .Append("`VerificationTableTests` が照合してこの表を書き出します）。")
+              .Append($"書き出したプログラムの版: `{ProgramVersion}` (以後の版でもテストが毎回同じ照合を行います)。\n\n");
+
+            sb.Append("### 検証の範囲\n\n");
+            sb.Append("照合の件数が多くても、すべての杭種・条件・非線形の経路を検証したことにはなりません。分野ごとの範囲です。\n\n");
+            sb.Append("| 分野 | 文献の数値との自動照合 | 設計例との図・表による比較 (検証ウィンドウ) | 照合していない範囲 |\n");
+            sb.Append("|---|---:|---|---|\n");
+            foreach (var row in ScopeRows(all))
+            {
+                string figures = row.Row.FigureSections.Length == 0 ? "なし" : string.Join("、", row.Row.FigureSections);
+                sb.Append($"| {M(row.Row.Name)} | {row.Count} 件 | {M(figures)} | {M(row.Row.NotVerified)} |\n");
+            }
+            sb.Append('\n');
 
             sb.Append($"### 学会の指針・計算例 ({academic.Count(r => r.Ok)} / {academic.Count} 項目)\n\n");
             AppendMarkdownTable(sb, academic);

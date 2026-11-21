@@ -287,6 +287,14 @@
         .summary-lead {
             line-height: 1.6;
         }
+        /* 箇所ごとの比較対象・入力条件の行 (外部レビュー #28) */
+        .comparison-table tr.section-meta td {
+            background: #F4F9FD;
+            font-size: 12px;
+        }
+        .scope-table td {
+            vertical-align: top;
+        }
         .summary-count {
             font-weight: normal;
             color: #666;
@@ -402,6 +410,7 @@
         <h1>設計例によるプログラムの検証</h1>
         <div class="nav">
             <a href="#sec-summary">照合一覧</a>
+            <a href="#sec-scope">検証の範囲</a>
             <a href="#sec-5">計算例5</a>
             <a href="#sec-9">計算例9</a>
             <a href="#sec-3-1">設計例3.1</a>
@@ -433,11 +442,13 @@
             </div>
             <div class="summary-block">
             <!-- verification-summary:begin (自動生成: VerificationTableTests が書く。手で編集しない) -->
-            <p class="summary-lead">学会の指針・計算例に数値として書かれている 6 項目を本プログラムで計算し、6 項目が文献の許容内でした。この一覧はテスト (<code>VerificationTableTests</code>) が毎回計算して書き出したもので、テストが通る限り表と実装は一致しています。認定工法 (杭先端の支持力・せん断耐力の算定) のカタログとの照合は <a href="verification_methods.html">別ページ</a> にあります。</p>
+            <p class="summary-lead">学会の指針・計算例に数値として書かれている 6 項目を本プログラムで計算し、6 項目が文献の許容内でした。この一覧はテスト (<code>VerificationTableTests</code>) が毎回計算して書き出したもので、テストが通る限り表と実装は一致しています。値はプログラムの版 <span class="program-version">1.0.40-beta</span> で書き出したもので、以後の版でもテストが毎回同じ照合を行い、許容を外れればテストが失敗します。認定工法 (杭先端の支持力・せん断耐力の算定) のカタログとの照合は <a href="verification_methods.html">別ページ</a> にあります。</p>
             <div class="item-title">建築基礎構造設計指針 2019　<span class="summary-count">6 / 6 項目</span></div>
             <table class="comparison-table">
                 <tr><th>箇所</th><th>項目</th><th>文献値</th><th>プログラム値</th><th>差</th><th>許容</th><th>判定</th></tr>
+                <tr class="section-meta"><td colspan="7" style="text-align:left"><b>計算例2 例表2.2</b>　比較対象: 地盤ウィンドウで計算例2 を読み込んで求めた地盤変位 (Dmax&#183;U*) の地表面の値　／　入力条件: 計算例2 の地盤 (液状化なし)、レベル2</td></tr>
                 <tr><td>計算例2 例表2.2</td><td style="text-align:left">地表面の地盤変位 (レベル2)</td><td>127.4 mm</td><td>126.8 mm</td><td>-0.5%</td><td>&#177;1.5%</td><td><span class="match">一致</span></td></tr>
+                <tr class="section-meta"><td colspan="7" style="text-align:left"><b>計算例1 例表1.2</b>　比較対象: 地盤ウィンドウで計算例1 を読み込んで求めた、補正 N 値からの繰返しせん断ひずみ γcy　／　入力条件: 計算例1 の地盤、レベル1、GL-3.0〜-7.0 m の 5 点</td></tr>
                 <tr><td>計算例1 例表1.2</td><td style="text-align:left">繰返しせん断ひずみ γcy (GL-3.0 m, レベル1)</td><td>4 %</td><td>4 %</td><td>0.0%</td><td>倍半分</td><td><span class="match">一致</span></td></tr>
                 <tr><td>計算例1 例表1.2</td><td style="text-align:left">繰返しせん断ひずみ γcy (GL-4.0 m, レベル1)</td><td>8 %</td><td>8 %</td><td>0.0%</td><td>倍半分</td><td><span class="match">一致</span></td></tr>
                 <tr><td>計算例1 例表1.2</td><td style="text-align:left">繰返しせん断ひずみ γcy (GL-5.0 m, レベル1)<br><small>チャート読み取り (図3.2.6) のため文献が倍半分を許容</small></td><td>1 %</td><td>0.5 %</td><td>-50.0%</td><td>倍半分</td><td><span class="match">一致</span></td></tr>
@@ -445,6 +456,33 @@
                 <tr><td>計算例1 例表1.2</td><td style="text-align:left">繰返しせん断ひずみ γcy (GL-7.0 m, レベル1)</td><td>0.5 %</td><td>0.5 %</td><td>0.0%</td><td>倍半分</td><td><span class="match">一致</span></td></tr>
             </table>
             <!-- verification-summary:end -->
+            </div>
+        </div>
+
+        <!-- ============================================================
+     検証の範囲 (テストが生成。外部レビュー #28)
+    ============================================================ -->
+        <div class="section" id="sec-scope">
+            <div class="section-title-row">
+                <div class="section-title-cell section-title-cell-left">検証の範囲</div>
+                <div class="section-title-cell section-title-cell-center">分野ごとの照合と、照合していない範囲</div>
+                <div class="section-title-cell section-title-cell-right"></div>
+            </div>
+            <div class="summary-block">
+            <!-- verification-scope:begin (自動生成: VerificationTableTests が書く。手で編集しない) -->
+            <p class="summary-lead">照合の件数が多くても、すべての杭種・境界条件・非線形の経路を検証したことにはなりません。分野ごとに、文献の数値と自動で照合しているもの・設計例と図や表で比べたもの (このページの各節)・照合していない範囲を示します。</p>
+            <table class="comparison-table scope-table">
+                <tr><th>分野</th><th>文献の数値との自動照合</th><th>設計例との図・表による比較</th><th>照合していない範囲</th></tr>
+                <tr><td style="text-align:left">液状化判定 (FL・繰返しせん断ひずみ)</td><td>5 件</td><td style="text-align:left">基礎指針&#39;19 計算例1<br>基礎指針&#39;19 計算例3<br>設計例 3.4 ― SC杭 液状化</td><td style="text-align:left">自動照合は計算例1 の γcy の 5 点だけ。FL・液状化による地盤反力係数の低減率 βL は図・表での比較のみ。</td></tr>
+                <tr><td style="text-align:left">地盤変位 (応答変位法)</td><td>1 件</td><td style="text-align:left">基礎指針&#39;19 計算例2<br>基礎指針&#39;19 計算例3<br>設計例 3.1 ― SC杭, PRC杭<br>設計例 3.2 ― PHC杭<br>関東支部 計算例8</td><td style="text-align:left">自動照合は計算例2 の地表面の 1 点だけ。深さ方向の分布は図での比較のみ。応答スペクトル法 (MDOF・等価線形化) の地盤変位は照合していない (検証ページの計算例3 は「確認中」)。</td></tr>
+                <tr><td style="text-align:left">杭の水平解析 (非線形の応力・変位)</td><td>0 件</td><td style="text-align:left">基礎指針&#39;19 計算例9<br>基礎指針&#39;19 計算例10<br>設計例 3.1 ― SC杭, PRC杭<br>設計例 3.2 ― PHC杭<br>設計例 3.3 ― 場所打ち杭<br>設計例 3.4 ― SC杭 液状化<br>関東支部 計算例8</td><td style="text-align:left">文献の数値との自動照合はない。図での比較と、同梱の例題の結果を固定する回帰テスト (変化の見張りで、文献との一致を保証するものではない) のみ。基礎梁あり・剛床以外の接合条件・群杭効果の組合せは、例題にない組み合わせが多い。</td></tr>
+                <tr><td style="text-align:left">杭体の曲げ耐力・M-φ 関係</td><td>0 件</td><td style="text-align:left">基礎指針&#39;19 計算例9<br>基礎指針&#39;19 計算例10</td><td style="text-align:left">文献の数値との自動照合はない。既製杭はメーカーのカタログの Mcr・Mu との突合テスト (PrecastCatalogCrackMomentTests) がある。場所打ち杭・鋼管杭 (杭頭部の検討式を含む) の耐力は図での比較のみ。</td></tr>
+                <tr><td style="text-align:left">杭体のせん断耐力</td><td>4 件</td><td style="text-align:left">なし</td><td style="text-align:left">自動照合はエムケーパイルリング785 (場所打ち RC 杭) の使用限界・損傷限界の 4 件だけ。ほかの杭種・工法と終局限界のせん断耐力は文献の数値と照合していない。</td></tr>
+                <tr><td style="text-align:left">鉛直支持力 (杭先端)</td><td>39 件</td><td style="text-align:left">基礎指針&#39;19 計算例8<br>設計例 3.1 ― SC杭, PRC杭<br>関東支部 計算例8</td><td style="text-align:left">自動照合は Smart-MAGNUM・Hybrid ニーディングの先端支持力係数 α と計算例の Rpa だけ。基礎指針の一般式による支持力と引抜き抵抗は図・表での比較のみ。ほかの工法は照合していない。</td></tr>
+                <tr><td style="text-align:left">沈下 (単杭・群杭・即時・圧密)</td><td>0 件</td><td style="text-align:left">基礎指針&#39;19 計算例5<br>基礎指針&#39;19 計算例6<br>基礎指針&#39;19 計算例7<br>基礎指針&#39;19 計算例8<br>基礎構造の設計 計算例7<br>設計例 3.3 ― 場所打ち杭<br>関東支部 計算例8</td><td style="text-align:left">文献の数値との自動照合はない。図・表での比較のみ。</td></tr>
+                <tr><td style="text-align:left">杭頭工法 (FT・キャプテン・キャプリングなど)</td><td>0 件</td><td style="text-align:left">なし</td><td style="text-align:left">文献・カタログとの照合はない。各工法の資料の式を実装し、式の形・境界の連続性を単体テストで確かめているだけ。</td></tr>
+            </table>
+            <!-- verification-scope:end -->
             </div>
         </div>
         <!-- ============================================================

@@ -58,6 +58,8 @@
             border-bottom: 1px solid #ddd;
         }
         .summary-lead { line-height: 1.6; }
+        /* 箇所ごとの比較対象・入力条件の行 (外部レビュー #28) */
+        .comparison-table tr.section-meta td { background: #F4F9FD; font-size: 12px; }
         .summary-count { font-weight: normal; color: #666; font-size: 12px; }
 
         .comparison-table {
@@ -110,10 +112,11 @@
         </div>
 
         <!-- verification-methods:begin (自動生成: VerificationTableTests が書く。手で編集しない) -->
-            <p class="summary-lead">認定工法のカタログ・設計マニュアルに数値として書かれている 43 項目を本プログラムで計算し、43 項目がカタログの表記と一致しました。この一覧はテスト (<code>VerificationTableTests</code>) が毎回計算して書き出したもので、テストが通る限り表と実装は一致しています。</p>
+            <p class="summary-lead">認定工法のカタログ・設計マニュアルに数値として書かれている 43 項目を本プログラムで計算し、43 項目がカタログの表記と一致しました。この一覧はテスト (<code>VerificationTableTests</code>) が毎回計算して書き出したもので、テストが通る限り表と実装は一致しています。値はプログラムの版 <span class="program-version">1.0.40-beta</span> で書き出したもので、以後の版でもテストが毎回同じ照合を行い、許容を外れればテストが失敗します。</p>
             <div class="item-title">Smart-MAGNUM 工法カタログ (ジャパンパイル)　<span class="summary-count">17 / 17 項目</span></div>
             <table class="comparison-table">
                 <tr><th>箇所</th><th>項目</th><th>文献値</th><th>プログラム値</th><th>差</th><th>許容</th><th>判定</th></tr>
+                <tr class="section-meta"><td colspan="7" style="text-align:left"><b>p.10 先端支持力係数 α 対比表</b>　比較対象: 先端支持力係数 α の式 (SoilPile.SmartMagnumAlpha)　／　入力条件: 対比表の格子点 (ωp・LL の組)、砂質・礫質と粘土質</td></tr>
                 <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.04, LL=0.5 m, 砂質・礫質)</td><td>348</td><td>348 (348.14)</td><td>0.0%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
                 <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.04, LL=1.0 m, 砂質・礫質)</td><td>394</td><td>394 (394.94)</td><td>+0.2%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
                 <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.04, LL=2.0 m, 砂質・礫質)</td><td>441</td><td>441 (441.74)</td><td>+0.2%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
@@ -129,12 +132,14 @@
                 <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.76, LL=2.0 m, 粘土質)</td><td>742</td><td>742 (742.51)</td><td>+0.1%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
                 <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=1.00, LL=0.5 m, 粘土質)</td><td>300</td><td>300 (300.00)</td><td>0.0%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
                 <tr><td>p.10 先端支持力係数 α 対比表</td><td style="text-align:left">α (ωp=2.00, LL=2.0 m, 粘土質)</td><td>859</td><td>859 (859.47)</td><td>+0.1%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
+                <tr class="section-meta"><td colspan="7" style="text-align:left"><b>p.10 計算例</b>　比較対象: α と長期許容先端支持力 Rpa　／　入力条件: 礫質地盤、下杭 φ1200 (節付き)、Den 1.9 m、Don 1.2 m、LL 1.0 m、Nu 36、Nl 47.5</td></tr>
                 <tr><td>p.10 計算例</td><td style="text-align:left">先端支持力係数 α</td><td>654</td><td>654 (654.96)</td><td>+0.1%</td><td>切り捨て一致</td><td><span class="match">一致</span></td></tr>
                 <tr><td>p.10 計算例</td><td style="text-align:left">長期許容先端支持力 Rpa = α&#183;N&#183;Ap/3<br><small>カタログ表記 1.10&#215;10⁴ kN</small></td><td>11,000 kN</td><td>11,018 kN</td><td>+0.2%</td><td>&#177;1%</td><td><span class="match">一致</span></td></tr>
             </table>
             <div class="item-title">Hybrid ニーディング工法カタログ (三谷セキサン)　<span class="summary-count">22 / 22 項目</span></div>
             <table class="comparison-table">
                 <tr><th>箇所</th><th>項目</th><th>文献値</th><th>プログラム値</th><th>差</th><th>許容</th><th>判定</th></tr>
+                <tr class="section-meta"><td colspan="7" style="text-align:left"><b>p.3 先端支持力係数 α 対比表</b>　比較対象: 先端支持力係数 α の式 (SoilPile.HybridAlpha)　／　入力条件: 拡大比 e = 1.0〜2.0 (0.1 刻み)、砂質・礫質と粘土質</td></tr>
                 <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.0, 砂質・礫質)</td><td>240</td><td>240</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
                 <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.0, 粘土質)</td><td>200</td><td>200</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
                 <tr><td>p.3 先端支持力係数 α 対比表</td><td style="text-align:left">α (e=1.1, 砂質・礫質)</td><td>286</td><td>286</td><td>0.0%</td><td>&#177;0.5</td><td><span class="match">一致</span></td></tr>
@@ -161,6 +166,7 @@
             <div class="item-title">エムケーパイルリング785 設計施工指針・同解説 (向山工場)　<span class="summary-count">4 / 4 項目</span></div>
             <table class="comparison-table">
                 <tr><th>箇所</th><th>項目</th><th>文献値</th><th>プログラム値</th><th>差</th><th>許容</th><th>判定</th></tr>
+                <tr class="section-meta"><td colspan="7" style="text-align:left"><b>解表5.2 杭径の検討用試験体</b>　比較対象: エムケーパイルリング785 を選んだ場所打ち RC 断面の使用限界・損傷限界せん断力　／　入力条件: 試験体 No.4 (杭径 400 mm、Fc 29.8、D13) と No.12 (杭径 700 mm、Fc 36.6、D25)。杭径は指針の適用範囲 (800〜2600 mm) の外で、指針が式の検証に使った値。告示1113 の区分(1)</td></tr>
                 <tr><td>解表5.2 杭径の検討用試験体</td><td style="text-align:left">使用限界せん断力 QAL (試験体 No.4、杭径 400 mm)<br><small>QAL = Lfs&#183;Ac/κ (κ = 4/3)</small></td><td>55.7 kN</td><td>55.7 kN</td><td>0.0%</td><td>&#177;0.5%</td><td><span class="match">一致</span></td></tr>
                 <tr><td>解表5.2 杭径の検討用試験体</td><td style="text-align:left">損傷限界せん断力 QAs (試験体 No.4、杭径 400 mm)<br><small>QAs = sfs&#183;Ac/κ (せん断補強筋を考慮しない式)</small></td><td>83.6 kN</td><td>83.55 kN</td><td>-0.1%</td><td>&#177;0.5%</td><td><span class="match">一致</span></td></tr>
                 <tr><td>解表5.2 杭径の検討用試験体</td><td style="text-align:left">使用限界せん断力 QAL (試験体 No.12、杭径 700 mm)<br><small>QAL = Lfs&#183;Ac/κ (κ = 4/3)</small></td><td>185.3 kN</td><td>185.3 kN</td><td>0.0%</td><td>&#177;0.5%</td><td><span class="match">一致</span></td></tr>
