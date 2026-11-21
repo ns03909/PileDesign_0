@@ -200,6 +200,49 @@ namespace TestProject1
             StringAssert.Contains(table, $"= {factor:0.000}$ を掛けて ${dA2 * factor:0.000}$ m");
         }
 
+        /// <summary>
+        /// 引抜き抵抗力の表: τT の係数 (2/3・4/5)、R_TU・R_TY・R_TR の掛け方、自重 W は係数なしで全区間ぶん足すこと
+        /// (「引抜側周面抵抗」のチェックによらない) を実装 (SoilPile.CalculateResistances) で確かめ、計算例を同じ式で計算する。
+        /// </summary>
+        [TestMethod]
+        public void TheUpliftTableMatchesTheImplementation()
+        {
+            string code = TestSource.Read("Graphics_r1", "Models", "InputData", "SoilPile.cs");
+            StringAssert.Contains(code, "\"砂質土\" => (0.8 * pileCircumVertical.Tau2, 5.0, 20.0, -2.0 / 3.0 * pileCircumVertical.Tau2)", "砂質土の τst が 2/3 τs でない");
+            StringAssert.Contains(code, "\"礫質土\" => (0.7 * pileCircumVertical.Tau2, 10.0, 30.0, -2.0 / 3.0 * pileCircumVertical.Tau2)", "礫質土の τst が 2/3 τs でない");
+            StringAssert.Contains(code, "\"粘性土\" => (0.8 * pileCircumVertical.Tau2, 3.0, 10.0, -4.0 / 5.0 * pileCircumVertical.Tau2)", "粘性土の τct が 4/5 τc でない");
+
+            // 杭頭から 10 m 砂質土 (τst = 44)・8 m 粘性土 (τct = 48)・2 m はチェックなし。杭径 1.2 m
+            var section = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.Phc]();
+            section.PileDiameter = 1200;
+            PileCircumVertical Layer(double top, double bottom, double tauT, bool uplift)
+            {
+                var seg = new PileBodySegment();
+                seg.PileSection = section;
+                return new PileCircumVertical { Top = top, Bottom = bottom, TauT = -tauT, IsNegativeCircumResistance = uplift, PileBodySegment = seg };
+            }
+            var pile = new SoilPile
+            {
+                PileCircumVerticals = [Layer(0, -10, 44, true), Layer(-10, -18, 48, true), Layer(-18, -20, 60, false)],
+            };
+            pile.CalculateResistances();
+            double psi = Math.PI * 1.2, sand = 44 * 10 * psi, clay = 48 * 8 * psi, friction = sand + clay;
+            double w = section.W * 20; // チェックの無い区間も含めて全長
+            Assert.AreEqual(-(friction + w), pile.Rtu, 1e-6, "R_TU = 周面 + W でない");
+            Assert.AreEqual(-(2.0 / 3.0 * friction + w), pile.Rty, 1e-6, "R_TY = 2/3 周面 + W でない");
+            Assert.AreEqual(-(friction / 1.2 + w), pile.Rtr, 1e-6, "R_TR = 周面/1.2 + W でない");
+            Assert.AreEqual(pile.Rtu / 3, pile.Rt_SLS, 1e-9);
+            Assert.AreEqual((pile.Rty, pile.Rtr), (pile.Rt_DLS, pile.Rt_ULS));
+
+            // 計算例 (W = 500 kN と置く)
+            string table = Tables()["cond-uplift"];
+            StringAssert.Contains(table, $"$\\psi = {psi:0.000}$ m");
+            StringAssert.Contains(table, $"で ${N0(sand)}$ kN、粘性土");
+            StringAssert.Contains(table, $"で ${N0(clay)}$ kN、周面の計 ${N0(friction)}$ kN");
+            StringAssert.Contains(table, $"$R_{{TU}} = {N0(friction + 500)}$ kN (使用限界 ${N0((friction + 500) / 3)}$ kN)、"
+                + $"$R_{{TY}} = {N0(2.0 / 3.0 * friction + 500)}$ kN、$R_{{TR}} = {N0(friction / 1.2 + 500)}$ kN");
+        }
+
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
         [TestMethod]
         public void ThePyExamplesMatchTheImplementation()
