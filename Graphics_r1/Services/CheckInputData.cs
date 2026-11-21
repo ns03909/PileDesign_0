@@ -136,9 +136,9 @@ namespace PileDesign.Services
                     const string clamp = "適用範囲の上下限に丸めた値で計算しています。杭体・地盤の入力を確かめる";
                     foreach (var w in soilPile.ValidateSmartMagnumRange())
                         warnings.Add(Diagnostic.Notice(affects, at, $"Smart-MAGNUM {w}", clamp));
-                    // 液状化のおそれのある層の周面抵抗 (チェックは自動では外さない)
-                    foreach (var w in soilPile.SmartMagnumLiquefiedFrictionWarnings())
-                        warnings.Add(Diagnostic.Notice(affects, DiagnosticTarget.Ground(soilPile.GroundNo), $"Smart-MAGNUM {w}",
+                    // 液状化のおそれのある層の周面抵抗 (すべての杭工法。チェックは自動では外さない)
+                    foreach (var w in soilPile.LiquefiedFrictionWarnings())
+                        warnings.Add(Diagnostic.Notice(affects, DiagnosticTarget.Ground(soilPile.GroundNo), soilPile.IsSmartMagnum ? $"Smart-MAGNUM {w}" : w,
                             "「地盤」ウィンドウの土層の表で、その層の押込側・引抜側の周面抵抗のチェックを外す"));
                     foreach (var w in soilPile.ValidateHybridKneadingRange())
                         warnings.Add(Diagnostic.Notice(affects, at, $"Hybridニーディング {w}", clamp));

@@ -1134,6 +1134,58 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>
+        /// 液状化のおそれのある土層に周面抵抗を見込んでいれば、層ごとに知らせる (すべての杭工法)。
+        ///
+        /// <para>周面抵抗の有無は土層ごとのチェックで決まり、工法が自動では外さない。チェックは自動では変えない
+        /// (どの層を外すかは利用者が決める。判定のレベルによっても違う)。</para>
+        ///
+        /// <para>Smart-MAGNUM では液状化のおそれのある地盤は周面摩擦の対象外 (カタログの適用範囲) で、2026-11-20 に
+        /// この工法だけ知らせるようにした (外部レビュー)。一般式でも外し忘れが静かに支持力を過大にするので、
+        /// 2026-11-21 に利用者の判断ですべての工法へ広げた。</para>
+        ///
+        /// <para>液状化のおそれは、鋼管杭の座屈長と同じく「液状化の判定で対象層とされ、レベル1 または レベル2 で βLq &lt; 1」
+        /// (<see cref="SteelPipeBuckling.IsLiquefied"/>)。判定を行っていない地盤では何も出さない。</para>
+        /// </summary>
+        public IEnumerable<string> LiquefiedFrictionWarnings()
+        {
+            string label = $"杭体{PileBodyNo}×地盤{GroundNo}";
+            var masses = GroundInput?.GroundMassesData;
+            if (PileCircumVerticals == null || masses == null || masses.Count == 0) yield break;
+
+            double[] tops = GroundInput!.MassTopAltitudes();
+            const double tol = NumericalConstants.COORDINATE_TOLERANCE;
+            foreach (var pcv in PileCircumVerticals)
+            {
+                if (pcv == null || !(pcv.IsPositiveCircumResistance || pcv.IsNegativeCircumResistance)) continue;
+                double upper = Math.Max(pcv.Top, pcv.Bottom), lower = Math.Min(pcv.Top, pcv.Bottom);
+                var levels = new List<string>();
+                for (int level = 0; level < 2; level++)
+                {
+                    for (int i = 0; i < masses.Count; i++)
+                    {
+                        double massBottom = tops[i] - (masses[i].H ?? masses[i].Spacing);
+                        bool overlaps = Math.Min(upper, tops[i]) - Math.Max(lower, massBottom) > tol;
+                        if (overlaps && SteelPipeBuckling.IsLiquefied(masses[i], level)) { levels.Add($"レベル{level + 1}"); break; }
+                    }
+                }
+                if (levels.Count == 0) continue;
+
+                string sides = (pcv.IsPositiveCircumResistance, pcv.IsNegativeCircumResistance) switch
+                {
+                    (true, true) => "押込み・引抜き",
+                    (true, false) => "押込み",
+                    _ => "引抜き",
+                };
+                yield return $"{label}: 土層「{pcv.GroundLayer?.Name}」(標高 {upper:N2}〜{lower:N2} m) は液状化の判定で"
+                    + $"液状化のおそれがあります ({string.Join("・", levels)} で βLq < 1) が、{sides}側の周面抵抗を見込んでいます。"
+                    + (IsSmartMagnum
+                        ? "Smart-MAGNUM 工法では、液状化のおそれのある地盤は周面摩擦の対象外です。"
+                        : "液状化した層の周面抵抗は、地震時には期待できないおそれがあります。見込むかどうかを確かめ、外すときは")
+                    + "「地盤」ウィンドウの土層の表 (または単杭沈下ウィンドウ) で、この層の周面抵抗のチェックを外してください。";
+            }
+        }
+
         // 抵抗力の計算メソッド
         public void CalculateResistances()
         {

@@ -88,7 +88,9 @@ namespace TestProject1
         [TestMethod]
         public void TheLiquefactionFactorIsWrittenBetaLq()
         {
-            var bad = new Regex(@"(低減率?|補正係数)\s*(\$\\beta_L\$|βL(?!q)|<em>β<sub>L</sub>|β<_L>)");
+            // 「水平地盤反力係数の低減係数 β」「液状化区間（β < 1）」も液状化の βLq (SC 杭の「低減係数 β」は別の量なので拾わない)
+            var bad = new Regex(@"(低減率?|補正係数)\s*(\$\\beta_L\$|βL(?!q)|<em>β<sub>L</sub>|β<_L>)"
+                + @"|地盤反力係数の低減係数\s*(\$\\beta\$|β(?!Lq))|液状化区間\s*[（(]\s*β(?!Lq)|\$\\beta\s*&lt;\s*1\$");
             var sep = System.IO.Path.DirectorySeparatorChar;
             string app = System.IO.Path.Combine(TestSource.Root(), "Graphics_r1");
             var files = System.IO.Directory.GetFiles(app, "*.*", System.IO.SearchOption.AllDirectories)

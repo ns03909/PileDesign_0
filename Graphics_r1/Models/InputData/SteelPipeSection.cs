@@ -196,7 +196,7 @@ namespace PileDesign.Models.InputData
         /// 座屈長 l_k (m)。液状化区間の長さで、0 なら柱座屈による低減を行わない。
         ///
         /// 「基礎部材の強度と変形性能」解説図 8.3 により、鋼管杭の座屈長は
-        /// 液状化区間 (水平地盤反力係数の低減係数 β &lt; 1 の範囲) の長さとする。
+        /// 液状化区間 (水平地盤反力係数の低減係数 βLq &lt; 1 の範囲) の長さとする。
         /// 求め方は <see cref="SteelPipeBuckling.ComputeBucklingLength"/>。
         /// </summary>
         public double BucklingLength { get; }

@@ -1337,7 +1337,7 @@ namespace PileDesign.Output
             {
                 string method = sp.IsSmartMagnum ? "Smart-MAGNUM 工法" : "Hybrid ニーディング工法";
                 var outside = (sp.IsSmartMagnum
-                        ? sp.ValidateSmartMagnumRange().Concat(sp.SmartMagnumLiquefiedFrictionWarnings())
+                        ? sp.ValidateSmartMagnumRange().Concat(sp.LiquefiedFrictionWarnings())
                         : sp.ValidateHybridKneadingRange())
                     .ToList();
                 if (outside.Count == 0)
