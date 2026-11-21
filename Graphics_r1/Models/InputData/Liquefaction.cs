@@ -65,6 +65,10 @@ namespace PileDesign.Models.InputData
             return gammaCy;
         }
 
+        /// <summary>
+        /// 液状化による地盤反力係数の低減率 βLq (基礎指針'19 図3.2.13。指針の記号は βL)。
+        /// 図の 2 本の曲線 (0 ≦ z &lt; 10 m・z ≧ 10 m) を βLq = 0.1 刻みで読み取った Na (<see cref="Na0010"/>・<see cref="Na1020"/>) から線形補間する。
+        /// </summary>
         internal static double CalculateBetaL(double z, double Na)
         {
             //double[] _betaLSet = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];

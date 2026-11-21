@@ -110,5 +110,19 @@ namespace TestProject1
             TestSource.AssertScanned(betaLq, 30, "βLq の表記");
             Assert.AreEqual(0, hits.Count, "液状化の低減率を βL と書いています (組合せ係数と紛れるので βLq):\n" + string.Join("\n", hits));
         }
+
+        /// <summary>
+        /// βLq の出典は基礎指針'19 図3.2.13。表4.5.1 は「液状化しない地盤における水平変位の算定法」で、
+        /// 2026-11-21 まで βLq の出典を誤って表4.5.1 と書いていた (利用者が指針で確認)。
+        /// </summary>
+        [TestMethod]
+        public void TheBetaLqSourceIsFigure3_2_13()
+        {
+            string help = Help();
+            Assert.IsFalse(Regex.IsMatch(help, @"表\s?4\.5\.1\s?[（(]\$N_a\$"), "βLq の出典を表4.5.1 と書いています (図3.2.13)");
+            Assert.IsFalse(help.Contains("表4.5.1・図3.2.6"), "βLq の出典を表4.5.1 と書いています (図3.2.13)");
+            StringAssert.Contains(help, "図3.2.13（$N_a$ と深さ $z$ の関数");
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "Models", "InputData", "Liquefaction.cs"), "基礎指針'19 図3.2.13");
+        }
     }
 }

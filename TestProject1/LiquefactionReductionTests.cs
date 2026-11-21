@@ -8,7 +8,7 @@ using System.Linq;
 namespace TestProject1
 {
     /// <summary>
-    /// 液状化による水平地盤反力の低減率 βLq (基礎指針'19 表4.5.1) が、
+    /// 液状化による水平地盤反力の低減率 βLq (基礎指針'19 図3.2.13) が、
     /// <b>kh0 と py の両方に掛かって解析に届くこと</b>。
     ///
     /// <para>2026-09-12 まで βLq は地盤ウィンドウと計算書に出るだけで、水平解析には
@@ -62,7 +62,7 @@ namespace TestProject1
                 $"要素 ({zTop}〜{zBtm} m) の βLq が土質点の範囲から引けていません");
         }
 
-        /// <summary>βLq はレベルごとに違う (表 4.5.1 は深さと Na の関数で、レベルで Na が変わる)。</summary>
+        /// <summary>βLq はレベルごとに違う (図 3.2.13 は深さと Na の関数で、レベルで Na が変わる)。</summary>
         [TestMethod]
         public void TheReductionIsPerLevel()
         {

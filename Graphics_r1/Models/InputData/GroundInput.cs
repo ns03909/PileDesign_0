@@ -339,7 +339,7 @@ namespace PileDesign.Models.InputData
 
         /// <summary>
         /// 標高 <paramref name="zTop"/>〜<paramref name="zBtm"/> の杭要素に掛ける、液状化による
-        /// 水平地盤反力の低減率 βLq (基礎指針'19 表4.5.1)。kh0 と py の両方に掛ける。1 = 低減なし。
+        /// 水平地盤反力の低減率 βLq (基礎指針'19 図3.2.13)。kh0 と py の両方に掛ける。1 = 低減なし。
         ///
         /// <para>土質点の占める深さの範囲は層の上端 (地表から層厚 H を積んだ位置) で決まる
         /// (<see cref="MassTopAltitudes"/> と同じ置き方)。要素の中央が入る土質点の βLq を使う。</para>
