@@ -9,7 +9,8 @@ namespace TestProject1
     /// ヘルプの「記号一覧」と、記号だけの表示に名前を添えたこと (外部レビュー #27 2026-11-21)。
     ///
     /// <para>文献の記号をそのまま使うので、β が組合せ係数・液状化の低減率・耐力の低減係数・梁の角度などを表す。
-    /// とくに βL は「基礎部の慣性力の組合せ係数」と「液状化の低減率」の 2 つの意味がある。</para>
+    /// とくに指針の αL・βL は「組合せ係数」と「液状化の補正係数」の 2 つの意味がある。
+    /// 利用者の判断 (2026-11-21) で、組合せ係数を αL・βL のまま、液状化側を αLq・βLq と書き分けた。</para>
     /// </summary>
     [TestClass]
     public class HelpSymbolListTests
@@ -30,9 +31,11 @@ namespace TestProject1
             var rows = Regex.Matches(SymbolTable(), "<tr><td>(.*?)</td><td>(.*?)</td>").Select(m => (Symbol: m.Groups[1].Value, Meaning: m.Groups[2].Value)).ToList();
             Assert.IsTrue(rows.Count >= 30, $"(前提) 記号一覧の行を読めていない: {rows.Count}");
 
-            // βL の 2 つの意味が両方ある
+            // 組合せ係数は αL・βL、液状化の補正係数は αLq・βLq
             Assert.IsTrue(rows.Any(r => r.Symbol.StartsWith("$\\beta_L$") && r.Meaning.Contains("組合せ係数")), "βL (組合せ係数) がありません");
-            Assert.IsTrue(rows.Any(r => r.Symbol.StartsWith("$\\beta_L$") && r.Meaning.Contains("液状化")), "βL (液状化の低減率) がありません");
+            Assert.IsTrue(rows.Any(r => r.Symbol.StartsWith("$\\beta_{Lq}$") && r.Meaning.Contains("液状化")), "βLq (液状化の低減率) がありません");
+            Assert.IsTrue(rows.Any(r => r.Symbol.StartsWith("$\\alpha_{Lq}$") && r.Meaning.Contains("液状化")), "αLq (液状化の py の補正係数) がありません");
+            Assert.IsFalse(rows.Any(r => r.Symbol.StartsWith("$\\beta_L$") && r.Meaning.Contains("液状化")), "液状化の低減率を βL と書いています (βLq)");
             // 単独の β の意味が 3 つ以上
             Assert.IsTrue(rows.Count(r => r.Symbol == "$\\beta$") >= 3, "単独の β の意味が揃っていません");
             // ξ の 2 つの意味
@@ -76,6 +79,36 @@ namespace TestProject1
                 StringAssert.Contains(loadCase, $"<TextBlock Text=\"{name}\" TextAlignment=\"Center\"/>", $"組合せ係数の見出しに「{name}」がありません");
             // 分離入力を足した後も「βU・βL を考慮しない」とだけ書いていた
             StringAssert.Contains(loadCase, "「分離入力」にすると");
+        }
+
+        /// <summary>
+        /// 液状化の補正係数を、組合せ係数と同じ βL と書いたところが戻っていない (2026-11-21 に βLq へ書き分けた)。
+        /// 「低減率」「補正係数」の直後の βL を、ヘルプと本体の .cs / .xaml から探す。
+        /// </summary>
+        [TestMethod]
+        public void TheLiquefactionFactorIsWrittenBetaLq()
+        {
+            var bad = new Regex(@"(低減率?|補正係数)\s*(\$\\beta_L\$|βL(?!q)|<em>β<sub>L</sub>|β<_L>)");
+            var sep = System.IO.Path.DirectorySeparatorChar;
+            string app = System.IO.Path.Combine(TestSource.Root(), "Graphics_r1");
+            var files = System.IO.Directory.GetFiles(app, "*.*", System.IO.SearchOption.AllDirectories)
+                .Where(f => (f.EndsWith(".cs") || f.EndsWith(".xaml"))
+                    && !f.Contains($"{sep}obj{sep}") && !f.Contains($"{sep}bin{sep}") && !f.Contains($"{sep}TestResults{sep}"))
+                .Append(System.IO.Path.Combine(app, "Help", "help.html"))
+                .ToList();
+            TestSource.AssertScanned(files.Count, 300, "本体の .cs / .xaml とヘルプ");
+
+            int betaLq = 0;
+            var hits = new List<string>();
+            foreach (var f in files)
+            {
+                string text = System.IO.File.ReadAllText(f);
+                betaLq += Regex.Matches(text, @"βLq|\\beta_\{Lq\}|<sub>Lq</sub>|β<_Lq>").Count;
+                hits.AddRange(bad.Matches(text).Select(m => $"{System.IO.Path.GetFileName(f)}: {m.Value}"));
+            }
+            // 見張りが空振りしていない (書き換えた先が見つかる)
+            TestSource.AssertScanned(betaLq, 30, "βLq の表記");
+            Assert.AreEqual(0, hits.Count, "液状化の低減率を βL と書いています (組合せ係数と紛れるので βLq):\n" + string.Join("\n", hits));
         }
     }
 }

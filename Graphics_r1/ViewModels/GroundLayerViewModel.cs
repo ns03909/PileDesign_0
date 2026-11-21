@@ -124,8 +124,8 @@ namespace PileDesign.ViewModels
             nameof(GroundInput.StressAltitude),
             nameof(GroundInput.GroundWaterGLDepth),
             nameof(GroundInput.StressGLDepth),
-            // 地表面加速度と算定法も FL・βL・地盤変位に効く。以前は監視しておらず、Enter を押さずに
-            // (クリックで) 確定すると再計算されないまま保存され、古い βL・地盤変位で水平解析が走った
+            // 地表面加速度と算定法も FL・βLq・地盤変位に効く。以前は監視しておらず、Enter を押さずに
+            // (クリックで) 確定すると再計算されないまま保存され、古い βLq・地盤変位で水平解析が走った
             nameof(GroundInput.GroundAcceleration1),
             nameof(GroundInput.GroundAcceleration2),
             nameof(GroundInput.ShallowSoilType),
@@ -1384,7 +1384,7 @@ namespace PileDesign.ViewModels
             if (lines.Count == 0) return null;
             return "粘性土で細粒分含有率 Fc が 0 の土質点があります。\n" + string.Join("\n", lines) + "\n\n"
                 + "液状化の判定は Fc が 35% 以下の層を対象にするので、このままだと地下水位以下・GL-20 m 以浅の粘性土が液状化層になり、"
-                + "水平地盤反力係数と地盤ばねが βL で低減されます。粘性土の Fc を入力してください (粘性土なら通常 35% を超えます)。";
+                + "水平地盤反力係数と地盤ばねが βLq で低減されます。粘性土の Fc を入力してください (粘性土なら通常 35% を超えます)。";
         }
 
         [RelayCommand]
@@ -1393,7 +1393,7 @@ namespace PileDesign.ViewModels
             if (GroundsInput != null)
             {
                 // 入力の変更で予約した再計算 (少し遅らせて走る) が残っていれば、保存する前に済ませる。
-                // 残したまま写すと、FL・βL・地盤変位が入力と合わないまま保存される
+                // 残したまま写すと、FL・βLq・地盤変位が入力と合わないまま保存される
                 if (_updateDebounceTimer != null)
                 {
                     _updateDebounceTimer.Stop();
@@ -1424,7 +1424,7 @@ namespace PileDesign.ViewModels
                 }
 
                 // 細粒分含有率 Fc が 0 の粘性土の土質点。Fc の既定は 0 で、液状化の判定は Fc (35% 以下が対象) と深さ・水位だけを見るので、
-                // Fc を入れ忘れた粘性土は地下水位以下・20m 以浅で液状化層になり、βL で kh0・py が大きく下がる
+                // Fc を入れ忘れた粘性土は地下水位以下・20m 以浅で液状化層になり、βLq で kh0・py が大きく下がる
                 if (DescribeClayWithZeroFc(GroundsInput) is { } zeroFc)
                 {
                     MessageBoxResult fcResult = MessageService.Show(zeroFc + "\n\n状態を保存してウィンドウを閉じますか？",
@@ -2001,7 +2001,7 @@ namespace PileDesign.ViewModels
             }
         }
 
-        // βL
+        // βLq (液状化の低減率。指針の記号は βL)
         internal void RecalculateBetaL()
         {
             for (int levelIndex = 0; levelIndex < 2; levelIndex++)
@@ -2010,7 +2010,7 @@ namespace PileDesign.ViewModels
                 {
                     if (groundMassData.IsLiquefactionLayer)
                     {
-                        // 基礎指針 2019: FL ≥ 1.0 (液状化に至らない) のときは βL = 1.0 (低減なし)
+                        // 基礎指針 2019: FL ≥ 1.0 (液状化に至らない) のときは βLq = 1.0 (低減なし)
                         // テーブル (Na, z) からの読取りは「液状化発生時 (FL<1)」の規定。
                         double? fl = groundMassData.FL != null && groundMassData.FL.Count > levelIndex
                             ? groundMassData.FL[levelIndex]

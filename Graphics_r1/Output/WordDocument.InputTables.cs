@@ -17,7 +17,7 @@ namespace PileDesign.Output
     // Word 表として出力する partial。
     internal partial class WordDocument
     {
-        // 液状化判定リスト（FL/βL/γcy 等）が null や長さ不足でもセルを "-" にして、
+        // 液状化判定リスト（FL/βLq/γcy 等）が null や長さ不足でもセルを "-" にして、
         // 表全体が例外で欠落しないよう安全に取得するヘルパー。
         private static string SafeListCell(IReadOnlyList<double?>? list, int idx, string fmt)
             => (list != null && idx >= 0 && idx < list.Count && list[idx].HasValue)
@@ -371,7 +371,7 @@ namespace PileDesign.Output
                 CreateTableCell(["液状化", "抵抗比", "τ<_L>/σ<_z>'"], fontSize, "center"),
                 CreateTableCell([$"L{i + 1}", "繰返し", "せん断", "応力度", "τ<_d>/σ<_z>'"], fontSize, "center"),
                 CreateTableCell([$"L{i + 1}", "液状化", "安全率", "F<_L>"], fontSize, "center"),
-                CreateTableCell([$"L{i + 1}", "地盤", "反力", "係数", "低減率", "β<_L>"], fontSize, "center"),
+                CreateTableCell([$"L{i + 1}", "地盤", "反力", "係数", "低減率", "β<_Lq>"], fontSize, "center"),
                 CreateTableCell([$"L{i + 1}", "繰返し", "せん断", "ひずみ", "γ<_cy>", "[%]"], fontSize, "center"),
                 CreateTableCell([$"L{i + 1}", "液状化", "水平", "変位", "∑γ<_cy>H", "[mm]"], fontSize, "center")
                     );
@@ -400,7 +400,7 @@ namespace PileDesign.Output
                     dataRow.Append(CreateTableCell([$"{groundMass.NL:N2}"], fontSize, "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.TauLonSigmaZPrime:N3}"], fontSize, "right"));
                     dataRow.Append(CreateTableCell([SafeListCell(groundMass.TauDonSigmaZPrime, i, "N3")], fontSize, "right"));
-                    // FL < 1.0 (液状化発生) の行は FL / βL / γcy / ΣγcyH を太字で強調。
+                    // FL < 1.0 (液状化発生) の行は FL / βLq / γcy / ΣγcyH を太字で強調。
                     // FL ≥ 1.0 または FL=null の場合は通常表示。
                     bool isLiquefying = groundMass.FL != null && groundMass.FL.Count > i
                         && groundMass.FL[i].HasValue && groundMass.FL[i]!.Value < 1.0;

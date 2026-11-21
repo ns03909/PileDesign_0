@@ -10,7 +10,7 @@ namespace PileDesign.Common
     /// 表の貼り付け (<see cref="EnhancedDataGrid"/>) と、画面に出ていないセルの
     /// コピー・CSV 出力 (<c>DataGridCsv</c>) が使う。以前は両方に写しがあり、
     /// 添字 ([0]) を読めたのは貼り付け側だけだった。CSV 側は添字付きの列
-    /// (地盤ウィンドウの液状化判定の τd/σz'・βL・γcy など) を、
+    /// (地盤ウィンドウの液状化判定の τd/σz'・βLq・γcy など) を、
     /// <b>画面外の行だけ空欄で出していた</b>。
     /// </summary>
     internal static class BindingPath

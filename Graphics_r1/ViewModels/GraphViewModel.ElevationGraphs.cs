@@ -513,7 +513,7 @@ namespace PileDesign.ViewModels
 
                                 // 群杭の影響 (群杭係数 ξ・杭間隔比 R/B) も解析と同じものを使う
                                 var groupPileEffect = Models.InputData.GroupPileEffect.For(pileLayoutDataItem);
-                                // 液状化の低減率 βL も要素ごとに解析と同じ値を使う
+                                // 液状化の低減率 βLq も要素ごとに解析と同じ値を使う
                                 var graphGround = InputModel.RequireSoilPile(pileLayoutDataItem).GroundInput;
                                 bool applyBeta = isLiquefaction && graphGround != null;
                                 double BetaAt(int e) => applyBeta && e >= 0 && e < reactions.Count

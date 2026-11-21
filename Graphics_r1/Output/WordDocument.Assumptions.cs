@@ -664,10 +664,10 @@ namespace PileDesign.Output
                 return "自動算定";
             }
 
-            // 手入力値は自動算定の kh0 を置き換えるだけで、解析では群杭係数 ξ と液状化による低減率 βL を
-            // その上に掛ける (HorizontalSoilReactionItem: Kh0 × GroupPileEffect.Kh0Factor = ξ·βL)。
+            // 手入力値は自動算定の kh0 を置き換えるだけで、解析では群杭係数 ξ と液状化による低減率 βLq を
+            // その上に掛ける (HorizontalSoilReactionItem: Kh0 × GroupPileEffect.Kh0Factor = ξ·βLq)。
             note = "以下の土層は要素分割ウィンドウで手入力した kh0 を用いている（記載のない土層は自動算定）。"
-                 + "手入力した kh0 にも、群杭係数 ξ と、液状化を考慮するケースでは液状化による低減率 βL を乗じている";
+                 + "手入力した kh0 にも、群杭係数 ξ と、液状化を考慮するケースでは液状化による低減率 βLq を乗じている";
             return string.Join("\n", entries);
         }
 

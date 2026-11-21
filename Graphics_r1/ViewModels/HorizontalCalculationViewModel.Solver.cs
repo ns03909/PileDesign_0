@@ -918,7 +918,7 @@ namespace PileDesign.ViewModels
 
                 int reactionCount = horizontalReactions.Count;
 
-                // 液状化による水平地盤反力の低減率 βL (基礎指針'19 表4.5.1)。kh0 と py の両方に掛かる。
+                // 液状化による水平地盤反力の低減率 βLq (基礎指針'19 表4.5.1)。kh0 と py の両方に掛かる。
                 // 深さ (土質点) ごと・レベルごとに違うので要素単位に持つ。液状化を考慮しないケースと
                 // VL は 1 (低減なし)。判定していない地盤も 1 になる (GroundInput.LiquefactionReductionAt)。
                 var betaL = new double[reactionCount];

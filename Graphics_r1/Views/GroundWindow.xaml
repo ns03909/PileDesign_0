@@ -2506,7 +2506,7 @@
                                                         <TextBlock Text="地盤反力" TextAlignment="Center"/>
                                                         <TextBlock Text="係数" TextAlignment="Center"/>
                                                         <TextBlock Text="低減率" TextAlignment="Center"/>
-                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="β"/><Run Text="L" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="β"/><Run Text="Lq" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
@@ -2592,7 +2592,7 @@
                                                         <TextBlock Text="地盤反力" TextAlignment="Center"/>
                                                         <TextBlock Text="係数" TextAlignment="Center"/>
                                                         <TextBlock Text="低減率" TextAlignment="Center"/>
-                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="β"/><Run Text="L" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
+                                                        <TextBlock TextAlignment="Center" HorizontalAlignment="Center"><Run Text="β"/><Run Text="Lq" BaselineAlignment="Subscript" FontSize="9"/></TextBlock>
                                                     </StackPanel>
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>

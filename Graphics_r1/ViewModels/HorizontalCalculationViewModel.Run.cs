@@ -356,7 +356,7 @@ namespace PileDesign.ViewModels
 
             // 地盤 (p-y) 非線形モードはケース単位の設定。PrepareKmat が caseModel から読む。
             caseModel.SoilNonlinearityMode = loadCase.SoilNonlinearityMode;
-            // 液状化による水平地盤反力の低減率 βL もケース単位 (レベル別・液状化ケースのみ)。
+            // 液状化による水平地盤反力の低減率 βLq もケース単位 (レベル別・液状化ケースのみ)。
             // 同じく PrepareKmat が caseModel から読む。
             caseModel.CaseLevel = level;
             caseModel.CaseIsLiquefaction = isLiquefaction;
@@ -999,7 +999,7 @@ namespace PileDesign.ViewModels
                                 // VL ケースは iLC=-1 となるため >=0 チェック必須
                                 bool isFront = pli.IsFrontAt(caseModel.CaseLevel, iLC);
                                 var groupPileEffect = Models.InputData.GroupPileEffect.For(pli);
-                                // 液状化の低減率 βL は要素ごと。ばねの組立 (PrepareKmat) と同じ値を使う
+                                // 液状化の低減率 βLq は要素ごと。ばねの組立 (PrepareKmat) と同じ値を使う
                                 var pliGround = pli.SoilPileAt(InputModel)?.GroundInput;
                                 bool applyBeta = isLiquefaction && pliGround != null;
                                 double BetaAt(int e) => applyBeta && e >= 0 && e < reactions.Count

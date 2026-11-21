@@ -435,7 +435,7 @@
 
                             <DataGridTextColumn Width="*" Binding="{Binding Alpha1, StringFormat=N1}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                 <DataGridTextColumn.Header>
-                                    <!-- 記号だけでは紛れる (βL は液状化の低減率にも使う) ので名前を添える (外部レビュー #27) -->
+                                    <!-- 記号だけでは紛れる (指針は液状化の低減率にも βL を使う。本プログラムではそちらを βLq と書く) ので名前を添える (外部レビュー #27) -->
                                     <StackPanel ToolTip="地盤変位の組合せ係数 αL (地盤変位の最大値に対する比)">
                                         <TextBlock Text="地盤変位" TextAlignment="Center"/>
                                         <TextBlock TextAlignment="Center"><Run Text="α"/><Run Text="L" BaselineAlignment="Subscript" FontSize="10"/></TextBlock>
@@ -464,7 +464,7 @@
 
                             <DataGridTextColumn Width="*" Binding="{Binding Beta2, StringFormat=N1}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                 <DataGridTextColumn.Header>
-                                    <StackPanel ToolTip="基礎部の慣性力の組合せ係数 βL (地盤の液状化の低減率 βL とは別の値)">
+                                    <StackPanel ToolTip="基礎部の慣性力の組合せ係数 βL (地盤の液状化の低減率 βLq とは別の値)">
                                         <TextBlock Text="基礎部" TextAlignment="Center"/>
                                         <TextBlock TextAlignment="Center"><Run Text="β"/><Run Text="L" BaselineAlignment="Subscript" FontSize="10"/></TextBlock>
                                     </StackPanel>

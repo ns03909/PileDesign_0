@@ -925,9 +925,9 @@ namespace PileDesign.ViewModels
                 // 群杭の影響 (群杭係数 ξ・杭間隔比 R/B)。解析と同じ p-y 曲線を描くために必要
                 var groupPileEffect = Models.InputData.GroupPileEffect.For(pileLayout);
 
-                // 液状化の低減率 βL は要素ごと・レベルごとに違い、液状化を考慮するケースだけ 1 未満になる。
-                // kh0 と py の両方に掛かるので、βL が違えば曲線も別物になる。マーカー (解析結果) は
-                // 必ず自分のケースの曲線上に乗る必要があるため、βL の種類だけ曲線を描く。
+                // 液状化の低減率 βLq は要素ごと・レベルごとに違い、液状化を考慮するケースだけ 1 未満になる。
+                // kh0 と py の両方に掛かるので、βLq が違えば曲線も別物になる。マーカー (解析結果) は
+                // 必ず自分のケースの曲線上に乗る必要があるため、βLq の種類だけ曲線を描く。
                 var curveGround = soilPile.GroundInput;
                 double BetaFor(int level, bool isLiq, int segIndex)
                     => (isLiq && curveGround != null && segIndex >= 0 && segIndex < reactions.Count)
@@ -938,7 +938,7 @@ namespace PileDesign.ViewModels
                 {
                 var reaction = reactions[segIdx];
 
-                // この要素に現れる βL の種類 (値が同じものは 1 本にまとめるので、
+                // この要素に現れる βLq の種類 (値が同じものは 1 本にまとめるので、
                 // 液状化していない要素は従来どおり 1 本のまま)
                 var betaVariants = new List<double>();
                 foreach (var lcForBeta in selectedLoadCases)
@@ -980,11 +980,11 @@ namespace PileDesign.ViewModels
                         double pyTop = reaction.GetPyFor(isTop: true, isFront, curveEffect);
                         double pyBtm = reaction.GetPyFor(isTop: false, isFront, curveEffect);
                         double kh0ForCurve = reaction.GetKh0For(curveEffect);
-                        // βL・前後が 1 種類なら凡例は簡潔に保つ
-                        string betaSuffix = (betaVariants.Count > 1 ? $"|βL={beta:0.00}" : "")
+                        // βLq・前後が 1 種類なら凡例は簡潔に保つ
+                        string betaSuffix = (betaVariants.Count > 1 ? $"|βLq={beta:0.00}" : "")
                             + (frontVariants.Count > 1 ? (isFront ? "|前方杭" : "|後方杭") : "");
                         string curveDetails = (beta < 1.0 - 1e-9
-                            ? pyDetails + $"\n液状化低減 βL: {beta:0.00}"
+                            ? pyDetails + $"\n液状化低減 βLq: {beta:0.00}"
                             : pyDetails)
                             + $"\n{(isFront ? "前方杭" : "後方杭")}";
 
@@ -1009,7 +1009,7 @@ namespace PileDesign.ViewModels
                 if (springs == null) continue;
 
                 // i端 = node segIdx, j端 = node segIdx+1
-                // py は液状化の低減 βL がケースごとに違うので、ここでは端 (上/下) だけを持ち、
+                // py は液状化の低減 βLq がケースごとに違うので、ここでは端 (上/下) だけを持ち、
                 // 値はケースが決まってから求める
                 var endNodes = new List<(int nodeIdx, string label, bool isTop, ScottPlot.MarkerShape shape)>();
                 if (segIdx < springs.Count)
@@ -1039,7 +1039,7 @@ namespace PileDesign.ViewModels
                                 double relDisp = PileDesign.Common.StableNumerics.Norm(relDispX, relDispY);
                                 double relDispMm = relDisp * 1000.0;
 
-                                // Y軸は理論値（P-y曲線上の値）。βL はこのケースのものを使う
+                                // Y軸は理論値（P-y曲線上の値）。βLq はこのケースのものを使う
                                 var markerEffect = groupPileEffect.WithLiquefaction(
                                     BetaFor(loadCase.Level, isLiquefaction, segIdx));
                                 // 前方杭・後方杭もこのケースのもの (解析と同じ判定)

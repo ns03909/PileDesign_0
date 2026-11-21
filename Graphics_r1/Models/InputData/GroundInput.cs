@@ -339,14 +339,14 @@ namespace PileDesign.Models.InputData
 
         /// <summary>
         /// 標高 <paramref name="zTop"/>〜<paramref name="zBtm"/> の杭要素に掛ける、液状化による
-        /// 水平地盤反力の低減率 βL (基礎指針'19 表4.5.1)。kh0 と py の両方に掛ける。1 = 低減なし。
+        /// 水平地盤反力の低減率 βLq (基礎指針'19 表4.5.1)。kh0 と py の両方に掛ける。1 = 低減なし。
         ///
         /// <para>土質点の占める深さの範囲は層の上端 (地表から層厚 H を積んだ位置) で決まる
-        /// (<see cref="MassTopAltitudes"/> と同じ置き方)。要素の中央が入る土質点の βL を使う。</para>
+        /// (<see cref="MassTopAltitudes"/> と同じ置き方)。要素の中央が入る土質点の βLq を使う。</para>
         ///
-        /// <para><b>βL の初期値 [0, 0] は「未判定」で「完全液状化」ではない。</b> 判定を一度も
+        /// <para><b>βLq の初期値 [0, 0] は「未判定」で「完全液状化」ではない。</b> 判定を一度も
         /// 行っていない地盤で 0 を低減率として使うと、地盤ばねが全部消える。
-        /// <c>IsLiquefactionLayer</c> が立っている土質点だけを対象とし、対象外 (βL が null)・
+        /// <c>IsLiquefactionLayer</c> が立っている土質点だけを対象とし、対象外 (βLq が null)・
         /// 土質点の範囲外・地表より上は 1 を返す (<c>SteelPipeBuckling.IsLiquefied</c> と同じ切り分け)。</para>
         /// </summary>
         /// <param name="levelIndex">0 = レベル1、1 = レベル2。負 (VL) なら 1 を返す。</param>

@@ -124,7 +124,7 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// この要素の塑性水平地盤反力度 py (kN/m²)。杭間隔比 R/B は評価時に渡されたものを使う。
         /// 保存されている <c>Py*</c> は R/B 未設定 (群杭の影響なし) の基準値。
-        /// 液状化の低減 βL は呼び出し側で掛ける。
+        /// 液状化の低減 βLq は呼び出し側で掛ける。
         /// </summary>
         private double PyAt(bool isTop, bool isFront, double rOnB)
             => GetPy(SoilType, isFront, B, isTop ? ZTop : ZBtm, rOnB, Phi, Cu,
@@ -334,7 +334,7 @@ namespace PileDesign.Models.InputData
 
         /// <summary>
         /// この杭・この要素における基準水平地盤反力係数 kh0 (kN/m³)。
-        /// 手入力で上書きした kh0 にも 群杭係数 ξ と液状化低減率 βL が掛かる。
+        /// 手入力で上書きした kh0 にも 群杭係数 ξ と液状化低減率 βLq が掛かる。
         /// </summary>
         public double GetKh0For(in GroupPileEffect effect) => Kh0 * effect.Kh0Factor;
 
@@ -456,10 +456,10 @@ namespace PileDesign.Models.InputData
         public double ROnB { get; init; }
 
         /// <summary>
-        /// 液状化による水平地盤反力の低減率 βL (基礎指針'19 表4.5.1)。<b>kh0 と py の両方に掛ける。</b>
+        /// 液状化による水平地盤反力の低減率 βLq (基礎指針'19 表4.5.1)。<b>kh0 と py の両方に掛ける。</b>
         /// 1 = 低減なし。液状化を考慮しないケース・液状化判定の対象外の層・VL では 1。
         ///
-        /// <para>βL は深さ (土質点) ごと・地震動レベルごとに違うので、杭単位ではなく
+        /// <para>βLq は深さ (土質点) ごと・地震動レベルごとに違うので、杭単位ではなく
         /// <b>要素単位</b>に付ける。<see cref="WithLiquefaction"/> で要素ごとの写しを作る。</para>
         /// </summary>
         public double BetaL { get; init; }
@@ -467,17 +467,17 @@ namespace PileDesign.Models.InputData
         /// <summary>群杭の影響・液状化の低減を考えない (単杭・非液状化) 補正。杭を特定できない表示用。</summary>
         public static GroupPileEffect None => new() { Xi = 1.0, ROnB = 0.0, BetaL = 1.0 };
 
-        /// <summary>この杭配置の入力から作る (βL は 1 = 液状化の低減なし)。</summary>
+        /// <summary>この杭配置の入力から作る (βLq は 1 = 液状化の低減なし)。</summary>
         public static GroupPileEffect For(PileLayoutDataItem pile)
             => pile == null
                 ? None
                 : new GroupPileEffect { Xi = pile.GroupPileFactor, ROnB = pile.EffectivePileSpacingFactor, BetaL = 1.0 };   // R/B を考慮しない杭は 0 (単杭と同じ)
 
-        /// <summary>この要素の液状化低減率 βL を付けた写しを返す。</summary>
+        /// <summary>この要素の液状化低減率 βLq を付けた写しを返す。</summary>
         public GroupPileEffect WithLiquefaction(double betaL)
             => new() { Xi = Xi, ROnB = ROnB, BetaL = betaL };
 
-        /// <summary>kh0 に掛ける係数 (群杭係数 ξ × 液状化低減率 βL)。</summary>
+        /// <summary>kh0 に掛ける係数 (群杭係数 ξ × 液状化低減率 βLq)。</summary>
         public double Kh0Factor => Xi * BetaL;
     }
 

@@ -138,7 +138,7 @@ namespace PileDesign.Output
                 var pileNodes = pile.PileNodes;
                 bool isFront = rep != null && pile.IsFrontFor(rep);
                 if (AnalyzedCases().Any(lc => pile.IsFrontFor(lc) != isFront)) frontDiffers.Add(pile.No);
-                var effect = GroupPileEffect.For(pile);   // 液状化なし (βL = 1)
+                var effect = GroupPileEffect.For(pile);   // 液状化なし (βLq = 1)
                 int n = reactions?.Count ?? 0;
 
                 for (int i = 0; i < pile.HorizontalSoilSprings.Count; i++)
@@ -335,7 +335,7 @@ namespace PileDesign.Output
             var analyzed = AnalyzedCases().ToList();
             bool anyLiquefaction = (_anaModel.AnalysisStepResults ?? []).Any(r => r.IsLiquefaction);
 
-            notes.Add($"地盤ばねは荷重ケースごとに変えられないため、液状化を考慮しない状態 (βL = 1)・{repName} の前方杭/後方杭・"
+            notes.Add($"地盤ばねは荷重ケースごとに変えられないため、液状化を考慮しない状態 (βLq = 1)・{repName} の前方杭/後方杭・"
                       + $"地盤非線形「{ModeName(mode)}」の 1 組で書きます。");
             if (anyLiquefaction)
                 notes.Add("液状化を考慮したケースも、地盤ばねは液状化を考慮しない値です (地盤変位は液状化の値を与えます)。");
