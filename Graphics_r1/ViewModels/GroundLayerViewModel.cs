@@ -130,6 +130,7 @@ namespace PileDesign.ViewModels
             nameof(GroundInput.GroundAcceleration2),
             nameof(GroundInput.ShallowSoilType),
             nameof(GroundInput.CalculationMethod),
+            nameof(GroundInput.RegionalFactor),
         ];
 
         // 相互換算（標高ZとGL深さ）の同期
@@ -2255,8 +2256,8 @@ namespace PileDesign.ViewModels
                 // 地震荷重により決まる係数
                 double L = (levelIndex == 0) ? 0.2 : 1.0;
 
-                // 地域係数
-                double Z = 1.0;
+                // 地域係数 (地盤ウィンドウの入力。2026-11-21 までは 1.0 に固定していた)
+                double Z = GroundInput.RegionalFactor;
 
                 // Gs1/Gs2/Impedance/T2/XiE/Beta は応答スペクトル法のみで使用 — 他算定法では 0 にクリア
                 GroundInput.Gs1Levels[levelIndex] = 0.0;

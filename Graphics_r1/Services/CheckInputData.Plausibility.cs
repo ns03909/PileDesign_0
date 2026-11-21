@@ -47,6 +47,7 @@ namespace PileDesign.Services
             notices.AddRange(CollectPileToeNValueNotices(inputModel));
             notices.AddRange(CollectNegativeStressSpringNotices(inputModel));
             notices.AddRange(CollectGroundAccelerationNotices(inputModel));
+            notices.AddRange(CollectRegionalFactorNotices(inputModel));
             notices.AddRange(CollectSoilMagnitudeNotices(inputModel));
             notices.AddRange(CollectPileSpacingNotices(inputModel));
             return notices;
@@ -204,6 +205,29 @@ namespace PileDesign.Services
                         + "液状化の判定に使います。",
                         "地盤の画面で地表面加速度を m/s² で入れ直す"));
                 }
+            }
+            return notices;
+        }
+
+        /// <summary>
+        /// 地域係数 Z が告示の値 (0.7〜1.0) の外。割り増して使う場合もあるので止めずに知らせる。
+        /// 入力欄は 0.1〜2.0 に丸めて受け付ける (2026-11-21 に入力にした。それまでは 1.0 固定)。
+        /// </summary>
+        internal static List<Diagnostic> CollectRegionalFactorNotices(InputModel inputModel)
+        {
+            var notices = new List<Diagnostic>();
+            var grounds = inputModel?.GroundsInput;
+            if (grounds == null) return notices;
+            for (int g = 0; g < grounds.Count; g++)
+            {
+                var ground = grounds[g];
+                if (ground == null) continue;
+                double z = ground.RegionalFactor;
+                if (z >= 0.7 - 1e-9 && z <= 1.0 + 1e-9) continue;
+                notices.Add(Diagnostic.Notice(DiagnosticSeverity.Info, DiagnosticTarget.Ground(g + 1),
+                    $"地盤 {g + 1}: 地域係数 Z = {z:0.###} は告示の値 (0.7〜1.0) の外です。"
+                    + "地盤変位 (固有周期ののび α、応答スペクトル法の加速度) に掛かります。",
+                    "意図した値か、地盤の画面の「地域係数 Z」を確かめる"));
             }
             return notices;
         }

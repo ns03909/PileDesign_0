@@ -395,11 +395,13 @@ namespace PileDesign.ViewModels
             // 算定法が応答スペクトル法以外のときは Gs1=Gs2=0 のため地表は描けない。
             // その場合は基盤 Sa0 のみ表示。
             bool hasSurface = GroundInput.Gs1Levels[0] > 0 || GroundInput.Gs1Levels[1] > 0;
+            // 地域係数 Z (算定と同じ値。以前は算定もグラフも 1.0 固定)
+            double z = GroundInput.RegionalFactor;
 
             // Level 1 基盤 (薄水色)
             {
                 double[] sa = new double[nPts];
-                for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaBedrock(Ts[i], 0.2);
+                for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaBedrock(Ts[i], 0.2, z);
                 var s = wpf.Plot.Add.ScatterLine(logTs, sa);
                 s.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
                 s.LineWidth = 1.5f;
@@ -409,7 +411,7 @@ namespace PileDesign.ViewModels
             // Level 2 基盤 (濃水色)
             {
                 double[] sa = new double[nPts];
-                for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaBedrock(Ts[i], 1.0);
+                for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaBedrock(Ts[i], 1.0, z);
                 var s = wpf.Plot.Add.ScatterLine(logTs, sa);
                 s.Color = Color.FromSKColor(NikkenSKColor.DeepBlue);
                 s.LineWidth = 1.5f;
@@ -426,7 +428,7 @@ namespace PileDesign.ViewModels
                     double t1 = GroundInput.NaturalPeriods[0];
                     double t2 = GroundInput.T2Levels[0];
                     double[] sa = new double[nPts];
-                    for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaSurface(Ts[i], t1, t2, gs1, gs2, 0.2);
+                    for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaSurface(Ts[i], t1, t2, gs1, gs2, 0.2, z);
                     var s = wpf.Plot.Add.ScatterLine(logTs, sa);
                     s.Color = Color.FromSKColor(NikkenSKColor.SkyBlue);
                     s.LineWidth = 2.5f;
@@ -439,7 +441,7 @@ namespace PileDesign.ViewModels
                     double t1 = GroundInput.NaturalPeriods[1];
                     double t2 = GroundInput.T2Levels[1];
                     double[] sa = new double[nPts];
-                    for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaSurface(Ts[i], t1, t2, gs1, gs2, 1.0);
+                    for (int i = 0; i < nPts; i++) sa[i] = PileDesign.Services.GroundResponseSpectrumCalc.SaSurface(Ts[i], t1, t2, gs1, gs2, 1.0, z);
                     var s = wpf.Plot.Add.ScatterLine(logTs, sa);
                     s.Color = Color.FromSKColor(NikkenSKColor.DeepBlue);
                     s.LineWidth = 2.5f;

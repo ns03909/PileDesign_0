@@ -3921,6 +3921,10 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
                         <td>工学的基盤のせん断波速度 (m/s)</td>
                         <td>工学的基盤層のせん断弾性波速度を入力します（初期値：400）。</td>
                     </tr>
+                    <tr id="ground-regional-factor">
+                        <td>地域係数 Z</td>
+                        <td>地盤変位の算定 (固有周期ののび $\alpha$) と応答スペクトル法の加速度 $L Z S_{a0}(T)$ に掛けます（初期値：1.0）。告示の値 (0.7〜1.0) の外は解析前の確認で知らせます。1.0.40-beta までは入力欄が無く、1.0 に固定していました。</td>
+                    </tr>
                 </tbody>
             </table>
 
@@ -10152,8 +10156,8 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
             <table class="formula-conditions" id="cond-ground-displacement">
                 <tr><th>適用対象</th><td>液状化しない地盤の地表変位 $D_{max}$ と深さ方向の分布 $D_{max} u_i^*$ (地盤変位算定法 a1(b1)・a2(b2))。水平解析では組合せ係数 $\alpha_L$ を掛けて杭の地盤ばねの外端に強制変位として与える。液状化する層があれば $\Sigma \gamma_{cy} H$ を加える</td></tr>
-                <tr><th>入力</th><td>地盤ウィンドウの「表層の土質」(粘性土・砂質土)・「地盤変位算定法」・工学的基盤の単位体積重量 $\gamma_B$ とせん断波速度 $V_{SB}$、土質点の層厚 $H$・単位体積重量・$V_{S0}$</td></tr>
-                <tr><th>採用値</th><td>a1(b1) (地震動を地表で設定) は式 (4.5.2)、a2(b2) (工学的基盤で設定) は式 (4.5.1)。「表層の土質」が粘性土なら $C_1 = 0.0028$・$C_2 = 0.53$・$C_\alpha = 25$、砂質土なら $0.0015$・$0.66$・$40$。$L$ はレベル1 で 0.2、レベル2 で 1.0。<strong>地域係数 $Z$ は 1.0 に固定</strong> (入力欄なし)。$\alpha$ は 4、$f_A$ は 1 で頭打ち。$\sum H_i$ は工学的基盤より上の土質点の層厚の和</td></tr>
+                <tr><th>入力</th><td>地盤ウィンドウの「表層の土質」(粘性土・砂質土)・「地盤変位算定法」・工学的基盤の単位体積重量 $\gamma_B$ とせん断波速度 $V_{SB}$・「地域係数 Z」、土質点の層厚 $H$・単位体積重量・$V_{S0}$</td></tr>
+                <tr><th>採用値</th><td>a1(b1) (地震動を地表で設定) は式 (4.5.2)、a2(b2) (工学的基盤で設定) は式 (4.5.1)。「表層の土質」が粘性土なら $C_1 = 0.0028$・$C_2 = 0.53$・$C_\alpha = 25$、砂質土なら $0.0015$・$0.66$・$40$。$L$ はレベル1 で 0.2、レベル2 で 1.0。地域係数 $Z$ は地盤ウィンドウの入力 (既定 1.0)。$\alpha$ は 4、$f_A$ は 1 で頭打ち。$\sum H_i$ は工学的基盤より上の土質点の層厚の和</td></tr>
                 <tr><th>適用外</th><td>「応答スペクトル法」を選んだときはこの式を使わない (計算できないレベルだけ a2(b2) の式で代用し、地盤ウィンドウに知らせる)。工学的基盤の物性値が不正なとき、工学的基盤より上に層厚が無いときは計算しない</td></tr>
                 <tr><th>参照箇所</th><td>基礎指針'19 4.5 節・表 4.5.1、<a href="#section-ground-input">地盤の入力</a>・<a href="#h-応答スペクトル法-MDOF--等価線形化">応答スペクトル法</a>・<a href="#loadcase-superposition">荷重の重ね合わせ</a> ($\alpha_L$)</td></tr>
                 <tr><th>計算例</th><td>砂質土、$\sum H_i = 20$ m、$T_0 = 0.5$ s、レベル2: $\alpha = 1 + 1.0 \times 1.0 \times 40 \times 0.5 / 20 = 2.0$、$f_A = \min(1.6 \times 2.0 \times 0.5, 1) = 1.0$。a2(b2) は $D_{max} = 0.0015 \times 3 \times 1.0 \times 20 = 0.090$ m、a1(b1) は $R_{Z0} = 0.3$ で $\{0.66 \times 0.75 + 2 \times 0.3/2.0\} = 0.795$ を掛けて $0.072$ m</td></tr>
@@ -10204,7 +10208,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             <ul class="symbol-list">
                 <li class="symbol-intro">ここに、</li>
                 <li><span class="symbol-label">$L$</span>地震荷重レベルにより決まる定数(レベル1で0.2,レベル2で1.0)</li>
-                <li><span class="symbol-label">$Z$</span>地域係数</li>
+                <li><span class="symbol-label">$Z$</span>地域係数 (地盤ウィンドウの「<a href="#ground-regional-factor">地域係数 Z</a>」。既定 1.0)</li>
                 <li><span class="symbol-label">$C_\alpha$</span>表層の土質の動的変形特性から決まる定数(粘性土で25,砂質土で40)</li>
                 <li><span class="symbol-label">$T_0$</span>地盤の初期固有周期</li>
             </ul>
@@ -10296,7 +10300,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 <li><span class="symbol-label">$\beta$</span>1 次モード参加係数 $= \{U\}^T[M]\{1\} / \{U\}^T[M]\{U\}$ (論文式 3)</li>
                 <li><span class="symbol-label">$U_i$</span>1 次モード形の質点 $i$ における値</li>
                 <li><span class="symbol-label">$\xi_e$</span>等価減衰定数 (論文式 10、ひずみエネルギー重み付き平均)</li>
-                <li><span class="symbol-label">$L,\ Z$</span>レベルに応じた係数 (レベル1 0.2、レベル2 1.0) と地域係数。本プログラムは論文式 (1) にこれらを乗じる</li>
+                <li><span class="symbol-label">$L,\ Z$</span>レベルに応じた係数 (レベル1 0.2、レベル2 1.0) と地域係数 (<a href="#ground-regional-factor">地盤ウィンドウの入力</a>、既定 1.0)。本プログラムは論文式 (1) にこれらを乗じる</li>
             </ul>
 
             <h4>地盤増幅率 (論文式 9)</h4>

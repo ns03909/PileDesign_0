@@ -437,6 +437,10 @@ namespace PileDesign.Output
                     CreateTableCell([$"{groundInput.ShallowSoilType}"], fontSize, "right")
                 ),
                 new TableRow(
+                    CreateTableCell(["地域係数 Z"], fontSize, "center"),
+                    CreateTableCell([$"{groundInput.RegionalFactor:0.0##}"], fontSize, "right")
+                ),
+                new TableRow(
                     CreateTableCell(["工学的基盤の単位体積重量[kN/m<^3>]"], fontSize, "center"),
                     CreateTableCell([$"{groundInput.BedrockDensity:N1}"], fontSize, "right")
                 ),

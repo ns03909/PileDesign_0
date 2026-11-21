@@ -187,7 +187,7 @@ namespace TestProject1
             StringAssert.Contains(a1.Groups[1].Value, "C2", "a1(b1) (地表で設定) は C2・R_Z0 を含む式 (4.5.2) のはず");
             StringAssert.Contains(a1.Groups[1].Value, "Rz0");
             Assert.IsFalse(a2.Groups[1].Value.Contains("C2"), "a2(b2) (工学的基盤で設定) は式 (4.5.1) のはず");
-            StringAssert.Contains(code, "double Z = 1.0;", "地域係数 Z が 1.0 固定でなくなった。表の「採用値」を直す");
+            StringAssert.Contains(code, "double Z = GroundInput.RegionalFactor;", "地域係数 Z を入力から取っていない (表の「採用値」と合わない)");
 
             // 計算例: 砂質土、ΣH = 20、T0 = 0.5、レベル2、R_Z0 = 0.3
             double alpha = Math.Min(1 + 1.0 * 1.0 * 40 * 0.5 / 20, 4.0), fA = Math.Min(1.6 * alpha * 0.5, 1);

@@ -211,6 +211,20 @@ namespace PileDesign.Models.InputData
             set => SetProperty(ref _bedrockShearWaveVelocity, value);
         }
 
+        /// <summary>
+        /// 地域係数 Z (地盤変位の算定: 基礎指針'19 式 (4.5.3) の α と、応答スペクトル法の Sa(T) = L·Z·Sa0(T))。
+        ///
+        /// <para>2026-11-21 まで入力欄が無く、算定で 1.0 に固定していた (ヘルプにも書かれていなかった)。
+        /// 利用者の判断で入力にした。既定 1.0 なので、以前のファイル (この項目が無い) の結果は変わらない。
+        /// 告示の地域係数は 0.7〜1.0。その外の値は解析前の確認で知らせる (割り増して使う場合もあるので止めない)。</para>
+        /// </summary>
+        private double _regionalFactor = 1.0;
+        public double RegionalFactor
+        {
+            get => _regionalFactor;
+            set => SetFiniteClampedDouble(ref _regionalFactor, value, min: 0.1, max: 2.0, fallback: 1.0);
+        }
+
         // 土層データ（デシリアライズ時はコンストラクタのデフォルト値を上書きする）
         private ObservableCollection<GroundLayerInput> _groundLayers = null!;   // コンストラクタで入る
         [JsonProperty(ObjectCreationHandling = ObjectCreationHandling.Replace)]
