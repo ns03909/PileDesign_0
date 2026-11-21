@@ -940,6 +940,29 @@
             margin: 4px 0;
             max-width: 100%;
         }
+
+        /* 式の適用条件の小表 (外部レビュー #31)。行は 適用対象・入力・採用値・適用外・参照箇所 (・計算例) の順にそろえる */
+        table.formula-conditions {
+            border-collapse: collapse;
+            margin: 6px 0 14px;
+            font-size: 0.92em;
+            max-width: 100%;
+        }
+
+            table.formula-conditions th,
+            table.formula-conditions td {
+                border: 1px solid #C8DDEC;
+                padding: 3px 8px;
+                text-align: left;
+                vertical-align: top;
+            }
+
+            table.formula-conditions th {
+                background: #F4F9FD;
+                white-space: nowrap;
+                font-weight: normal;
+                color: #1F5F8B;
+            }
     </style>
 </head>
 
@@ -12674,6 +12697,14 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                         </div>
                         <div class="formula-right">強度と変形性能 (8.3)</div>
                     </div>
+                    <table class="formula-conditions" id="cond-steel-pipe-local-buckling">
+                        <tr><th>適用対象</th><td>鋼管杭 (鋼管部・コンクリート充填鋼管部) の使用限界・損傷限界の曲げと軸力、安全限界の鋼管の曲げ強度 ${}_s\sigma_{cy1} = 1.1 \times 1.5\,{}_sf_{c1}$</td></tr>
+                        <tr><th>入力</th><td>杭断面の鋼管の外径 $D$・肉厚・腐食しろ・規格 ($F$)</td></tr>
+                        <tr><th>採用値</th><td>$t$ は腐食しろを引いた肉厚。$D/t \leq 25$ は低減なし。$D/t = 25$ で 2 式は連続 ($0.8 + 5/25 = 1$)</td></tr>
+                        <tr><th>適用外</th><td>場所打ち鋼管コンクリート杭・SC 杭の鋼管 (それぞれの章の式)</td></tr>
+                        <tr><th>参照箇所</th><td>強度と変形性能 (8.2)・(8.3)、<a href="#cond-steel-pipe-buckling">柱座屈の ${}_sf_{c2}$</a></td></tr>
+                        <tr><th>計算例</th><td>$F = 235$ N/mm²: $D/t = 25$ (例 $D = 600$, $t = 24$) で ${}_sf_{c1} = 156.7$ (= $F/1.5$)、$D/t = 50$ ($t = 12$) で 141.0、$D/t = 100$ ($t = 6$) で 133.2</td></tr>
+                    </table>
 
                     <h4>鋼管杭の長期許容曲げ座屈応力度 sfc2</h4>
                     <p>
@@ -12737,6 +12768,18 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                         基本設定の「鋼管杭の柱座屈 (曲げ座屈)」で考慮しない選択にすることもできる
                         (この項目を入れる前の耐力と比べたいとき)。
                     </p>
+                    <!-- 式の適用条件 (外部レビュー #31)。計算例の数値は FormulaConditionTableTests が実装の式で突き合わせる -->
+                    <table class="formula-conditions" id="cond-steel-pipe-buckling">
+                        <tr><th>適用対象</th><td>鋼管杭の圧縮側の軸力の制限値 (損傷限界 $N_{dc}$・安全限界 ${}_sN_{uc}$) と、${}_sN_{uc}$ で割る杭中間部・下部の安全限界曲げモーメントの軸力比 (圧縮のとき)。曲げの強度 ${}_s\sigma_{cy1}$ は局部座屈系のまま</td></tr>
+                        <tr><th>入力</th><td>杭断面の鋼管 (外径 $D$・腐食後の肉厚 $t$・規格 $F$)、地盤ウィンドウの液状化の検討 ($\beta$)、杭配置 (杭頭・杭先端の高さ)</td></tr>
+                        <tr><th>採用値</th><td>$l_k$ = $\beta &lt; 1$ の連続区間の長さの最大 (杭が通る範囲だけ。レベル1・レベル2 の長い方。同じ杭体を使う杭のうち最も長いもの)、$E = 205{,}000$ N/mm²、$I$ は鋼管のみ。制限値は局部座屈系 ${}_sf_{c1}$ と柱座屈系 ${}_sf_{c2}$ の小さい方</td></tr>
+                        <tr><th>適用外</th><td>液状化の検討をしていない地盤 ($l_k = 0$ として低減しない。解析前の注意に出る)、基本設定で柱座屈を考慮しないとき、場所打ち杭・既製コンクリート杭</td></tr>
+                        <tr><th>参照箇所</th><td>強度と変形性能 (8.10)〜(8.12)・解説図 8.3、<a href="#fund-opt-steelpipe-buckling">基本設定の柱座屈</a>、<a href="#h-地盤の液状化">地盤の液状化</a></td></tr>
+                        <tr><th>計算例</th><td>$D = 600$ mm、$t = 12$ mm、$F = 235$ N/mm² ($D/t = 50$ で ${}_sf_{c1} = 141.0$ N/mm²)。
+                            $l_k = 0$ m: ${}_sf_{c2} = F/1.5 = 156.7$ → ${}_sf_{c1}$ が支配。
+                            $l_k = 5$ m: $\lambda_c = 0.259$、${}_sf_{c2} = 151.4$ → まだ ${}_sf_{c1}$ が支配。
+                            $l_k = 10$ m: $\lambda_c = 0.518$、${}_sf_{c2} = 136.8$ → <strong>柱座屈系が支配</strong> (この断面では約 9 m が境)</td></tr>
+                    </table>
 
                     <h3 id="h-使用限界状態">使用限界状態</h3>
                     <p>鋼管部・コンクリート充填鋼管部 共通。$\beta_1 = 1.0$。</p>
@@ -13211,6 +13254,14 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                         <li>$l_3$: 鋼管断面変化部〜$L = 4D$ 位置 (鋼管薄部、$l_3 = L - l_1 - l_2$。未入力なら $3D$)</li>
                         <li>$EI_1$: 杭断面の曲げ剛性 $EI$ (腐食後の鋼管 + 充填コンクリート + 主筋の換算。諸元表・FEM の弾性剛性と同じ値)、$EI_2 = sE \times I_{\text{steel}}$ (腐食後の杭頭部の鋼管のみ)、$EI_3$: 杭体の、断面変化部 ($l_1 + l_2$) のすぐ下にある鋼管部の区間の腐食後の鋼管の $sE \times I$ (その深さがまだコンクリート充填鋼管部の区間なら、その下の最初の鋼管部の区間。鋼管部の区間が無ければ $EI_2$ と同じ)。杭断面の諸元表に「鋼管薄部の曲げ剛性 EI3」として出します</li>
                     </ul>
+                    <table class="formula-conditions" id="cond-steel-pipe-head-eieq">
+                        <tr><th>適用対象</th><td>鋼管杭のコンクリート充填鋼管部 (杭頭部) の M-φ (検定と FEM の両方。ファイバー M-φ を選んだときを除く) と $\theta'_{Mu}$・$\theta_u$</td></tr>
+                        <tr><th>入力</th><td>杭断面 (コンクリート充填鋼管部) の「充填長 l1」「鋼管厚部の長さ l2」、杭体の区間 (下の鋼管部の断面)</td></tr>
+                        <tr><th>採用値</th><td>$L = 4D$ (充填長によらず固定)。$l_1$ 未入力は $D$、$l_2$ 未入力は 0。$l_1$・$l_2$ は $L$ の中に打ち切る。要素分割は杭頭から $l_1$・$l_1 + l_2$・$4D$ に節点を置く</td></tr>
+                        <tr><th>適用外</th><td>コンクリート充填鋼管部の無い鋼管杭 (杭中間部の式)、ファイバー M-φ を選んだとき</td></tr>
+                        <tr><th>参照箇所</th><td>基礎部材の強度と変形性能 8 章、<a href="#h-記号一覧">記号一覧</a> ($l_1$, $l_2$, $l_3$)</td></tr>
+                        <tr><th>計算例</th><td>境界の値: $l_1 \geq 4D$ なら $L$ 全体が充填部で $EI_{eq} = EI_1$。下に鋼管部の区間が無いか、杭頭部と同じ鋼管なら $EI_3 = EI_2$ で、$l_2$ は $EI_{eq}$ を変えない。下の区間が薄い鋼管なら、$l_2$ を長くするほど $EI_{eq}$ は大きくなる</td></tr>
+                    </table>
                     <div class="formula-block">
                         <div class="formula-left">
                             <p>$$\theta'_{Mu} = 0.172 (1 - n_{ud}/(_{pm}N_y \beta)) \cdot cL' / D$$</p>
