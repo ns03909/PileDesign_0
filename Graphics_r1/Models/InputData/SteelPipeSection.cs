@@ -63,8 +63,8 @@ namespace PileDesign.Models.InputData
         internal const double HeadZoneDiameters = 4.0;
 
         /// <summary>
-        /// 杭頭部の鋼管厚部の長さ l2 [mm] (充填部の下端から鋼管の断面変化部まで)。0 は厚部なし。
-        /// 杭断面の「鋼管厚部の長さ l2」の入力 (<see cref="PileSection.CftThickPartLength"/>) を渡す
+        /// 杭頭部のl2 (充填部下端〜鋼管の断面変化部) [mm] (充填部の下端から鋼管の断面変化部まで)。0 は厚部なし。
+        /// 杭断面の「充填部下端〜鋼管の断面変化部 l2」の入力 (<see cref="PileSection.CftThickPartLength"/>) を渡す
         /// (2026-11-21。以前は 0 固定)。厚部の剛性 EI2 は、いまは薄部 EI3 と同じ値を使う。
         /// </summary>
         internal double HeadThickPartLength { get; init; }
@@ -748,7 +748,7 @@ namespace PileDesign.Models.InputData
         /// 鋼管杭頭部 (コンクリート充填鋼管部) の M-φ 関係を返す。
         /// φ = [0, φ_Md, φ_Mu', φ_u]、M = [0, Md, Mu, Mu]
         /// 杭頭部 EI は L³/EIeq = (L³−(l2+l3)³)/EI1 + ((l2+l3)³−l3³)/EI2 + l3³/EI3 で合成。
-        /// L = 4D、l1 = 充填長 (未入力なら D)、l2 = 鋼管厚部の長さ (0 は厚部なし)、l3 = L − l1 − l2 (鋼管のみ)。<see cref="ComputeEIeqHead"/> を参照。
+        /// L = 4D、l1 = 充填長 (未入力なら D)、l2 = 充填部下端〜鋼管の断面変化部の長さ (0 は厚部なし)、l3 = L − l1 − l2 (鋼管のみ)。<see cref="ComputeEIeqHead"/> を参照。
         /// </summary>
         internal (System.Collections.Generic.List<double> phis, System.Collections.Generic.List<double> moments)
             GetMPhiRelationshipHead(double Nud)
@@ -841,7 +841,7 @@ namespace PileDesign.Models.InputData
         /// <summary>
         /// 杭頭部の 3 セグメント直列合成 EIeq を計算する。
         /// L³/EIeq = (L³ − (l2+l3)³)/EI1 + ((l2+l3)³ − l3³)/EI2 + l3³/EI3
-        /// L = 4D、l1 = 充填長 (<see cref="HeadFillLength"/>、未入力なら D)、l2 = 鋼管厚部の長さ (<see cref="HeadThickPartLength"/>、
+        /// L = 4D、l1 = 充填長 (<see cref="HeadFillLength"/>、未入力なら D)、l2 = 充填部下端〜鋼管の断面変化部の長さ (<see cref="HeadThickPartLength"/>、
         /// 0 は厚部なし)、l3 = L − l1 − l2。
         /// <para>L = 4D は θMu の長さと同じで、充填長に関わらず固定する。l1・l2 は L の中に収まるよう打ち切る
         /// (充填長が L 以上なら L 全体が充填部で EIeq = EI1)。以前は l1 = D・l2 = 0・l3 = 3D 固定で、既定値はそのときと同じ値になる。</para>

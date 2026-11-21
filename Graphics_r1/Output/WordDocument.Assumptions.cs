@@ -165,7 +165,7 @@ namespace PileDesign.Output
                     + "充填長 l1 を用いて求めた ("
                     + string.Join("、", headLengths.Select(x => $"杭体No.{x.No}: {x.Section!.EffectiveCftFillLength:N0} mm"
                         + (x.Section.HasCftFillLengthInput ? "" : " (杭径 D と仮定)")
-                        + (x.Section.CftThickPartLength > 0 ? $"、鋼管厚部の長さ l2 = {x.Section.CftThickPartLength:N0} mm" : "")))
+                        + (x.Section.CftThickPartLength > 0 ? $"、充填部下端〜鋼管の断面変化部 l2 = {x.Section.CftThickPartLength:N0} mm" : "")))
                     + ")。"
                     + "鋼管厚部の剛性は杭頭部の鋼管、鋼管薄部の剛性 EI3 は杭体の鋼管の断面変化部 (l1 + l2) より下の区間の鋼管 (腐食後) から求めた"
                     + "(下に鋼管部の区間が無い杭体は杭頭部の鋼管と同じとした)。"

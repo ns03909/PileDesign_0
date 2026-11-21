@@ -900,13 +900,13 @@ namespace PileDesign.Models.InputData
         [System.Text.Json.Serialization.JsonIgnore]
         public bool HasCftFillLengthInput => CftFillLength > 0;
 
-        // 鋼管杭の杭頭部の鋼管厚部の長さ l2 (mm)。コンクリート充填部の下端から鋼管の断面変化部まで。0 は厚部なし。
+        // 鋼管杭の杭頭部のl2 (充填部下端〜鋼管の断面変化部) (mm)。コンクリート充填部の下端から鋼管の断面変化部まで。0 は厚部なし。
         //
         // 杭頭部の検討式の合成 EIeq の l2 と、要素分割の節点 (杭頭から l1 + l2) に使う。
         // 2026-11-21 までは入力が無く 0 固定だった (利用者の要望で充填長 l1 と同じく杭断面に入力を設けた)
         private double _cftThickPartLength;
 
-        /// <summary>鋼管厚部の長さ l2 の入力 (mm)。0 は厚部なし (以前と同じ)。</summary>
+        /// <summary>l2 (充填部下端〜鋼管の断面変化部) の入力 (mm)。0 は厚部なし (以前と同じ)。</summary>
         public double CftThickPartLength
         {
             get => _cftThickPartLength;

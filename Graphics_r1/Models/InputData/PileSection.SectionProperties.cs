@@ -275,8 +275,8 @@ namespace PileDesign.Models.InputData
                         "未入力のため杭径 D と仮定。実際の充填長が違う場合は「充填長」を入力してください"));
             if (PileSectionType == PileTypeNames.CftSection)
                 SelectedPileSectionSpecification.Add(
-                    new Spec("鋼管厚部の長さ", "l2", $"{CftThickPartLength:N0}", "mm",
-                        CftThickPartLength > 0 ? "入力値。充填部の下端から鋼管の断面変化部まで" : "厚部なし (充填部の下端で断面が変わる)"));
+                    new Spec("充填部下端〜鋼管の断面変化部", "l2", $"{CftThickPartLength:N0}", "mm",
+                        CftThickPartLength > 0 ? "入力値" : "0: 充填部の下端で断面が変わる (厚い鋼管の区間なし)"));
             if (PileSectionType == PileTypeNames.CftSection)
                 SelectedPileSectionSpecification.Add(HeadThinPipeEI > 0
                     ? new Spec("鋼管薄部の曲げ剛性", "EI3", $"{HeadThinPipeEI:N0}", "kNm2", "杭体の、断面変化部より下の鋼管部の区間から (腐食後)")

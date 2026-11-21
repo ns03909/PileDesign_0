@@ -16,7 +16,7 @@ namespace TestProject1
     /// <para>杭頭部の検討式は、杭頭から L = 4D を充填部 l1・鋼管部 l3 = L − l1 に分けて合成剛性 EIeq を求める。
     /// 以前は l1 = D 固定で入力できなかった。いまは杭断面の「充填長 l1」で入れる。未入力 (0) は杭径 D で、
     /// 以前のファイルの計算は変わらない。杭体の区間長とは別の入力なので、違うときは解析前の注意に出す。</para>
-    /// <para>鋼管厚部の長さ l2 も杭断面で入れる (2026-11-21)。0 は厚部なし。節点 (l1 + l2) と EIeq の l2 に渡す。</para>
+    /// <para>l2 (充填部下端〜鋼管の断面変化部) も杭断面で入れる (2026-11-21)。0 は厚部なし。節点 (l1 + l2) と EIeq の l2 に渡す。</para>
     /// </summary>
     [TestClass]
     public class SteelPipeHeadLengthTests
@@ -47,16 +47,16 @@ namespace TestProject1
             var middle = new PileSection { PileBodyType = PileTypeNames.SteelPipe, PileSectionType = PileTypeNames.SteelPipeSection, PipeDia = 800, PipeTs = 12, CftFillLength = 1600 };
             middle.SetSpecs();
             Assert.IsFalse(middle.SelectedPileSectionSpecification.Any(s => s.Item.StartsWith("充填長")), "鋼管部にも出している");
-            Assert.IsFalse(middle.SelectedPileSectionSpecification.Any(s => s.Item == "鋼管厚部の長さ"), "鋼管部にも l2 を出している");
+            Assert.IsFalse(middle.SelectedPileSectionSpecification.Any(s => s.Item == "充填部下端〜鋼管の断面変化部"), "鋼管部にも l2 を出している");
 
-            // 鋼管厚部の長さ l2 (2026-11-21)。0 は厚部なし
-            var thick = head.SelectedPileSectionSpecification.SingleOrDefault(s => s.Item == "鋼管厚部の長さ");
-            Assert.IsNotNull(thick, "鋼管厚部の長さ l2 を出していない");
+            // l2 (充填部下端〜鋼管の断面変化部) (2026-11-21)。0 は厚部なし
+            var thick = head.SelectedPileSectionSpecification.SingleOrDefault(s => s.Item == "充填部下端〜鋼管の断面変化部");
+            Assert.IsNotNull(thick, "l2 (充填部下端〜鋼管の断面変化部) を出していない");
             Assert.AreEqual("0", thick.Value);
-            StringAssert.Contains(thick.Note, "厚部なし");
+            StringAssert.Contains(thick.Note, "充填部の下端で断面が変わる");
             head.CftThickPartLength = 800;
             head.SetSpecs();
-            Assert.AreEqual("800", head.SelectedPileSectionSpecification.Single(s => s.Item == "鋼管厚部の長さ").Value);
+            Assert.AreEqual("800", head.SelectedPileSectionSpecification.Single(s => s.Item == "充填部下端〜鋼管の断面変化部").Value);
         }
 
         // ── 検討式 ──
@@ -79,7 +79,7 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 鋼管厚部の長さ l2 と鋼管薄部の剛性 EI3 (2026-11-21)。厚部 EI2 は杭頭部の鋼管、薄部 EI3 は杭体の下の区間の鋼管。
+        /// l2 (充填部下端〜鋼管の断面変化部) と鋼管薄部の剛性 EI3 (2026-11-21)。厚部 EI2 は杭頭部の鋼管、薄部 EI3 は杭体の下の区間の鋼管。
         /// 薄部が杭頭部の鋼管より柔らかければ、l2 を長くする (薄部を厚部に置き換える) と EIeq は硬くなる。
         /// 下の区間が無い (EI3 = 0 → 杭頭部の鋼管と同じ) ときは、l2 は EIeq を変えない。
         /// </summary>
@@ -223,7 +223,7 @@ namespace TestProject1
             Has(filled, 1.6, "充填部の下端 (入力 1,600 mm) = 断面変化部 (l2 = 0)");
             Has(filled, 4 * d, "検討区間の下端 4D");
 
-            // 鋼管厚部の長さ l2 を入れると、断面変化部 l1 + l2 にも節点が入る (2026-11-21)
+            // l2 (充填部下端〜鋼管の断面変化部) を入れると、断面変化部 l1 + l2 にも節点が入る (2026-11-21)
             head.CftThickPartLength = 400;
             var thick = Depths();
             Has(thick, 1.6, "充填部の下端 l1");
@@ -315,7 +315,7 @@ namespace TestProject1
                 svc.SaveProjectData(file, input, new PileDesign.FEM.AnaModel(), null);
                 var loaded = svc.LoadProjectData(file).InputModel.PileBodies[0].PileBodySegments[0].PileSection;
                 Assert.AreEqual(1600, loaded.CftFillLength, "入力した充填長が保存の往復で変わった");
-                Assert.AreEqual(700, loaded.CftThickPartLength, "入力した鋼管厚部の長さ l2 が保存の往復で変わった");
+                Assert.AreEqual(700, loaded.CftThickPartLength, "入力したl2 (充填部下端〜鋼管の断面変化部) が保存の往復で変わった");
 
                 string text = FileOperationService.ReadSaveFileText(file);
                 string old = Regex.Replace(text, "\\s*\"Cft(FillLength|ThickPartLength)\":\\s*[0-9.eE+-]+,?", "");

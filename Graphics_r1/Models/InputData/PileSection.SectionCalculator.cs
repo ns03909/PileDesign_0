@@ -65,7 +65,7 @@ namespace PileDesign.Models.InputData
                 CompositeHeadEI = PileSectionType == PileTypeNames.CftSection ? EI * 1e9 : null,
                 // 杭頭部の充填長 l1 (mm)。未入力なら null で、検討式が杭径 D とする (以前と同じ計算)
                 HeadFillLength = PileSectionType == PileTypeNames.CftSection && HasCftFillLengthInput ? CftFillLength : null,
-                // 杭頭部の鋼管厚部の長さ l2 (mm)。0 は厚部なし
+                // 杭頭部のl2 (充填部下端〜鋼管の断面変化部) (mm)。0 は厚部なし
                 HeadThickPartLength = PileSectionType == PileTypeNames.CftSection ? CftThickPartLength : 0.0,
                 // 杭頭部の鋼管薄部の EI3 (杭体の下の区間から配った値)。kNm² → N·mm²。無ければ null で杭頭部の鋼管と同じ
                 HeadThinPipeEI = PileSectionType == PileTypeNames.CftSection && HeadThinPipeEI > 0 ? HeadThinPipeEI * 1e9 : null,
