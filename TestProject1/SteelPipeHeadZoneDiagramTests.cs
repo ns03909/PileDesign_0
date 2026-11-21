@@ -37,7 +37,7 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 図を足して入力タブが縦に長くなったので、タブの中身はスクロールできる (利用者の要望 2026-11-21)。
+        /// 杭断面ウィンドウの入力タブは縦に長くなりうるので、タブの中身はスクロールできる (利用者の要望 2026-11-21)。
         /// 入力タブ (InputTab) の直下が ScrollViewer であること。
         /// </summary>
         [TestMethod]
@@ -48,7 +48,7 @@ namespace TestProject1
                     @"<avalonDock:LayoutAnchorable x:Name=""InputTab""[^>]*>\s*(<!--.*?-->\s*)?<ScrollViewer x:Name=""InputTabScroll""[^>]*VerticalScrollBarVisibility=""Auto""",
                     System.Text.RegularExpressions.RegexOptions.Singleline),
                 "杭断面ウィンドウの入力タブがスクロールできません (中身が ScrollViewer で包まれていない)");
-            StringAssert.Contains(xaml, "<viewControls:SteelPipeHeadZoneDiagram", "(前提) 杭頭部の区間の図が入力タブにありません");
+            // 杭頭部の区間の図は 2026-11-21 に杭体ウィンドウへ移した (HeadZoneSegmentsTests.TheInputsLiveInThePileBodyWindow)
         }
 
         /// <summary>入力の組み合わせ (未入力・打ち切り・厚部なし) で、描画が例外なく終わり、何かを描く。</summary>

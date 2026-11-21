@@ -1,7 +1,32 @@
 ﻿namespace PileDesign.Models.InputData
 {
+    /// <summary>
+    /// 鋼管杭の杭頭部で、杭体ウィンドウの l1・l2 から作った区間か (2026-11-21)。
+    /// 作った区間の長さは l1・l2 で決まり、表では編集しない。
+    /// </summary>
+    public enum HeadZoneRole
+    {
+        /// <summary>l1・l2 と関係のない区間 (表で編集する)。</summary>
+        None = 0,
+        /// <summary>コンクリート充填鋼管部 (杭頭〜l1)。</summary>
+        Fill = 1,
+        /// <summary>充填部下端〜鋼管の断面変化部 (l2)。充填部と同じ鋼管の鋼管部。</summary>
+        ThickPart = 2,
+    }
+
     public class PileBodySegment : BaseModel
     {
+        /// <summary>
+        /// 鋼管杭の杭頭部で l1・l2 から作った区間か (<see cref="PileBodyInput.SetHeadZone"/>)。保存する。
+        /// None 以外の区間は、区間長を表で編集せず、削除もしない (l1・l2 を 0 にして消す)。
+        /// </summary>
+        private HeadZoneRole _headZoneRole;
+        public HeadZoneRole HeadZoneRole
+        {
+            get => _headZoneRole;
+            set => SetProperty(ref _headZoneRole, value);
+        }
+
         private int _no;
         public int No
         {

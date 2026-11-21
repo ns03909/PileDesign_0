@@ -156,6 +156,167 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        // ─── 鋼管杭の杭頭部 (l1・l2) ───────────────────────────────────────────
+        //
+        // 杭頭部の検討式 (合成剛性 EIeq、「基礎部材の強度と変形性能」図 8.3) の l1 (コンクリート充填部) と
+        // l2 (充填部下端〜鋼管の断面変化部) は、杭体の上の 2 区間そのもの。2026-11-21 までは杭断面に
+        // 別の入力 (CftFillLength・CftThickPartLength) として持ち、区間長と二重になっていた (利用者の指摘)。
+        // いまは杭体ウィンドウで l1・l2 を入れると上の 2 区間を作り直し (SetHeadZone)、杭断面の値は
+        // ここから配る (SyncHeadZoneSections)。l1・l2 は区間の長さから読む (別に覚えない)。
+
+        /// <summary>充填部 (l1) の区間。無ければ null。</summary>
+        internal PileBodySegment? HeadFillSegment => PileBodySegments?.FirstOrDefault(s => s?.HeadZoneRole == HeadZoneRole.Fill);
+
+        /// <summary>充填部下端〜断面変化部 (l2) の区間。無ければ null。</summary>
+        internal PileBodySegment? HeadThickPartSegment => PileBodySegments?.FirstOrDefault(s => s?.HeadZoneRole == HeadZoneRole.ThickPart);
+
+        /// <summary>l1 (mm)。充填部の区間長。充填部が無ければ 0。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double HeadFillLength => (HeadFillSegment?.SegmentLength ?? 0.0) * 1000.0;
+
+        /// <summary>l2 (mm)。充填部下端〜断面変化部の区間長。無ければ 0。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double HeadThickPartLength => (HeadThickPartSegment?.SegmentLength ?? 0.0) * 1000.0;
+
+        /// <summary>杭頭部の杭径 D (mm)。充填部があればその断面、無ければ 1 区間目の断面の径。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double HeadPileDiameter
+            => (HeadFillSegment ?? PileBodySegments?.FirstOrDefault())?.PileSection?.PileDiameter ?? 0.0;
+
+        /// <summary>
+        /// l1・l2 (mm) を入れてよいか。だめなら理由 (画面の赤枠に出す)。
+        /// 厚い鋼管の区間 l1 + l2 は 4D 以下 (検討式の範囲)。l2 は充填部の下端から測るので、充填部が無ければ 0。
+        /// 杭の全長は変えない (下の区間で差を吸収する) ので、下に 1 m 以上の区間が残ること。
+        /// </summary>
+        internal string? ValidateHeadZone(double l1, double l2)
+        {
+            if (PileBodyType != PileTypeNames.SteelPipe) return "鋼管杭のときだけ入力できます";
+            if (!double.IsFinite(l1) || !double.IsFinite(l2) || l1 < 0 || l2 < 0) return "0 以上の数を入れてください";
+            if (l1 <= 0 && l2 > 0) return "充填部が無い (l1 = 0) ときは、l2 は 0 にしてください (l2 は充填部の下端から測ります)";
+            double d = HeadPileDiameter;
+            if (d > 0 && l1 + l2 > 4.0 * d + 1e-6)
+                return $"l1 + l2 = {l1 + l2:N0} mm が 4D = {4.0 * d:N0} mm を超えています (厚い鋼管の区間は 4D 以下)";
+            double total = (PileBodySegments?.Sum(s => s.SegmentLength) ?? 0.0) * 1000.0;
+            double lower = total - l1 - l2;
+            if (lower < 1000.0 - 1e-6)
+                return $"杭の全長 {total:N0} mm のうち、l1 + l2 の下に 1,000 mm 以上の区間が残りません";
+            return null;
+        }
+
+        /// <summary>
+        /// l1・l2 (mm) に合わせて上の 2 区間を作り直す。杭の全長は変えず、その下の 1 つ目の区間の長さで差を吸収する。
+        /// 入れられない値なら何も変えずに理由を返す (<see cref="ValidateHeadZone"/>)。
+        /// 充填部の断面は、いまの充填部 (無ければ 1 区間目) の断面を写して「コンクリート充填鋼管部」にし、
+        /// l2 の区間はその鋼管を写した「鋼管部」にする (<see cref="SyncHeadZoneSections"/>)。
+        /// </summary>
+        public string? SetHeadZone(double l1, double l2)
+        {
+            string? problem = ValidateHeadZone(l1, l2);
+            if (problem != null) return problem;
+            var segments = PileBodySegments!;
+
+            var oldFill = HeadFillSegment;
+            var template = (oldFill ?? HeadThickPartSegment ?? segments.FirstOrDefault(s => s.HeadZoneRole == HeadZoneRole.None) ?? segments[0]).PileSection;
+            double oldHead = segments.Where(s => s.HeadZoneRole != HeadZoneRole.None).Sum(s => s.SegmentLength);
+            foreach (var s in segments.Where(s => s.HeadZoneRole != HeadZoneRole.None).ToList()) segments.Remove(s);
+
+            // 吸収する区間 (作った区間のすぐ下)。全長を保つ
+            double newHead = (l1 + l2) / 1000.0;
+            // 区間は一覧に入れてから断面を入れる (一覧に足すと断面が既定値に初期化される: PileBodySegments_CollectionChanged)
+            if (segments.Count == 0)
+            {
+                var lowerSection = template.DeepCopy();
+                lowerSection.PileSectionType = PileTypeNames.SteelPipeSection;
+                var lower = new PileBodySegment { SegmentLength = 0.0 };
+                segments.Add(lower);
+                lower.PileSection = lowerSection;
+            }
+            segments[0].SegmentLength = Math.Round(segments[0].SegmentLength + oldHead - newHead, 9);
+
+            int at = 0;
+            if (l1 > 0)
+            {
+                var fill = new PileBodySegment { HeadZoneRole = HeadZoneRole.Fill, SegmentLength = l1 / 1000.0 };
+                segments.Insert(at++, fill);
+                fill.PileSection = template.DeepCopy();
+            }
+            if (l2 > 0)
+            {
+                var thick = new PileBodySegment { HeadZoneRole = HeadZoneRole.ThickPart, SegmentLength = l2 / 1000.0 };
+                segments.Insert(at, thick);
+                thick.PileSection = template.DeepCopy();
+            }
+
+            SyncHeadZoneSections();
+            PileBodySegmentsUpdate();
+            return null;
+        }
+
+        /// <summary>
+        /// 杭頭部の区間の断面をそろえ、杭断面の l1・l2 (合成剛性 EIeq と節点に使う値) を配る。
+        /// 充填部は「コンクリート充填鋼管部」、l2 の区間は充填部の断面を写した「鋼管部」(鋼管は同じ)。
+        /// 充填部の断面 (鋼管・コンクリート) を杭断面ウィンドウで変えたら呼ぶ (l2 の区間が追随する)。
+        /// </summary>
+        public void SyncHeadZoneSections()
+        {
+            if (PileBodySegments == null) return;
+            if (PileBodyType != PileTypeNames.SteelPipe)
+            {
+                foreach (var s in PileBodySegments) if (s != null) s.HeadZoneRole = HeadZoneRole.None;
+                return;
+            }
+            var fill = HeadFillSegment;
+            var thick = HeadThickPartSegment;
+            if (fill?.PileSection != null)
+            {
+                if (fill.PileSection.PileSectionType != PileTypeNames.CftSection) fill.PileSection.PileSectionType = PileTypeNames.CftSection;
+                fill.PileSection.CftFillLength = HeadFillLength;
+                fill.PileSection.CftThickPartLength = HeadThickPartLength;
+            }
+            // 写すのは鋼管が違うときだけ (毎回作り直すと、配るたびに断面が別の実体になり曲線の控えも捨てる)
+            if (thick != null && fill?.PileSection != null
+                && !(thick.PileSection?.PileSectionType == PileTypeNames.SteelPipeSection && SamePipe(fill.PileSection, thick.PileSection)))
+            {
+                var copy = fill.PileSection.DeepCopy();
+                copy.PileSectionType = PileTypeNames.SteelPipeSection;
+                copy.CftFillLength = 0.0;
+                copy.CftThickPartLength = 0.0;
+                thick.PileSection = copy;
+            }
+        }
+
+        /// <summary>
+        /// 杭頭部の区間の印が無い鋼管杭 (この仕組みより前のファイル・計算例) に印を付ける。
+        /// 1 区間目が「コンクリート充填鋼管部」なら充填部 (l1 = その区間長)、そのすぐ下が同じ鋼管
+        /// (径・肉厚・規格・腐食) の「鋼管部」なら l2 の区間とする。区間の長さ・断面は変えない。
+        /// </summary>
+        public void EnsureHeadZoneRoles()
+        {
+            var segments = PileBodySegments;
+            if (segments == null || segments.Count == 0) return;
+            if (PileBodyType != PileTypeNames.SteelPipe || segments.Any(s => s?.HeadZoneRole != HeadZoneRole.None))
+            {
+                SyncHeadZoneSections();
+                return;
+            }
+            if (segments[0]?.PileSection?.PileSectionType != PileTypeNames.CftSection) return;
+            segments[0].HeadZoneRole = HeadZoneRole.Fill;
+            if (segments.Count >= 3 && SamePipe(segments[0].PileSection, segments[1].PileSection)
+                && segments[1].PileSection.PileSectionType == PileTypeNames.SteelPipeSection)
+                segments[1].HeadZoneRole = HeadZoneRole.ThickPart;
+            SyncHeadZoneSections();
+        }
+
+        private static bool SamePipe(PileSection? a, PileSection? b)
+            // 製品名ではなく、計算に使う数値 (径・肉厚・規格・腐食) で比べる (名前の無い断面どうしを同じとみなさない)
+            => a != null && b != null
+               && a.PipeDia == b.PipeDia && a.PipeTs == b.PipeTs
+               && a.PipeGrade == b.PipeGrade
+               && a.CorrosionDepth == b.CorrosionDepth;
+
         /// <summary>
         /// 節杭 の杭頭タイプ（標準 / 拡頭中間径 / 拡頭）を、直上の杭区間の径から自動決定する。
         ///

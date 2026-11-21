@@ -1986,11 +1986,21 @@ namespace PileDesign.Models.InputData
             foreach (var pileBody in PileBodies ?? [])
             {
                 if (pileBody?.PileBodyType != PileTypeNames.SteelPipe) continue;
+                // 杭頭部の区間 (l1・l2) の印と、杭断面へ配る l1・l2 (2026-11-21 から杭体の区間で決める)
+                pileBody.EnsureHeadZoneRoles();
                 ApplyHeadThinPipeEI(pileBody.PileBodySegments);
             }
             foreach (var soilPile in ElementDivision?.SoilPiles ?? [])
             {
-                if (soilPile == null || PileBodyAt(soilPile.PileBodyNo)?.PileBodyType != PileTypeNames.SteelPipe) continue;
+                var body = soilPile == null ? null : PileBodyAt(soilPile.PileBodyNo);
+                if (body?.PileBodyType != PileTypeNames.SteelPipe) continue;
+                // 土層-杭セットの断面は杭体の写し。l1・l2 も杭体の区間から配り直す
+                foreach (var seg in soilPile!.PileBodySegments ?? [])
+                {
+                    if (seg?.PileSection?.PileSectionType != PileTypeNames.CftSection) continue;
+                    seg.PileSection.CftFillLength = body.HeadFillLength;
+                    seg.PileSection.CftThickPartLength = body.HeadThickPartLength;
+                }
                 ApplyHeadThinPipeEI(soilPile.PileBodySegments);
             }
         }

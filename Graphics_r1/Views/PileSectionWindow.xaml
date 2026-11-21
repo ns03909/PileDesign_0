@@ -10,7 +10,6 @@
         xmlns:local="clr-namespace:PileDesign.ViewModels"
         xmlns:conv="clr-namespace:PileDesign.Converters"
         xmlns:common="clr-namespace:PileDesign.Common"
-        xmlns:viewControls="clr-namespace:PileDesign.Views.Controls"
         mc:Ignorable="d"
         xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"
         d:DataContext="{d:DesignInstance Type=local:PileSectionViewModel}"
@@ -760,41 +759,17 @@
                                                     <TextBox Text="{Binding PileSection.ConcreteE, Mode=OneWay, Converter={StaticResource ModulusDisplayConverter}}" Width="50"
                                                              TextAlignment="Right" Foreground="{StaticResource ReadOnlyBrush}" IsReadOnly="True"/>
                                                 </StackPanel>
-                                                <!-- 杭頭部の検討式 (合成 EIeq) に使う充填長 l1。0 は未入力で杭径 D とみなす (外部レビュー #10) -->
-                                                <StackPanel Orientation="Horizontal"
-                                                            ToolTip="杭頭部の検討式で、杭頭から 4D の範囲の合成剛性 EIeq を求めるときの充填部の長さです。&#x0a;0 のときは杭径 D とみなします。杭体の区間長とは別の入力です。">
+                                                <!-- 杭頭部の検討式 (合成 EIeq) と節点に使う l1・l2 は、杭体ウィンドウで入れる (杭頭の区間長。2026-11-21 から)。ここでは値だけ見せる -->
+                                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                                                     <TextBlock Width="150" HorizontalAlignment="Right" Text="充填長 l1 (mm)"/>
-                                                    <TextBox Text="{Binding PileSection.CftFillLength, UpdateSourceTrigger=LostFocus}" Width="50"
-                                                             Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0"
-                                                             AutomationProperties.Name="充填長 l1"
-                                                             GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                                                             PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                             TextChanged="TextBox_TextChanged"
-                                                             LostFocus="TextBox_LostFocus"/>
-                                                    <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource ReadOnlyBrush}"
-                                                               Text="0 で杭径 D"/>
+                                                    <TextBlock Width="50" TextAlignment="Right" Foreground="{StaticResource ReadOnlyBrush}" Text="{Binding PileSection.CftFillLength, StringFormat={}{0:N0}}"/>
                                                 </StackPanel>
-                                                <!-- 杭頭部の検討式 (合成 EIeq) と節点の位置に使う l2 (充填部下端〜鋼管の断面変化部。図 8.3 の l2)。0 は充填部の下端で断面が変わる -->
-                                                <StackPanel Orientation="Horizontal"
-                                                            ToolTip="コンクリート充填部の下端から鋼管の断面変化部 (厚い鋼管が薄い鋼管に変わる位置) までの長さです。&#x0a;杭頭から l1 + l2 の位置に節点を置き、杭頭部の検討式の合成剛性 EIeq に使います。0 のときは充填部の下端で断面が変わる (厚い鋼管の区間なし) とみなします。">
+                                                <StackPanel Orientation="Horizontal">
                                                     <TextBlock Width="150" HorizontalAlignment="Right" TextWrapping="Wrap" Text="充填部下端〜鋼管の断面変化部 l2 (mm)"/>
-                                                    <TextBox Text="{Binding PileSection.CftThickPartLength, UpdateSourceTrigger=LostFocus}" Width="50"
-                                                             Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0"
-                                                             AutomationProperties.Name="充填部下端〜鋼管の断面変化部 l2"
-                                                             GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
-                                                             PreviewKeyDown="TextBox_PreviewKeyDown"
-                                                             TextChanged="TextBox_TextChanged"
-                                                             LostFocus="TextBox_LostFocus"/>
-                                                    <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource ReadOnlyBrush}"
-                                                               Text="0 で充填部の下端が断面変化部"/>
+                                                    <TextBlock Width="50" TextAlignment="Right" VerticalAlignment="Center" Foreground="{StaticResource ReadOnlyBrush}" Text="{Binding PileSection.CftThickPartLength, StringFormat={}{0:N0}}"/>
                                                 </StackPanel>
-                                                <!-- l1・l2・l3 と EI1〜EI3 の区間の図 (基礎部材の強度と変形性能 図 8.3 にならう)。入力した l1・l2 で描く -->
-                                                <viewControls:SteelPipeHeadZoneDiagram Margin="0,8,0,0" HorizontalAlignment="Left"
-                                                    PileDiameter="{Binding PileSection.PileDiameter}"
-                                                    FillLength="{Binding PileSection.CftFillLength}"
-                                                    ThickPartLength="{Binding PileSection.CftThickPartLength}"
-                                                    AutomationProperties.Name="杭頭部の区間の図 (l1・l2・l3 と EI1〜EI3)"
-                                                    ToolTip="杭頭から L = 4D の範囲の合成剛性 EIeq を求める区間です。&#x0a;EI1: 鋼管と充填コンクリート (杭断面の EI)、EI2: 杭頭部の鋼管だけ、EI3: 断面変化部より下の鋼管 (杭体の下の区間の鋼管)。"/>
+                                                <TextBlock Margin="0,2,0,0" TextWrapping="Wrap" Foreground="{StaticResource ReadOnlyBrush}"
+                                                           Text="l1・l2 は杭体ウィンドウの「杭頭部 (コンクリート充填鋼管部)」で入力します (杭頭の区間の長さ)。区間の図もそちらにあります。"/>
                                             </StackPanel>
                                         </GroupBox>
                                     </StackPanel>

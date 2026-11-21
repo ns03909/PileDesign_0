@@ -150,7 +150,7 @@ namespace PileDesign.Output
                 .ToList();
             if (steelPipeBodies == null || steelPipeBodies.Count == 0) return;
 
-            // 杭頭部の検討式に使う充填長 l1。入力値か、未入力で杭径 D と仮定したかを杭体ごとに書く (外部レビュー #10)
+            // 杭頭部の検討式に使う充填長 l1・l2 (杭体ウィンドウで入れる杭頭の区間長)。杭頭の区間でない充填鋼管部は杭径 D と仮定したことを書く
             var headLengths = steelPipeBodies
                 .Select(x => (x.No, Section: x.Body.PileBodySegments?
                     .Select(seg => seg?.PileSection)
@@ -167,9 +167,9 @@ namespace PileDesign.Output
                         + (x.Section.HasCftFillLengthInput ? "" : " (杭径 D と仮定)")
                         + (x.Section.CftThickPartLength > 0 ? $"、充填部下端〜鋼管の断面変化部 l2 = {x.Section.CftThickPartLength:N0} mm" : "")))
                     + ")。"
-                    + "鋼管厚部の剛性は杭頭部の鋼管、鋼管薄部の剛性 EI3 は杭体の鋼管の断面変化部 (l1 + l2) より下の区間の鋼管 (腐食後) から求めた"
+                    + "l1・l2 は杭体の杭頭の区間長。充填部下端〜断面変化部 (l2) の剛性 EI2 は杭頭部の鋼管、断面変化部より下の剛性 EI3 は杭体の鋼管の断面変化部 (l1 + l2) より下の区間の鋼管 (腐食後) から求めた"
                     + "(下に鋼管部の区間が無い杭体は杭頭部の鋼管と同じとした)。"
-                    + (anyAssumed ? "「杭径 D と仮定」は充填長が未入力のもので、実際の充填長が異なる場合は別途確認すること。" : ""));
+                    + (anyAssumed ? "「杭径 D と仮定」は杭頭の区間 (杭体の充填長 l1) で作っていない充填鋼管部のもので、実際の充填長が異なる場合は別途確認すること。" : ""));
             }
 
             // 引張軸力のときの曲げ耐力は原典と違う式 (2026-11-20 利用者の判断。ヘルプ steel-pipe-tension-caution)

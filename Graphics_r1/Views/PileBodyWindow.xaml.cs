@@ -222,6 +222,13 @@ namespace PileDesign.Views
 
         private void DataGrid_BeginningEdit(object sender, DataGridBeginningEditEventArgs e)
         {
+            // 杭頭の区間 (鋼管杭の充填長 l1・l2 で作った区間) の長さは、表では編集しない (l1・l2 の欄で変える)
+            if (e.Row?.Item is PileBodySegment { HeadZoneRole: not HeadZoneRole.None }
+                && e.Column is DataGridBoundColumn { Binding: System.Windows.Data.Binding { Path.Path: nameof(PileBodySegment.SegmentLength) } })
+            {
+                e.Cancel = true;
+                return;
+            }
             var viewModel = (PileBodyViewModel)DataContext;
             viewModel._undoManager.SaveState(new ObservableCollection<PileBodyInput>(
                 viewModel.PileBodies.Select(pb => pb.DeepCopy())

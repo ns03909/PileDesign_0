@@ -31,6 +31,12 @@ namespace PileDesign.Views.Controls
             nameof(ThickPartLength), typeof(double), typeof(SteelPipeHeadZoneDiagram),
             new FrameworkPropertyMetadata(0.0, FrameworkPropertyMetadataOptions.AffectsRender));
 
+        /// <summary>
+        /// l1 = 0 を「充填部なし」として図を描かないか (杭体ウィンドウ。既定 true)。
+        /// false なら、杭断面の値と同じく l1 = 0 を杭径 D とみなして描く (計算の仮定と同じ)。
+        /// </summary>
+        public bool NoFillWhenZero { get; set; } = true;
+
         /// <summary>杭径 D (mm)。</summary>
         public double PileDiameter { get => (double)GetValue(PileDiameterProperty); set => SetValue(PileDiameterProperty, value); }
 
@@ -118,6 +124,12 @@ namespace PileDesign.Views.Controls
                 Label("杭径を入力すると、杭頭部の区間の図が出ます", 8, 20, 11, Muted);
                 return;
             }
+            // 杭体ウィンドウでは l1 = 0 は充填部なし (杭頭の区間を作らない)。杭頭部の検討式も使わない
+            if (!(FillLength > 0) && NoFillWhenZero)
+            {
+                Label("充填長 l1 = 0: コンクリート充填部はありません (杭頭部の検討式 EIeq は使いません)", 8, 20, 11, Muted);
+                return;
+            }
 
             // 配置: 左に剛性の式、中央に杭、右に寸法線と記号の説明 (「基礎部材の強度と変形性能」図 8.3 にならう)
             const double pileX = 150, pileW = 64, capTop = 8, capH = 42, embed = 18, wallThick = 9, wallThin = 4.5;
@@ -177,6 +189,9 @@ namespace PileDesign.Views.Controls
                 }
             }
             Walls(y2 + taper, yEnd, l3 > 0 ? wallThin : wallThick);
+            // 断面変化部の位置に、鋼管の内側を横切る細線を引く (向こう側の内壁の段差。利用者の要望)
+            if (l3 > 0)
+                dc.DrawLine(Thin, new Point(pileX + wallThick, y2), new Point(pileX + pileW - wallThick, y2));
             // 杭の外形 (頭は閉じ、下は続くので開けておく)
             dc.DrawLine(Outline, new Point(pileX, head), new Point(pileX + pileW, head));
             dc.DrawLine(Outline, new Point(pileX, head), new Point(pileX, yEnd));

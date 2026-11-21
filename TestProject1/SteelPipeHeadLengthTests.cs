@@ -185,7 +185,8 @@ namespace TestProject1
 
         /// <summary>
         /// 鋼管杭の土層-杭セットは、杭頭 (パイルキャップ下面) から充填部の下端 l1・鋼管の断面変化部 l1 + l2・4D に
-        /// 節点を持つ (利用者の要望 2026-11-20)。l1 は充填長の入力 (未入力なら D)、l2 は 0 なので断面変化部は l1 と重なる。
+        /// 節点を持つ (利用者の要望 2026-11-20)。l1・l2 は杭体ウィンドウで入れる杭頭の区間長 (2026-11-21 から)。
+        /// 設計例集3.5 は充填鋼管部の区間 0.8 m がそのまま l1 で、l2 = 0 なので断面変化部は l1 と重なる。
         /// 解析と同じ組み立て (GenerateSoilPiles → SoilPileNodeAltitudes) を通して、設計例集3.5 (鋼管杭) で確かめる。
         /// </summary>
         [TestMethod]
@@ -194,7 +195,8 @@ namespace TestProject1
             var (input, err) = IntegrationTests.BuildExampleInputModel("Example3_5", "PileExample3_5");
             if (input == null) throw new AssertInconclusiveException("例題ファイルなし: " + err);
             var pile = input.PileLayoutItems[0];
-            var head = input.PileBodyAt(pile.PileBodyNo)!.PileBodySegments
+            var body = input.PileBodyAt(pile.PileBodyNo)!;
+            var head = body.PileBodySegments
                 .Select(s => s.PileSection).First(s => s.PileSectionType == PileTypeNames.CftSection);
             double d = head.PileDiameter / 1000.0;
 
@@ -209,7 +211,8 @@ namespace TestProject1
                     $"{what} ({depth:F3} m) に節点がありません: {string.Join(", ", depths.Select(x => x.ToString("F3")))}");
 
             var blank = Depths();
-            Has(blank, d, "充填部の下端 (未入力 = D)");
+            Has(blank, 0.8, "充填部の下端 (充填鋼管部の区間 0.8 m = l1)");
+            Assert.AreEqual(800.0, head.CftFillLength, "杭断面へ l1 (区間長) を配っていない");
 
             // 鋼管薄部の EI3 は、杭体の断面と土層-杭セットの複写の両方に入っている (解析は複写を読む)
             Assert.IsTrue(head.HeadThinPipeEI > 0, "(前提) 設計例集3.5 の杭体には充填鋼管部の下に鋼管部がある");
@@ -218,13 +221,13 @@ namespace TestProject1
             Assert.AreEqual(head.HeadThinPipeEI, copyHead.HeadThinPipeEI, "土層-杭セットの複写に EI3 が入っていない");
             Has(blank, 4 * d, "検討区間の下端 4D");
 
-            head.CftFillLength = 1600;
+            Assert.IsNull(body.SetHeadZone(1600, 0));
             var filled = Depths();
             Has(filled, 1.6, "充填部の下端 (入力 1,600 mm) = 断面変化部 (l2 = 0)");
             Has(filled, 4 * d, "検討区間の下端 4D");
 
             // l2 (充填部下端〜鋼管の断面変化部) を入れると、断面変化部 l1 + l2 にも節点が入る (2026-11-21)
-            head.CftThickPartLength = 400;
+            Assert.IsNull(body.SetHeadZone(1600, 400));
             var thick = Depths();
             Has(thick, 1.6, "充填部の下端 l1");
             Has(thick, 2.0, "鋼管の断面変化部 l1 + l2");
@@ -249,34 +252,29 @@ namespace TestProject1
 
         // ── 解析前の注意 ──
 
+        /// <summary>
+        /// 杭頭の区間 (杭体の充填長 l1 で作った区間) でないコンクリート充填鋼管部は知らせる (検討式は l1 を D と仮定する)。
+        /// 2026-11-21 から l1 は杭頭の区間長そのものなので、以前の「区間長と杭断面の l1 が違う」注意は要らない。
+        /// </summary>
         [TestMethod]
-        public void ANoticeIsRaisedWhenTheSegmentLengthDiffers()
+        public void ANoticeIsRaisedForAFilledSectionThatIsNotTheHeadZone()
         {
-            // segmentLength が null なら、杭体に入れた後の断面の杭径 D (杭体に入れると断面の諸元が初期化されることがある)
-            static InputModel Model(double? segmentLength, double fill)
+            static InputModel Model(HeadZoneRole role)
             {
-                var section = Head(fill);
                 var body = new PileBodyInput { PileBodyType = PileTypeNames.SteelPipe };
-                var segment = new PileBodySegment { No = 1, PileSection = section };
-                body.PileBodySegments = [segment];
-                segment.SegmentLength = segmentLength ?? segment.PileSection.PileDiameter / 1000.0;
-                segment.SegmentDepth = segment.SegmentLength;
+                body.PileBodySegments = [new PileBodySegment { No = 1, SegmentLength = 2.0, HeadZoneRole = role },
+                                         new PileBodySegment { No = 2, SegmentLength = 10.0 }];
+                // 区間の一覧を入れると断面が初期化されることがあるので、入れてから断面を入れる
+                body.PileBodySegments[0].PileSection = Head();
+                body.PileBodySegments[1].PileSection = Pipe(9);
                 return new InputModel { PileBodies = [body] };
             }
-            static string[] Notices(InputModel m) => CheckInputData.CollectPileBodyNotices(m).Select(n => n.Message).Where(s => s.Contains("充填長")).ToArray();
+            static string[] Notices(InputModel m) => CheckInputData.CollectPileBodyNotices(m).Select(n => n.Message).Where(s => s.Contains("充填")).ToArray();
 
-            var equal = Notices(Model(null, 0));
-            Assert.AreEqual(0, equal.Length, "区間長 = D で未入力なのに注意を出している: " + string.Join(" / ", equal));
-
-            var assumed = Notices(Model(2.0, 0));
-            Assert.AreEqual(1, assumed.Length, "区間長と仮定の D が違うのに知らせていない");
-            StringAssert.Contains(assumed[0], "未入力のため杭径 D と仮定");
-            StringAssert.Contains(assumed[0], "2,000 mm");
-
-            Assert.AreEqual(0, Notices(Model(2.0, 2000)).Length, "入力した充填長が区間長と同じなのに注意を出している");
-            var differs = Notices(Model(2.0, 1500));
-            Assert.AreEqual(1, differs.Length);
-            Assert.IsFalse(differs[0].Contains("仮定"), "入力した値なのに仮定と書いている");
+            Assert.AreEqual(0, Notices(Model(HeadZoneRole.Fill)).Length, "杭頭の区間なのに注意を出している");
+            var notHead = Notices(Model(HeadZoneRole.None));
+            Assert.AreEqual(1, notHead.Length, "杭頭の区間でない充填鋼管部を知らせていない");
+            StringAssert.Contains(notHead[0], "杭径 D と仮定");
         }
 
         // ── 計算書 ──

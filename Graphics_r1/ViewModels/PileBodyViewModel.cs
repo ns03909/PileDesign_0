@@ -43,7 +43,59 @@ namespace PileDesign.ViewModels
         public PileBodyInput PileBody
         {
             get => _pileBody;
-            private set => SetProperty(ref _pileBody, value);
+            private set
+            {
+                if (SetProperty(ref _pileBody, value)) NotifyHeadZone();
+            }
+        }
+
+        // ─── 鋼管杭の杭頭部 (l1・l2) ─────────────────────────────────────────
+        //
+        // l1 (コンクリート充填部) と l2 (充填部下端〜鋼管の断面変化部) を入れると、杭体の上の 2 区間を作り直す
+        // (PileBodyInput.SetHeadZone。杭の全長は変えない)。2026-11-21 に杭断面の入力から移した (利用者の要望)。
+        // 入れられない値 (l1 + l2 > 4D など) は受け付けず、例外の文を欄の赤枠に出す (ValidatesOnExceptions)。
+
+        /// <summary>鋼管杭か (l1・l2 の欄と図を出す)。</summary>
+        public bool IsSteelPipeBody => PileBody?.PileBodyType == PileTypeNames.SteelPipe;
+
+        /// <summary>杭頭部の杭径 D (mm)。図に使う。</summary>
+        public double HeadPileDiameter => PileBody?.HeadPileDiameter ?? 0.0;
+
+        /// <summary>充填長 l1 (mm)。0 は充填部なし。</summary>
+        public double HeadFillLength
+        {
+            get => PileBody?.HeadFillLength ?? 0.0;
+            set => ApplyHeadZone(value, PileBody?.HeadThickPartLength ?? 0.0);
+        }
+
+        /// <summary>充填部下端〜鋼管の断面変化部 l2 (mm)。0 は充填部の下端で断面が変わる。</summary>
+        public double HeadThickPartLength
+        {
+            get => PileBody?.HeadThickPartLength ?? 0.0;
+            set => ApplyHeadZone(PileBody?.HeadFillLength ?? 0.0, value);
+        }
+
+        private void ApplyHeadZone(double l1, double l2)
+        {
+            var body = PileBody;
+            if (body == null) return;
+            if (Math.Abs(l1 - body.HeadFillLength) < 1e-9 && Math.Abs(l2 - body.HeadThickPartLength) < 1e-9) return;
+            // 入れられない値は受け付けない。欄は赤枠になり、この文が欄の下に出る
+            string? problem = body.SetHeadZone(l1, l2);
+            if (problem != null) throw new ArgumentException(problem);
+            RecalculateDataGridPileBody();
+            DrawShapes();
+            UpdateTemporarySoilPile();
+            NotifyHeadZone();
+        }
+
+        /// <summary>l1・l2 の欄と図を、いまの杭体に合わせて出し直す。</summary>
+        internal void NotifyHeadZone()
+        {
+            OnPropertyChanged(nameof(IsSteelPipeBody));
+            OnPropertyChanged(nameof(HeadPileDiameter));
+            OnPropertyChanged(nameof(HeadFillLength));
+            OnPropertyChanged(nameof(HeadThickPartLength));
         }
 
         // 杭体数+1リスト
@@ -734,6 +786,12 @@ namespace PileDesign.ViewModels
 
             int i = pileBody.PileBodySegments.IndexOf(segment);
             if (i < 0) return;
+            if (segment.HeadZoneRole == HeadZoneRole.ThickPart)
+            {
+                MessageService.ShowInfo("この区間 (充填部下端〜鋼管の断面変化部 l2) の鋼管は、杭頭のコンクリート充填鋼管部と同じです。"
+                    + "鋼管を変えるときは、1 区間目 (コンクリート充填鋼管部) の杭断面を編集してください。");
+                return;
+            }
 
             int segmentNo = i + 1;
             var pileSectionWindow = new PileSectionWindow(_mainWindowViewModel, segment.PileSection, PileBodyNo, segmentNo);
@@ -755,6 +813,10 @@ namespace PileDesign.ViewModels
             // 断面ウィンドウの編集中は断面タイプが一時的に既定値へ戻ることがあり、
             // その途中の値のまま表示が固まらないよう、確定後にここで必ず再評価する。
             PileBody.UpdateHybridDerivedDiameter();
+
+            // 充填部の鋼管を変えたら l2 の区間 (同じ鋼管の鋼管部) を追随させ、l1・l2 を杭断面へ配り直す
+            PileBody.EnsureHeadZoneRoles();
+            NotifyHeadZone();
 
             DrawShapes();
             UpdateTemporarySoilPile();
@@ -916,6 +978,7 @@ namespace PileDesign.ViewModels
 
             SetPileTopTypeAndConstruction();
             AddSegment(); // 1区間追加
+            NotifyHeadZone();
         }
 
         [RelayCommand]
@@ -923,6 +986,12 @@ namespace PileDesign.ViewModels
         {
             if (parameter is PileBodySegment selectedItem)
             {
+                if (selectedItem.HeadZoneRole != HeadZoneRole.None)
+                {
+                    MessageService.ShowInfo("杭頭の区間 (充填長 l1・充填部下端〜鋼管の断面変化部 l2 で作った区間) は削除できません。"
+                        + "消すときは、上の「充填長 l1」「l2」を 0 にしてください。");
+                    return;
+                }
                 CurrentBody.PileBodySegments.Remove(selectedItem);
                 RecalculateDataGridPileBody();
                 DrawShapes();

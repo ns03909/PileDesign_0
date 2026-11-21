@@ -10,7 +10,10 @@ namespace TestProject1
     /// 連立方程式の解の相対残差が大きかった回数を、水平解析のログとサマリーに出すこと。
     ///
     /// 解は差し替えずに使う (外側の反復の収束判定で精度を確保する) が、回数が多いモデルは条件が悪い手掛かりになる。
-    /// 計算例 3-5 は荷重が大きい段階で残差が 1e-6 を超える解が出る (2026-09-26 に 126 回を確認)。
+    /// 計算例 3-5 は荷重が大きい段階で残差が 1e-6 を超える解が出ていた (2026-09-26 に 126 回を確認)。原因は杭頭の
+    /// 0.798 m (l1 = D と仮定) と 0.800 m (充填鋼管部の区間の境) の間の長さ 2 mm の要素で、2026-11-21 に l1 を区間長に
+    /// したら要素が無くなり、残差の大きい解も出なくなった。いまは断面変化部 (l1 + l2 = 3.190 m) を 4D (3.192 m) の
+    /// 節点の 2 mm 手前に置いて、同じ条件の悪いモデルを作って確かめる。
     /// </summary>
     [TestClass]
     public class LargeResidualReportTests
@@ -36,6 +39,13 @@ namespace TestProject1
                     Level1Steps = 4, Level2Steps = 16, UseLineSearch = true, Parallelism = 1,
                     LiquefactionMode = HorizontalCalculationViewModel.LiquefactionOptionType.Both,
                     Configure = h => hcvm = h,
+                    // 長さ 2 mm の要素を作る (断面変化部 3.190 m と 4D = 3.192 m の節点)
+                    Customize = m =>
+                    {
+                        string? problem = m.PileBodies[0].SetHeadZone(800, 2390);
+                        Assert.IsNull(problem, problem);
+                        m.GenerateSoilPiles();
+                    },
                 });
             }
             catch (InvalidOperationException ex) when (ex.Message.Contains("例題ロード失敗"))

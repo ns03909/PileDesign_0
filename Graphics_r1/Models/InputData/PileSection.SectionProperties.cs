@@ -266,17 +266,17 @@ namespace PileDesign.Models.InputData
                     new Spec("鋼管ヤング係数", "Es", $"{PipeEs:N0}", "N/mm2"));
             }
 
-            // 鋼管杭の杭頭部 (コンクリート充填鋼管部) の充填長 l1。杭頭部の検討式の合成 EIeq に使う。
-            // 未入力なら杭径 D と仮定する。採用した長さと出どころを諸元に出す (外部レビュー #10 2026-11-20)
+            // 鋼管杭の杭頭部 (コンクリート充填鋼管部) の l1・l2。杭頭部の検討式の合成 EIeq と節点に使う。
+            // 2026-11-21 から杭体ウィンドウの l1・l2 (杭頭の区間長) から配る値。配られていない (杭頭の区間でない) 充填鋼管部は l1 を杭径 D と仮定する
             if (PileSectionType == PileTypeNames.CftSection)
                 SelectedPileSectionSpecification.Add(HasCftFillLengthInput
-                    ? new Spec("充填長", "l1", $"{EffectiveCftFillLength:N0}", "mm", "入力値。杭頭部の検討式の合成剛性 EIeq に使います")
+                    ? new Spec("充填長", "l1", $"{EffectiveCftFillLength:N0}", "mm", "杭体の l1 (杭頭の区間長)。杭頭部の検討式の合成剛性 EIeq に使います")
                     : new Spec("充填長 (仮定)", "l1", $"{EffectiveCftFillLength:N0}", "mm",
-                        "未入力のため杭径 D と仮定。実際の充填長が違う場合は「充填長」を入力してください"));
+                        "杭頭の区間ではないため杭径 D と仮定。杭体ウィンドウの「充填長 l1」で杭頭の区間を作ってください"));
             if (PileSectionType == PileTypeNames.CftSection)
                 SelectedPileSectionSpecification.Add(
                     new Spec("充填部下端〜鋼管の断面変化部", "l2", $"{CftThickPartLength:N0}", "mm",
-                        CftThickPartLength > 0 ? "入力値" : "0: 充填部の下端で断面が変わる (厚い鋼管の区間なし)"));
+                        CftThickPartLength > 0 ? "杭体の l2 (杭頭の区間長)" : "0: 充填部の下端で断面が変わる (厚い鋼管の区間なし)"));
             if (PileSectionType == PileTypeNames.CftSection)
                 SelectedPileSectionSpecification.Add(HeadThinPipeEI > 0
                     ? new Spec("鋼管薄部の曲げ剛性", "EI3", $"{HeadThinPipeEI:N0}", "kNm2", "杭体の、断面変化部より下の鋼管部の区間から (腐食後)")
