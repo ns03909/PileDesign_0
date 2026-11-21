@@ -173,6 +173,32 @@ namespace TestProject1
             StringAssert.Contains(table, $"で ${N0(rfc)}$ kN。$R_u = {N0(rp + rfs + rfc)}$ kN (使用限界 ${N0((rp + rfs + rfc) / 3)}$ kN)");
         }
 
+        /// <summary>
+        /// 地盤変位 Dmax の表: a1(b1) が式 (4.5.2) (C2・R_Z0 を含む)、a2(b2) が式 (4.5.1) であることを実装の分岐で確かめ、
+        /// 計算例を同じ式で計算する (2026-11-21 に利用者が指針の式番号と算定法の対応を確認)。
+        /// </summary>
+        [TestMethod]
+        public void TheGroundDisplacementTableMatchesTheImplementation()
+        {
+            string code = TestSource.Read("Graphics_r1", "ViewModels", "GroundLayerViewModel.cs");
+            var a1 = Regex.Match(code, @"if \(calculationMethod == ""a1\(b1\)""\)\s*\{\s*Dmax = ([^;]+);");
+            var a2 = Regex.Match(code, @"else if \(calculationMethod == ""a2\(b2\)""[^)]*\)\s*\{[^}]*?Dmax = ([^;]+);");
+            Assert.IsTrue(a1.Success && a2.Success, "(前提) 地盤変位の算定法の分岐を読めない");
+            StringAssert.Contains(a1.Groups[1].Value, "C2", "a1(b1) (地表で設定) は C2・R_Z0 を含む式 (4.5.2) のはず");
+            StringAssert.Contains(a1.Groups[1].Value, "Rz0");
+            Assert.IsFalse(a2.Groups[1].Value.Contains("C2"), "a2(b2) (工学的基盤で設定) は式 (4.5.1) のはず");
+            StringAssert.Contains(code, "double Z = 1.0;", "地域係数 Z が 1.0 固定でなくなった。表の「採用値」を直す");
+
+            // 計算例: 砂質土、ΣH = 20、T0 = 0.5、レベル2、R_Z0 = 0.3
+            double alpha = Math.Min(1 + 1.0 * 1.0 * 40 * 0.5 / 20, 4.0), fA = Math.Min(1.6 * alpha * 0.5, 1);
+            double dA2 = 0.0015 * (alpha * alpha - 1) * fA * 20;
+            double factor = 0.66 * (1 - 1 / (alpha * alpha)) + 2.0 * 0.3 / alpha;
+            string table = Tables()["cond-ground-displacement"];
+            StringAssert.Contains(table, $"= {alpha:0.0}$、$f_A = \\min(1.6 \\times 2.0 \\times 0.5, 1) = {fA:0.0}$");
+            StringAssert.Contains(table, $"$D_{{max}} = 0.0015 \\times 3 \\times 1.0 \\times 20 = {dA2:0.000}$ m");
+            StringAssert.Contains(table, $"= {factor:0.000}$ を掛けて ${dA2 * factor:0.000}$ m");
+        }
+
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
         [TestMethod]
         public void ThePyExamplesMatchTheImplementation()

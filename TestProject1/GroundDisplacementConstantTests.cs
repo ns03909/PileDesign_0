@@ -7,7 +7,8 @@ using System.Text.RegularExpressions;
 namespace TestProject1
 {
     /// <summary>
-    /// 地盤変位の式 (基礎指針'19 (4.5.1)) の定数 C2 が文献値であること。
+    /// 地盤変位の式 (基礎指針'19 (4.5.2)。地震動を地表で設定する a1(b1)) の定数 C2 が文献値であること。
+    /// (4.5.1) は工学的基盤で設定する a2(b2) の式で、C2 を含まない (2026-11-21 に利用者が指針で確認)。
     ///
     /// <para>C2 は表層の土質の減衰特性から決まる定数で、文献値は粘性土 0.53、砂質土 0.66。
     /// 解析が通る経路 (<c>GroundLayerViewModel.RecalculateVSE</c> → <c>DmaxUStar</c> →
