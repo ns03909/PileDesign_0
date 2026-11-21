@@ -155,6 +155,15 @@ namespace PileDesign.Views
             }
         }
 
+        /// <summary>検定の表で選んだ行 (検定不能・適用範囲外) を直す入力画面を開く (外部レビュー #20 2026-11-21)。</summary>
+        private void OpenFixInputMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not MenuItem { CommandParameter: DataGrid dataGrid }) return;
+            if (dataGrid.SelectedItem is not PileDesign.Models.Results.EvaluationItem { FixTarget: { } target }) return;
+            if (DataContext is TableWindowViewModel { MainVm: { } main } && !main.OpenInputFor(target))
+                PileDesign.Services.MessageService.ShowInfo("この項目を直す入力画面はありません。理由の欄を確かめ、解析をやり直してください。");
+        }
+
         // ContextMenuが開かれたときにDataGridをCommandParameterに設定するイベントハンドラ
         private void ContextMenu_Opened(object sender, RoutedEventArgs e)
         {
@@ -165,6 +174,13 @@ namespace PileDesign.Views
                     foreach (MenuItem menuItem in contextMenu.Items)
                     {
                         menuItem.CommandParameter = dataGrid;
+                        // 「原因の入力を開く」は検定の表の行のときだけ出し、開き先がある行だけ使える
+                        if (menuItem.Tag as string == "OpenFixInput")
+                        {
+                            bool isEvaluation = dataGrid.SelectedItem is PileDesign.Models.Results.EvaluationItem;
+                            menuItem.Visibility = isEvaluation ? Visibility.Visible : Visibility.Collapsed;
+                            menuItem.IsEnabled = dataGrid.SelectedItem is PileDesign.Models.Results.EvaluationItem { FixTarget: not null };
+                        }
                     }
                 }
             }

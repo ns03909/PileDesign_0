@@ -190,6 +190,16 @@ namespace PileDesign.Models.Results
         public bool IsUnavailable => !string.IsNullOrEmpty(UnavailableReason);
 
         /// <summary>
+        /// 検定できない項目 (検定不能・適用範囲外) を直すために開く入力の場所。理由を決めたところで一緒に決める
+        /// (理由の文から推し量らない)。null なら開く入力画面は無い (解析結果が無い・要素分割のやり直しなど、
+        /// 再解析で直すもの。未収束は解析ログとヘルプの「収束しない場合」で確かめる)。外部レビュー #20 (2026-11-21)。
+        ///
+        /// <para>杭体ウィンドウへは杭体だけを選んで開く。検定の区間番号 (<see cref="SegmentIndex"/>) は杭要素分割の要素の
+        /// 番号で、杭体ウィンドウの区間の番号とは違うため、区間までは選ばない (別の区間を開くよりよい)。</para>
+        /// </summary>
+        public PileDesign.Common.DiagnosticTarget? FixTarget { get; init; }
+
+        /// <summary>
         /// OK / NG を判定できる項目か。収束していないケース・算定式の適用範囲の外・データが欠けて検定できなかった項目は判定しない。
         /// OK・NG の件数や最大の検定比は、これが true の項目だけから数える。
         /// </summary>

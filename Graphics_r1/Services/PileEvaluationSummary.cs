@@ -74,6 +74,12 @@ namespace PileDesign.Services
         /// <summary>この杭に、収束したケースの NG があるか。</summary>
         public bool HasNg { get; init; }
 
+        /// <summary>
+        /// 検定できない項目 (検定不能・適用範囲外) のうち、直す入力の場所 (<see cref="EvaluationItem.FixTarget"/>) を持つ最初のもの。
+        /// ダッシュボードの「原因の入力を開く」が使う。無ければ null (再解析で直すものか、検定できない項目が無い)。
+        /// </summary>
+        public EvaluationItem? FirstFixable { get; init; }
+
         public PileRatioBand Band { get; init; }
 
         /// <summary>一覧に出す判定の文字列。</summary>
@@ -383,6 +389,9 @@ namespace PileDesign.Services
                 HasUnconverged = hasUnconverged,
                 HasOutOfScope = hasOutOfScope,
                 HasUnavailable = hasUnavailable,
+                // 未収束のケースは解析で直すもので入力の場所を持たない。検定不能を先に、次に適用範囲外
+                FirstFixable = list.Where(i => !i.IsJudged && i.FixTarget != null)
+                    .OrderBy(i => i.IsUnavailable ? 0 : 1).FirstOrDefault(),
                 Band = BandOf(maxRatio, hasNg, hasUnconverged, hasOutOfScope, hasUnavailable),
             };
         }

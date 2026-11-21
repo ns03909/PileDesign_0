@@ -35,7 +35,7 @@ namespace PileDesign.Views
         /// 杭ごとの一覧の 1 行。一覧に出すのは杭・判定・検定比・検定項目で、対象・応答値・限界値・荷重条件は選んだ行の詳細に出す。
         /// </summary>
         internal sealed record PileRow(int PileNo, string Status, string RatioText, string Category,
-            string Target, string Response, string Limit, string Condition);
+            string Target, string Response, string Limit, string Condition, EvaluationItem? Fixable = null);
 
         /// <summary>「閉じる」を押した (持ち主がドッキングの欄を閉じる)。</summary>
         public event EventHandler? CloseRequested;
@@ -479,6 +479,37 @@ namespace PileDesign.Views
             ShowPileButton.IsEnabled = any;
             OpenPileEvaluationButton.IsEnabled = any;
             ShowDetail(PileRatioGrid.SelectedItem as PileRow);
+            ShowFixable(PileRatioGrid.SelectedItem as PileRow);
+        }
+
+        // ---- 検定できない項目から、原因の入力を開く (外部レビュー #20 2026-11-21) ----
+
+        /// <summary>選んだ杭の、直す入力の場所を持つ検定できない項目 (無ければ null)。</summary>
+        private EvaluationItem? SelectedFixable => (PileRatioGrid.SelectedItem as PileRow)?.Fixable;
+
+        private void ShowFixable(PileRow? row)
+        {
+            var item = row?.Fixable;
+            OpenFixInputButton.IsEnabled = item?.FixTarget != null;
+            FixReasonText.Visibility = item == null ? Visibility.Collapsed : Visibility.Visible;
+            FixReasonText.Text = item == null ? "" : DescribeFixable(item);
+        }
+
+        /// <summary>検定できない項目の説明 (状態・項目・理由・開く場所)。</summary>
+        internal static string DescribeFixable(EvaluationItem item)
+        {
+            var target = item.FixTarget;
+            string where = target == null ? ""
+                : $" → {PileDesign.Services.DiagnosticSelection.DestinationName(PileDesign.Services.DiagnosticSelection.DestinationOf(target))}"
+                  + (target.Label.Length > 0 ? $" ({target.Label})" : "");
+            return $"{item.StatusLabel}: {item.Category} — {item.NotJudgedReason}{where}";
+        }
+
+        private void OpenFixInputButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (SelectedFixable?.FixTarget is not { } target) return;
+            if (!_vm.OpenInputFor(target))
+                MessageService.ShowInfo("この項目を直す入力画面はありません。理由の欄を確かめ、解析をやり直してください。");
         }
 
         private void PileRatioGrid_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -515,7 +546,8 @@ namespace PileDesign.Views
                     : e.HasUnavailable ? "(検定不能の項目のみ)" : "");
             string response = g == null ? "" : $"{g.ResponseText} {g.Unit}".TrimEnd();
             string limit = g == null ? "" : $"{g.LimitText} {g.Unit}".TrimEnd();
-            return new PileRow(e.PileNo, e.StatusLabel, ratio, category, g?.TargetDescription ?? "", response, limit, g?.ConditionDescription ?? "");
+            return new PileRow(e.PileNo, e.StatusLabel, ratio, category, g?.TargetDescription ?? "", response, limit, g?.ConditionDescription ?? "",
+                e.FirstFixable);
         }
 
         // ---- 解析の状態 ----------------------------------------------------

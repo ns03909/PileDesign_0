@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.FEM;
 using PileDesign.Models;
+using PileDesign.Common;
 using PileDesign.Models.InputData;
 using PileDesign.Models.Results;
 using System;
@@ -542,10 +543,10 @@ namespace PileDesign.ViewModels
 
                 // ここから先で検定できないのは、対象なのにデータが欠けているとき。項目を作らずに進めると
                 // 一覧に出ない理由が分からないので、「検定不能」の項目として理由を残す
-                void Unavailable(string reason)
+                void Unavailable(string reason, DiagnosticTarget? fix = null)
                 {
                     found.Add(UnavailableItem(EvaluationKind.PileSectionMoment, $"杭体曲げ ({limitName})", limitName,
-                        beam.Name, pb, pileItem, seg, stepResult, lcName, combName, "kN·m", reason));
+                        beam.Name, pb, pileItem, seg, stepResult, lcName, combName, "kN·m", reason, fix));
                     perBeamResults[idx] = found;
                 }
                 if (pileItem == null) { Unavailable(UnlinkedPileReason); return; }
@@ -586,7 +587,7 @@ namespace PileDesign.ViewModels
                 var nmCurve = nmCache.GetOrAdd(cacheKey, _ => GetNMCurve(section, factored, momentLimit, loadCaseLevel));
                 if (nmCurve.Ns == null || nmCurve.Ms == null || nmCurve.Ns.Count < 2)
                 {
-                    Unavailable($"{limitName}の N-M 曲線を作れませんでした (断面の入力を確認してください)"); return;
+                    Unavailable($"{limitName}の N-M 曲線を作れませんでした (断面の入力を確認してください)", DiagnosticTarget.PileBody(pb)); return;
                 }
 
                 // NM相関曲線から許容モーメントを補間 (採った区間も控えて根拠に書く)
@@ -595,7 +596,7 @@ namespace PileDesign.ViewModels
                 // 範囲外の軸力では NaN が返る (NaN <= 0 は false なので、必ず > 0 で判定すること)
                 if (!(allowableM > 0))
                 {
-                    Unavailable(OutsideCurveReason(axialN_kN, $"{limitName}の曲げ耐力", "N-M")); return;
+                    Unavailable(OutsideCurveReason(axialN_kN, $"{limitName}の曲げ耐力", "N-M"), DiagnosticTarget.Pile(pileItem.PileNo, pb)); return;
                 }
 
                 // i端モーメント |M| = √(Myi² + Mzi²)
@@ -773,7 +774,8 @@ namespace PileDesign.ViewModels
         /// </summary>
         private static EvaluationItem UnavailableItem(EvaluationKind kind, string category, string limitName,
             string targetName, int pileBodyNo, PileLayoutDataItem? pile, int? segment,
-            AnalysisStepResult stepResult, string lcName, string combName, string unit, string reason) => new()
+            AnalysisStepResult stepResult, string lcName, string combName, string unit, string reason,
+            DiagnosticTarget? fixTarget = null) => new()
         {
             Kind = kind,
             Level = stepResult.LoadCase?.Level ?? 0,
@@ -792,6 +794,7 @@ namespace PileDesign.ViewModels
             Limit = double.NaN,
             Unit = unit,
             UnavailableReason = reason,
+            FixTarget = fixTarget,
         };
 
         /// <summary>
@@ -929,10 +932,10 @@ namespace PileDesign.ViewModels
 
                 // 曲げと同じく、対象なのにデータが欠けて検定できないときは「検定不能」の項目として理由を残す
                 var pileItem = ResolvePile(beam, pileByBeam);
-                void Unavailable(string reason)
+                void Unavailable(string reason, DiagnosticTarget? fix = null)
                 {
                     found.Add(UnavailableItem(EvaluationKind.PileSectionShear, $"杭体せん断 ({limitName})", limitName,
-                        beam.Name, pb, pileItem, seg, stepResult, lcName, combName, "kN", reason));
+                        beam.Name, pb, pileItem, seg, stepResult, lcName, combName, "kN", reason, fix));
                     perBeamResults[idx] = found;
                 }
                 if (pileItem == null) { Unavailable(UnlinkedPileReason); return; }
@@ -979,7 +982,7 @@ namespace PileDesign.ViewModels
                     _ => GetNQCurve(section, factored, shearLimit, damageLevel, monQd));
                 if (nqCurve.Ns == null || nqCurve.Qs == null || nqCurve.Ns.Count < 2)
                 {
-                    Unavailable($"{limitName}の Q-N 曲線を作れませんでした (断面の入力を確認してください)"); return;
+                    Unavailable($"{limitName}の Q-N 曲線を作れませんでした (断面の入力を確認してください)", DiagnosticTarget.PileBody(pb)); return;
                 }
 
                 var located = PileSection.LocateLimitAtAxialForce(nqCurve.Ns, nqCurve.Qs, axialN_kN);
@@ -987,7 +990,7 @@ namespace PileDesign.ViewModels
                 // 範囲外の軸力では NaN が返る (NaN <= 0 は false なので、必ず > 0 で判定すること)
                 if (!(allowableQ > 0))
                 {
-                    Unavailable(OutsideCurveReason(axialN_kN, $"{limitName}のせん断耐力", "Q-N")); return;
+                    Unavailable(OutsideCurveReason(axialN_kN, $"{limitName}のせん断耐力", "Q-N"), DiagnosticTarget.Pile(pileItem.PileNo, pb)); return;
                 }
 
                 // i端・j端のせん断力 |Q| = √(Fy² + Fz²)
@@ -1070,6 +1073,7 @@ namespace PileDesign.ViewModels
                     // 判定は曲げと同じ「超えたら NG」
                     IsOk = !(response > limit),
                     OutOfScopeReason = outOfScope,
+                    FixTarget = outOfScope != null ? DiagnosticTarget.PileBody(pb) : null,
                     Basis = basis,
                     ShearFormula = formula,
                 };
@@ -1427,7 +1431,8 @@ namespace PileDesign.ViewModels
                 if (criterion.UnavailableReason != null)
                 {
                     found.Add(UnavailableItem(EvaluationKind.PileHeadRotation, $"杭頭回転角 ({criterion.MethodName})", criterion.LimitName,
-                        rs.Name, pb, pileItem, null, stepResult, lcName, combName, "rad", criterion.UnavailableReason));
+                        rs.Name, pb, pileItem, null, stepResult, lcName, combName, "rad", criterion.UnavailableReason,
+                        DiagnosticTarget.PileBody(pb)));
                     perItem[idx] = found; return;
                 }
 

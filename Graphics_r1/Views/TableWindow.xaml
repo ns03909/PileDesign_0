@@ -28,6 +28,9 @@
             <MenuItem Header="コピー"
               Command="{Binding PlacementTarget.DataContext.CopyDataGridSelectionCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
               CommandParameter="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <!-- 検定の表の検定不能・適用範囲外の行から、直す入力画面を開く (外部レビュー #20)。ほかの表では隠す -->
+            <MenuItem Tag="OpenFixInput" Header="原因の入力を開く" Click="OpenFixInputMenuItem_Click"
+                      ToolTip="選んだ行 (検定不能・適用範囲外) を直す入力画面 (杭体・杭配置) を、その対象を選んで開きます"/>
 
         </ContextMenu>
         <conv:LoadCaseNameToColorConverter x:Key="LoadCaseNameToColorConverter"/>

@@ -279,7 +279,13 @@
                                     IsEnabled="False"
                                     ToolTipService.ShowOnDisabled="True"
                                     ToolTip="結果のテーブルを、検定の表をこの杭の行だけに絞って開きます (支配ケースが先頭)"/>
+                            <Button x:Name="OpenFixInputButton" Content="原因の入力を開く(_I)" Click="OpenFixInputButton_Click" Padding="10,2" Margin="8,0,0,0"
+                                    IsEnabled="False"
+                                    ToolTipService.ShowOnDisabled="True"
+                                    ToolTip="この杭の検定不能・適用範囲外の項目を直す入力画面 (杭体・杭配置) を、その対象を選んで開きます。&#x0a;解析結果が無いなど、解析のやり直しで直す項目と未収束の項目では使えません"/>
                         </StackPanel>
+                        <TextBlock x:Name="FixReasonText" Style="{StaticResource DashMutedStyle}" Margin="0,4,0,0"
+                                   TextWrapping="Wrap" Visibility="Collapsed"/>
                         <TextBlock x:Name="PileListNoteText" Style="{StaticResource DashMutedStyle}" Margin="0,4,0,0"
                                    Text="低減後の水平解析と杭の鉛直支持力の検定から、杭ごとに最も厳しい項目を 1 行にしています。全件は「テーブル」の「検定」にあります。"/>
                     </StackPanel>
