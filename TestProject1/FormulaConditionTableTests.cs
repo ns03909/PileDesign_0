@@ -106,6 +106,33 @@ namespace TestProject1
             Assert.AreEqual(10000 * 0.8 * 0.5, item.GetKh0For(new GroupPileEffect { Xi = 0.8, ROnB = 0, BetaL = 0.5 }), 1e-9);
         }
 
+        /// <summary>
+        /// PHC 杭のせん断耐力の計算例が、検定と同じ関数の値と一致する。
+        /// あわせて、ヘルプの肉厚が t = r_o − r_i であること (2026-10-01 に実装の「肉厚の半分」を直したが、
+        /// ヘルプの式は (r_o − r_i)/2 のまま 2026-11-21 まで残っていた)。
+        /// </summary>
+        [TestMethod]
+        public void ThePrecastShearExampleMatchesTheImplementation()
+        {
+            string help = Help();
+            Assert.IsFalse(help.Contains(@"t = \frac{r_o - r_i}{2}"), "ヘルプの PHC 杭のせん断の肉厚が半分のままです (t = r_o − r_i)");
+            StringAssert.Contains(help, @"t = r_o - r_i, \quad");
+
+            string table = Tables()["cond-precast-shear"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.Phc]();
+            Assert.AreEqual((600.0, 90.0, 85.0, 8.0), (s.PileDiameter, s.ConcreteThickness, s.ConcreteFc, s.SelectedPrecastPile.SigmaE), "(前提) 代表断面が変わった");
+            if (s.CreateSectionCalculator() is not PrecastPileSection calc) { Assert.Fail("(前提) PHC の断面計算オブジェクトを作れない"); return; }
+
+            var (diagonal, web) = calc.GetDamageLimitShearComponents(3.0, 0.0);
+            double level2 = s.DescribeShearLimit(SectionLimitState.Damage, 2, true, 3.0, 0.0)!.ValueN;
+            StringAssert.Contains(table, $"斜めひび割れ ${F1(diagonal / 1000)}$ kN・縦ひび割れ ${F1(web / 1000)}$ kN で ${F1(Math.Min(diagonal, web) / 1000)}$ kN (低減前)");
+            StringAssert.Contains(table, $"$\\times 0.65$ で ${F1(level2 / 1000)}$ kN");
+
+            // α: M/(Q·d) ≤ 1 で 2 倍、≥ 3 で 1 倍
+            Assert.AreEqual(2.0, calc.GetDamageLimitShearComponents(1.0, 0.0).DiagonalTension / diagonal, 1e-9);
+            Assert.AreEqual(1.0, calc.GetDamageLimitShearComponents(5.0, 0.0).DiagonalTension / diagonal, 1e-9);
+        }
+
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
         [TestMethod]
         public void ThePyExamplesMatchTheImplementation()

@@ -12210,7 +12210,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     </p>
                     <p>
                         $$
-                        t = \frac{r_o - r_i}{2}, \quad
+                        t = r_o - r_i, \quad
                         S_0 = \frac{2(r_o^3 - r_i^3)}{3}, \quad
                         \alpha = \min\!\left[\max\!\left(\frac{4}{M/(Q\,d) + 1},\,1.0\right),\,2.0\right]
                         $$
@@ -12223,6 +12223,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     </p>
                     <ul class="symbol-list">
                         <li class="symbol-intro">ここに、</li>
+                        <li><span class="symbol-label">$t$</span>肉厚 ($r_o$・$r_i$ は外半径・内半径)。式の $2t$ は両側の壁の厚さ</li>
                         <li><span class="symbol-label">$\sigma_x$</span>使用限界 $\sigma_s=1.2$、損傷・安全限界 $\sigma_d=1.8$ [N/mm$^2$]</li>
                         <li><span class="symbol-label">$\sigma_e$</span>有効プレストレス応力度</li>
                         <li><span class="symbol-label">$\sigma_{0e}$</span>軸力による応力度 $= N/A_e$</li>
@@ -12262,6 +12263,14 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     <p>
                         低減係数: $\beta_1 = 1.0$、$\beta_2 = 0.65$ (L2 のみ適用、L1 は $\beta_2 = 1.0$ と扱う)。
                     </p>
+                    <table class="formula-conditions" id="cond-precast-shear">
+                        <tr><th>適用対象</th><td>PHC 杭 (節杭を含む)・PRC 杭の使用・損傷・安全限界せん断力 (検定・Q-N 図・計算書)。PRC 杭も同じ式で、主筋はせん断耐力に入れない ($I$ はコンクリート断面)</td></tr>
+                        <tr><th>入力</th><td>杭断面の杭径 $D$・肉厚 $t$・$F_c$・有効プレストレス $\sigma_e$ (カタログの断面を選ぶと決まる)、杭の軸力 $N$ ($\sigma_{0e} = N/A_e$)、解析の断面力 ($M/(Q\!\cdot\!d)$)</td></tr>
+                        <tr><th>採用値</th><td>$t$ は肉厚 $r_o - r_i$。$d_{pc} = 15$ mm。$M/(Q\!\cdot\!d)$ は、この杭・この荷重ケース・この液状化の扱いの $M_{max}/(Q_{max}\,d)$ ($d = 0.9D$) で、断面力が無いか $Q_{max} = 0$ のときだけ既定値 3.0。$\alpha$ は $M/(Q\!\cdot\!d) \geq 3$ で 1.0、$\leq 1$ で 2.0。$\beta_1 = 1.0$、$\beta_2 = 0.65$ は損傷限界ではレベル2 だけ、安全限界では掛ける</td></tr>
+                        <tr><th>適用外</th><td>Q-N 曲線の軸力の範囲 (PHC 杭は $\sigma_e + \sigma_{0e}$ が 4 N/mm² から、使用限界 $F_c/3.5$・損傷/安全限界 45 N/mm² まで。PRC 杭は 0 から $F_c/3.5$・50 N/mm² まで) の外の軸力では、検定は OK / NG を出さず「範囲外」とする</td></tr>
+                        <tr><th>参照箇所</th><td>基礎部材の強度と変形性能 5 章 (PHC)・6 章 (PRC)、<a href="#sc-shear-monqd">$M/(Q\!\cdot\!d)$ の入り方</a>・<a href="#h-PRC-杭のせん断耐力">PRC 杭のせん断耐力</a></td></tr>
+                        <tr><th>計算例</th><td>PHC-600-標準-85-B ($D = 600$、$t = 90$、$F_c = 85$、$\sigma_e = 8.0$)、$N = 0$、$M/(Q\!\cdot\!d) = 3.0$ ($\alpha = 1.0$): 損傷限界は斜めひび割れ $185.4$ kN・縦ひび割れ $293.6$ kN で $185.4$ kN (低減前)、レベル2 は $\times 0.65$ で $120.5$ kN。$M/(Q\!\cdot\!d) \leq 1$ なら $\alpha = 2.0$ で 2 倍</td></tr>
+                    </table>
 
                     <h3 id="h-PHC-杭の-M-φ-関係">PHC 杭の M-φ 関係</h3>
                     <p>
