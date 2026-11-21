@@ -8,7 +8,7 @@ namespace PileDesign.Views.Controls
 {
     /// <summary>
     /// 鋼管杭の杭頭部 (コンクリート充填鋼管部) の、等価曲げ剛性 EIeq の算定に使う区間の図
-    /// (「基礎部材の強度と変形性能」図 8.3 にならう)。杭断面ウィンドウの充填長 l1・鋼管厚部の長さ l2 の入力欄の下に置く。
+    /// (「基礎部材の強度と変形性能」図 8.3 にならう)。杭断面ウィンドウの充填長 l1・l2 (充填部下端〜鋼管の断面変化部) の入力欄の下に置く。
     ///
     /// <para>EI1 (鋼管 + 充填コンクリート)・EI2 (鋼管の厚部)・EI3 (断面変化部より下の鋼管) の区間が、杭頭から
     /// L = 4D のどこにあるかを、入力した l1・l2 で描く。文章だけでは EI3 がどこの剛性か分かりにくかった (利用者の声、2026-11-21)。</para>
@@ -37,7 +37,7 @@ namespace PileDesign.Views.Controls
         /// <summary>充填長 l1 の入力 (mm)。0 は未入力で D とみなす。</summary>
         public double FillLength { get => (double)GetValue(FillLengthProperty); set => SetValue(FillLengthProperty, value); }
 
-        /// <summary>鋼管厚部の長さ l2 の入力 (mm)。0 は厚部なし。</summary>
+        /// <summary>l2 (充填部下端〜鋼管の断面変化部) の入力 (mm)。0 は充填部の下端で断面が変わる。</summary>
         public double ThickPartLength { get => (double)GetValue(ThickPartLengthProperty); set => SetValue(ThickPartLengthProperty, value); }
 
         public SteelPipeHeadZoneDiagram()
@@ -184,18 +184,25 @@ namespace PileDesign.Views.Controls
 
             // 寸法線: 区間 (l1・l2・l3) と L。パイルキャップ下面から測る
             double xDim = pileX + pileW + 34, xL = xDim + 100;
-            foreach (double y in new[] { top, y1, y2, yL })
+            // 本 (図 8.3) と同じく、途中の区切り (l1・l2 の下端) の補助線と黒丸は区間の寸法線までで止め、
+            // L の寸法線には上端と下端だけを付ける (途中に黒丸があると L が区切られて見える。利用者の指摘)
+            foreach (double y in new[] { top, yL })
+            {
                 dc.DrawLine(Guide, new Point(pileX + pileW + 2, y), new Point(xL + 4, y));
+                dc.DrawEllipse(Ink, null, new Point(xL, y), 2.2, 2.2);
+            }
+            foreach (double y in new[] { y1, y2 })
+                dc.DrawLine(Guide, new Point(pileX + pileW + 2, y), new Point(xDim + 4, y));
             dc.DrawLine(Thin, new Point(xDim, top), new Point(xDim, yL));
             dc.DrawLine(Thin, new Point(xL, top), new Point(xL, yL));
             foreach (double y in new[] { top, y1, y2, yL })
-            {
                 dc.DrawEllipse(Ink, null, new Point(xDim, y), 2.2, 2.2);
-                dc.DrawEllipse(Ink, null, new Point(xL, y), 2.2, 2.2);
-            }
             static string Mm(double v) => v.ToString("#,0", CultureInfo.InvariantCulture);
             if (l1 > 0) Rich($"l_1 = {Mm(l1)}" + (fillIsDefault ? " (D)" : ""), xDim + 4, (top + y1) / 2, 10.5);
             if (l2 > 0) Rich($"l_2 = {Mm(l2)}", xDim + 4, (y1 + y2) / 2, 10.5);
+            // l2 = 0 (厚部なし) でも区間を消さずに、充填部の下端 (= 断面変化部) にそう書く。
+            // 消すと、l1 と l3 だけが並んで l2 がどこへ行ったのか分からない (利用者の指摘)
+            else if (y1 < yL) Rich("l_2 = 0 (充填部の下端が断面変化部)", xDim + 6, y1, 10, Muted);
             if (l3 > 0) Rich($"l_3 = {Mm(l3)}", xDim + 4, (y2 + yL) / 2, 10.5);
             Label("L = 4D", xL + 4, (top + yL) / 2 - 7, 10.5);
             Label($"= {Mm(L)}", xL + 4, (top + yL) / 2 + 7, 10.5);
@@ -204,6 +211,7 @@ namespace PileDesign.Views.Controls
             double xText = pileX - 8;
             if (l1 > 0) Rich("EI_1 = _sE_sI_1 + _cE_cI", xText, (top + y1) / 2, 11, right: true);
             if (l2 > 0) Rich("EI_2 = _sE_sI_1", xText, (y1 + y2) / 2, 11, right: true);
+            else if (y1 < yL) Rich("EI_2 : 区間なし (l_2 = 0)", xText, y1, 10, Muted, right: true);
             if (l3 > 0) Rich("EI_3 = _sE_sI_2", xText, (y2 + yL) / 2, 11, right: true);
 
             // 記号の説明 (右)

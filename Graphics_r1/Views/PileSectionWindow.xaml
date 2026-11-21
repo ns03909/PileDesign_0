@@ -64,6 +64,8 @@
                     <avalonDock:LayoutDocumentPaneGroup Orientation="Vertical" DockWidth="0.5*">
                         <avalonDock:LayoutDocumentPane>
                             <avalonDock:LayoutAnchorable x:Name="InputTab" Title="入力" CanClose="False" CanHide="False">
+                                <!-- 杭頭部の区間の図などで入りきらないことがあるので、スクロールできるようにする (利用者の要望) -->
+                                <ScrollViewer x:Name="InputTabScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                                 <StackPanel Orientation="Vertical" Grid.Column="0">
 
                                     <StackPanel Orientation="Horizontal">
@@ -797,6 +799,7 @@
                                         </GroupBox>
                                     </StackPanel>
                                 </StackPanel>
+                                </ScrollViewer>
                             </avalonDock:LayoutAnchorable>
                         </avalonDock:LayoutDocumentPane>
                         <avalonDock:LayoutDocumentPane>
