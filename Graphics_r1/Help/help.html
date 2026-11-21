@@ -13636,6 +13636,32 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                         <div class="formula-right">基礎指針'19 6.6</div>
                     </div>
 
+                    <p>
+                        極限周面摩擦力度 $\tau_s$・$\tau_c$ (kN/m²) は、杭工法と土層の土質分類で決まります ($N$ は土層の N 値、$C_u$ は土層の粘着力)。
+                    </p>
+                    <table class="table-doc" id="shaft-friction-table" style="margin: 0.5em 0;">
+                        <thead>
+                            <tr><th>杭工法</th><th>砂質土・礫質土 $\tau_s$</th><th>粘性土 $\tau_c$</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>場所打ちコンクリート杭</td><td>$3.3N$ (上限 165)</td><td>$C_u$ (上限 100)</td></tr>
+                            <tr><td>埋込み杭 (プレボーリング杭)</td><td>$2.5N$ (上限 125)</td><td>$C_u$ (上限 125)</td></tr>
+                            <tr><td>埋込み杭 (中掘り杭)</td><td>$1.5N$ (上限 75)</td><td>$0.4C_u$ (上限 50)</td></tr>
+                            <tr><td>回転貫入杭</td><td>$2.0N$ (上限 100)</td><td>$0.5C_u$ (上限 62.5)</td></tr>
+                            <tr><td>打込み杭</td><td>$2.0N$ (上限 100)</td><td>$0.8C_u$ (上限 100)</td></tr>
+                            <tr><td>埋込み杭 (Smart-MAGNUM・Hybridニーディング)</td><td colspan="2">工法の評定式 (<a href="#section-smart-magnum">Smart-MAGNUM</a>・<a href="#section-hybrid-kneading">Hybridニーディング</a>)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <table class="formula-conditions" id="cond-vertical-bearing">
+                        <tr><th>適用対象</th><td>杭の押込みの極限鉛直支持力 $R_u$ (検定の押込み支持力。単杭沈下解析の極限先端支持力度も既定ではこの $q_p$)。基礎指針'19 の一般式 (Smart-MAGNUM・Hybridニーディングは工法の評定式に替わる)</td></tr>
+                        <tr><th>入力</th><td>杭体ウィンドウの「杭工法」「杭先端径」(埋込み杭は「根固め部径」、回転貫入杭は「羽根径」)「杭先端閉塞効率」$\eta$、杭体の区間の杭径 (周長 $\psi = \pi D$)、地盤ウィンドウの土層の土質・N 値・粘着力 $C_u$・土質点の N 値、土層ごとの「押込み方向周面抵抗」のチェック</td></tr>
+                        <tr><th>採用値</th><td>$A = \pi D^2/4$ ($D$ は杭先端径)。$\bar{N}$ は杭先端の上下 $D$ の範囲にある土質点の N 値 (1 点ごとに 100 で頭打ち) の平均で、60 で頭打ち。先端の土質と $C_u$ は杭先端が入る土層のもの。周面は「押込み方向周面抵抗」にチェックのある土層だけを足し、周長は軸部径 (節杭の節は見込まない)</td></tr>
+                        <tr><th>適用外</th><td>液状化のおそれのある層の周面抵抗は自動では外さない (外すときは土層の「押込み方向周面抵抗」のチェックを外す。解析前の確認で知らせるのは Smart-MAGNUM だけ)。$\bar{N}$ の範囲に土質点が 1 つも無いと $q_p = 0$ (解析前の確認で知らせる)。引抜き抵抗は別の式 ($\tau_T$・杭の自重を控除)</td></tr>
+                        <tr><th>参照箇所</th><td>基礎指針'19 6.3・6.4 節、<a href="#h-検定ウィンドウ">判定基準 — 杭の鉛直支持力</a> (使用限界 $R_u/3$・損傷限界 $R_u/1.5$)、<a href="#section-pile-body-input">杭体の入力</a>・<a href="#section-ground-input">地盤の入力</a></td></tr>
+                        <tr><th>計算例</th><td>場所打ちコンクリート杭、杭径・杭先端径 1.2 m、先端の砂質土 $\bar{N} = 50$: $q_p = 120 \times 50 = 6{,}000$ kN/m²、$R_p = 6{,}000 \times 1.131 = 6{,}786$ kN。周面は砂質土 $N = 20$ が 10 m ($\tau_s = 66$) で $2{,}488$ kN、粘性土 $C_u = 60$ が 8 m ($\tau_c = 60$) で $1{,}810$ kN。$R_u = 11{,}084$ kN (使用限界 $3{,}695$ kN)</td></tr>
+                    </table>
+
                 </section>
 
 

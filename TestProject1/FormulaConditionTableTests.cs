@@ -133,6 +133,46 @@ namespace TestProject1
             Assert.AreEqual(1.0, calc.GetDamageLimitShearComponents(5.0, 0.0).DiagonalTension / diagonal, 1e-9);
         }
 
+        /// <summary>
+        /// 周面摩擦力度 τ の表 (ヘルプ) が実装 (SoilPile.UpdatePileCircumVerticalProperties) の係数・上限と一致し、
+        /// 鉛直支持力の計算例が表の式どおりである。
+        /// </summary>
+        [TestMethod]
+        public void TheBearingTablesMatchTheImplementation()
+        {
+            string help = Help();
+            string friction = Regex.Match(help, "<table class=\"table-doc\" id=\"shaft-friction-table\".*?</table>", RegexOptions.Singleline).Value;
+            Assert.IsFalse(string.IsNullOrEmpty(friction), "周面摩擦力度の表がありません");
+            string code = TestSource.Read("Graphics_r1", "Models", "InputData", "SoilPile.cs");
+
+            // (工法の行の見出し, 砂質土の係数, 上限, 粘性土の係数 (1 は Cu そのもの), 上限)
+            var rows = new (string Method, string Sand, string SandMax, string Clay, string ClayMax)[]
+            {
+                ("場所打ちコンクリート杭", "3.3", "165", "", "100"),
+                ("埋込み杭 (プレボーリング杭)", "2.5", "125", "", "125"),
+                ("埋込み杭 (中掘り杭)", "1.5", "75", "0.4", "50"),
+                ("回転貫入杭", "2.0", "100", "0.5", "62.5"),
+                ("打込み杭", "2.0", "100", "0.8", "100"),
+            };
+            foreach (var r in rows)
+            {
+                string expected = $"<tr><td>{r.Method}</td><td>${r.Sand}N$ (上限 {r.SandMax})</td><td>${r.Clay}C_u$ (上限 {r.ClayMax})</td></tr>";
+                StringAssert.Contains(friction, expected, $"{r.Method} の行が違います");
+                StringAssert.Contains(code, $"\"砂質土\" => Math.Min({r.Sand} * nValue, {r.SandMax})", $"{r.Method}: 実装の砂質土の式が表と違います");
+                string clayCode = r.Clay == "" ? $"Math.Min(cohesive, {r.ClayMax})" : $"Math.Min({r.Clay} * cohesive, {r.ClayMax})";
+                StringAssert.Contains(code, $"\"粘性土\" => {clayCode}", $"{r.Method}: 実装の粘性土の式が表と違います");
+            }
+            TestSource.AssertScanned(Regex.Matches(friction, "<tr><td>").Count, 6, "周面摩擦力度の表の行");
+
+            // 計算例: 場所打ち杭 D = 1.2 m、先端 N̄ = 50、砂質土 N = 20 × 10 m、粘性土 Cu = 60 × 8 m
+            string table = Tables()["cond-vertical-bearing"];
+            double a = Math.PI * 1.2 * 1.2 / 4, psi = Math.PI * 1.2;
+            double rp = Math.Min(120 * 50, 7500) * a, rfs = Math.Min(3.3 * 20, 165) * 10 * psi, rfc = Math.Min(60.0, 100) * 8 * psi;
+            StringAssert.Contains(table, $"$R_p = 6{{,}}000 \\times {a:0.000} = {N0(rp)}$ kN");
+            StringAssert.Contains(table, $"で ${N0(rfs)}$ kN、粘性土");
+            StringAssert.Contains(table, $"で ${N0(rfc)}$ kN。$R_u = {N0(rp + rfs + rfc)}$ kN (使用限界 ${N0((rp + rfs + rfc) / 3)}$ kN)");
+        }
+
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
         [TestMethod]
         public void ThePyExamplesMatchTheImplementation()
