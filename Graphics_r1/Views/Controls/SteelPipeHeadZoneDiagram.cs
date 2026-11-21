@@ -42,7 +42,7 @@ namespace PileDesign.Views.Controls
 
         public SteelPipeHeadZoneDiagram()
         {
-            Width = 420;
+            Width = 640;
             Height = 290;
             SnapsToDevicePixels = true;
         }
@@ -64,6 +64,8 @@ namespace PileDesign.Views.Controls
         private static readonly Brush Muted = new SolidColorBrush(Color.FromRgb(0x66, 0x66, 0x66));
         private static readonly Brush SteelBrush = new SolidColorBrush(Color.FromRgb(0x9E, 0x9E, 0x9E));
         private static readonly Brush ConcreteBrush = new SolidColorBrush(Color.FromRgb(0xF2, 0xF2, 0xF2));
+        /// <summary>充填部より下の鋼管の内側に見える、向こう側の内壁。</summary>
+        private static readonly Brush InnerWallBrush = new SolidColorBrush(Color.FromRgb(0xD9, 0xD9, 0xD9));
         private static readonly Brush CapBrush = Brushes.White;
         private static readonly Pen Outline = new(Ink, 1.2);
         private static readonly Pen Thin = new(Ink, 0.8);
@@ -72,19 +74,42 @@ namespace PileDesign.Views.Controls
 
         static SteelPipeHeadZoneDiagram()
         {
-            foreach (var f in new Freezable[] { Ink, Muted, SteelBrush, ConcreteBrush, Outline, Thin, Hatch, Guide }) f.Freeze();
+            foreach (var f in new Freezable[] { Ink, Muted, SteelBrush, ConcreteBrush, InnerWallBrush, Outline, Thin, Hatch, Guide }) f.Freeze();
         }
 
         protected override void OnRender(DrawingContext dc)
         {
             base.OnRender(dc);
             double dip = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-            FormattedText Text(string s, double size = 11, Brush? brush = null)
-                => new(s, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, new Typeface("Yu Gothic UI"), size, brush ?? Ink, dip);
+            var face = new Typeface("Yu Gothic UI");
+            FormattedText Text(string s, double size, Brush? brush = null)
+                => new(s, CultureInfo.CurrentUICulture, FlowDirection.LeftToRight, face, size, brush ?? Ink, dip);
             void Label(string s, double x, double y, double size = 11, Brush? brush = null, bool right = false)
             {
                 var t = Text(s, size, brush);
                 dc.DrawText(t, new Point(right ? x - t.Width : x, y - t.Height / 2));
+            }
+            // 「_x」の次の 1 文字を下付きで描く (sEsI1 のような記号を本と同じ形で書くため)
+            void Rich(string s, double x, double y, double size = 11, Brush? brush = null, bool right = false)
+            {
+                var parts = new System.Collections.Generic.List<(FormattedText Text, bool Sub)>();
+                for (int i = 0; i < s.Length; i++)
+                {
+                    bool sub = s[i] == '_' && i + 1 < s.Length;
+                    if (sub) i++;
+                    int j = i + 1;
+                    if (!sub) while (j < s.Length && s[j] != '_') j++;
+                    parts.Add((Text(s[i..j], sub ? size * 0.72 : size, brush), sub));
+                    i = j - 1;
+                }
+                double width = 0;
+                foreach (var part in parts) width += part.Text.WidthIncludingTrailingWhitespace;
+                double cx = right ? x - width : x, baseH = Text("E", size).Height;
+                foreach (var (t, sub) in parts)
+                {
+                    dc.DrawText(t, new Point(cx, y - baseH / 2 + (sub ? size * 0.42 : 0)));
+                    cx += t.WidthIncludingTrailingWhitespace;
+                }
             }
 
             var (l1, l2, l3, L, fillIsDefault) = Zones(PileDiameter, FillLength, ThickPartLength);
@@ -94,19 +119,20 @@ namespace PileDesign.Views.Controls
                 return;
             }
 
-            // 配置: 左に剛性の説明、中央に杭、右に寸法線
-            const double pileX = 150, pileW = 64, capTop = 8, capH = 30, wallThick = 9, wallThin = 4.5;
-            double top = capTop + capH;                  // パイルキャップ下面 = 杭頭
+            // 配置: 左に剛性の式、中央に杭、右に寸法線と記号の説明 (「基礎部材の強度と変形性能」図 8.3 にならう)
+            const double pileX = 150, pileW = 64, capTop = 8, capH = 42, embed = 18, wallThick = 9, wallThin = 4.5;
+            double top = capTop + capH;                  // パイルキャップ下面。l1・L はここから測る
+            double head = top - embed;                   // 杭頭はパイルキャップの中に入り込む
             double zoneH = ActualHeight > 0 ? ActualHeight - top - 34 : 220;
             double scale = zoneH / L;
             double y1 = top + l1 * scale, y2 = y1 + l2 * scale, yL = top + L * scale, yEnd = yL + 18;
 
-            // パイルキャップ
+            // パイルキャップ (杭はこの上に重ねて描くので、杭の部分では下面の線が隠れる)
             dc.DrawRectangle(CapBrush, Outline, new Rect(pileX - 34, capTop, pileW + 68, capH));
-            Label("パイルキャップ", pileX + pileW / 2 - 36, capTop + capH / 2, 10.5);
+            Label("パイルキャップ", pileX + pileW / 2 - 36, capTop + (capH - embed) / 2, 10.5);
 
-            // 充填コンクリート (l1)。斜線で示す
-            var core = new Rect(pileX + wallThick, top, pileW - 2 * wallThick, Math.Max(y1 - top, 0));
+            // 充填コンクリート (杭頭〜l1)。斜線で示す
+            var core = new Rect(pileX + wallThick, head, pileW - 2 * wallThick, Math.Max(y1 - head, 0));
             if (core.Height > 0)
             {
                 dc.DrawRectangle(ConcreteBrush, null, core);
@@ -117,14 +143,19 @@ namespace PileDesign.Views.Controls
                 dc.DrawRectangle(null, Thin, core);
             }
 
-            // 鋼管: 断面変化部 (y2) までは厚い壁、その下は薄い壁。断面変化部は斜めにつなぐ
+            // 充填部より下の鋼管の内側は空洞で、縦断面では向こう側の鋼管の内壁が見える (本の図 8.3 の網掛け)。
+            // 薄い灰色で塗る。壁はこの上に重ねて描く
+            if (yEnd > y1)
+                dc.DrawRectangle(InnerWallBrush, null, new Rect(pileX, y1, pileW, yEnd - y1));
+
+            // 鋼管: 断面変化部 (y2) までは厚い壁、その下は薄い壁。外径は変えず、断面変化部は内側を斜めにつなぐ
             void Walls(double yFrom, double yTo, double thick)
             {
                 if (yTo <= yFrom) return;
                 dc.DrawRectangle(SteelBrush, Thin, new Rect(pileX, yFrom, thick, yTo - yFrom));
                 dc.DrawRectangle(SteelBrush, Thin, new Rect(pileX + pileW - thick, yFrom, thick, yTo - yFrom));
             }
-            Walls(top, y2, wallThick);
+            Walls(head, y2, wallThick);
             double taper = l3 > 0 ? Math.Min(8, (yEnd - y2) / 3) : 0;
             if (taper > 0)
             {
@@ -146,11 +177,12 @@ namespace PileDesign.Views.Controls
                 }
             }
             Walls(y2 + taper, yEnd, l3 > 0 ? wallThin : wallThick);
-            // 杭の外形 (下は続くので開けておく)
-            dc.DrawLine(Outline, new Point(pileX, top), new Point(pileX, yEnd));
-            dc.DrawLine(Outline, new Point(pileX + pileW, top), new Point(pileX + pileW, yEnd));
+            // 杭の外形 (頭は閉じ、下は続くので開けておく)
+            dc.DrawLine(Outline, new Point(pileX, head), new Point(pileX + pileW, head));
+            dc.DrawLine(Outline, new Point(pileX, head), new Point(pileX, yEnd));
+            dc.DrawLine(Outline, new Point(pileX + pileW, head), new Point(pileX + pileW, yEnd));
 
-            // 寸法線: 区間 (l1・l2・l3) と L
+            // 寸法線: 区間 (l1・l2・l3) と L。パイルキャップ下面から測る
             double xDim = pileX + pileW + 34, xL = xDim + 100;
             foreach (double y in new[] { top, y1, y2, yL })
                 dc.DrawLine(Guide, new Point(pileX + pileW + 2, y), new Point(xL + 4, y));
@@ -162,20 +194,32 @@ namespace PileDesign.Views.Controls
                 dc.DrawEllipse(Ink, null, new Point(xL, y), 2.2, 2.2);
             }
             static string Mm(double v) => v.ToString("#,0", CultureInfo.InvariantCulture);
-            if (l1 > 0) Label($"l1 = {Mm(l1)}" + (fillIsDefault ? " (D)" : ""), xDim + 4, (top + y1) / 2, 10.5);
-            if (l2 > 0) Label($"l2 = {Mm(l2)}", xDim + 4, (y1 + y2) / 2, 10.5);
-            if (l3 > 0) Label($"l3 = {Mm(l3)}", xDim + 4, (y2 + yL) / 2, 10.5);
-            Label($"L = 4D", xL + 4, (top + yL) / 2 - 7, 10.5);
+            if (l1 > 0) Rich($"l_1 = {Mm(l1)}" + (fillIsDefault ? " (D)" : ""), xDim + 4, (top + y1) / 2, 10.5);
+            if (l2 > 0) Rich($"l_2 = {Mm(l2)}", xDim + 4, (y1 + y2) / 2, 10.5);
+            if (l3 > 0) Rich($"l_3 = {Mm(l3)}", xDim + 4, (y2 + yL) / 2, 10.5);
+            Label("L = 4D", xL + 4, (top + yL) / 2 - 7, 10.5);
             Label($"= {Mm(L)}", xL + 4, (top + yL) / 2 + 7, 10.5);
 
-            // 区間ごとの剛性 (左)。区間が無いものは出さない
+            // 区間ごとの剛性 (左)。本 (図 8.3) と同じ記号で書く。区間が無いものは出さない
             double xText = pileX - 8;
-            if (l1 > 0) Label("EI1 = 鋼管 + 充填", xText, (top + y1) / 2, 10.5, right: true);
-            if (l2 > 0) Label("EI2 = 鋼管 (厚部)", xText, (y1 + y2) / 2, 10.5, right: true);
-            if (l3 > 0)
+            if (l1 > 0) Rich("EI_1 = _sE_sI_1 + _cE_cI", xText, (top + y1) / 2, 11, right: true);
+            if (l2 > 0) Rich("EI_2 = _sE_sI_1", xText, (y1 + y2) / 2, 11, right: true);
+            if (l3 > 0) Rich("EI_3 = _sE_sI_2", xText, (y2 + yL) / 2, 11, right: true);
+
+            // 記号の説明 (右)
+            double xLegend = xL + 62, yLegend = top + 4;
+            foreach (var line in new[]
             {
-                Label("EI3 = 鋼管 (薄部)", xText, (y2 + yL) / 2 - 7, 10.5, right: true);
-                Label("下の区間の鋼管", xText, (y2 + yL) / 2 + 7, 9.5, Muted, right: true);
+                "_sE_sI_1 : 杭頭部の鋼管の曲げ剛性",
+                "_cE_cI : 充填コンクリートの曲げ剛性",
+                "_sE_sI_2 : 下の区間 (杭中間部) の鋼管の曲げ剛性",
+                "l_1 : パイルキャップ下面〜充填部下端",
+                "l_2 : 充填部下端〜鋼管の断面変化部",
+                "l_3 : 断面変化部〜4D の位置",
+            })
+            {
+                Rich(line, xLegend, yLegend, 10.5);
+                yLegend += 19;
             }
             Label("寸法は mm。縦は L を基準にした縮尺、横は模式", 8, yEnd + 10, 9.5, Muted);
         }
