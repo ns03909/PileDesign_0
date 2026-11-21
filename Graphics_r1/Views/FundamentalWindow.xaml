@@ -38,23 +38,6 @@
         <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
         <StackPanel Margin="0,0,8,0">
 
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="性能グレード" HorizontalAlignment="Left" Grid.Column="0"/>
-                <ComboBox ItemsSource="{Binding SeismicGradeOptions}" SelectedItem="{Binding SeismicGrade}"
-                          Grid.Column="1"
-                          SelectionChanged="ComboBoxSeismicGrade_SelectionChanged"
-                          Margin="0,0,0,10"/>
-                <!--<ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding}" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate> "-->
-            </Grid>
-
             <GroupBox Header="地盤変位の地域係数" Margin="0,0,0,10" Padding="6">
                 <StackPanel>
                     <TextBlock TextWrapping="Wrap" Margin="0,0,0,6"
@@ -71,6 +54,23 @@
                     </Grid>
                 </StackPanel>
             </GroupBox>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="性能グレード" HorizontalAlignment="Left" Grid.Column="0"/>
+                <ComboBox ItemsSource="{Binding SeismicGradeOptions}" SelectedItem="{Binding SeismicGrade}"
+                          Grid.Column="1"
+                          SelectionChanged="ComboBoxSeismicGrade_SelectionChanged"
+                          Margin="0,0,0,10"/>
+                <!--<ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate> "-->
+            </Grid>
 
             <GroupBox Header="杭頭の安全限界回転角" Margin="0,0,0,10" Padding="6">
                 <StackPanel>

@@ -3076,10 +3076,10 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
 
             <h3 id="h-「基本設定」入力" style="font-weight: bold;"><img class="heading-icon" src="icons/FundamentalWindow.svg" alt="">「基本設定」入力</h3>
             <p><img class="button-icon" src="icons/FundamentalWindow.svg" alt="">「基本設定」ボタンをクリックして開くウィンドウで、
-                性能グレードと、杭体の材料モデル化を選びます。</p>
+                地域係数・性能グレードと、杭体の材料モデル化を選びます。</p>
             <ul>
-                <li><strong>性能グレード</strong>: 耐震性能グレード（S / A）の選択。グレードによりレベル2地震時の検定に用いる限界状態が異なります</li>
                 <li id="fund-opt-regional-factor"><strong>地盤変位の地域係数 Z</strong>: 地盤変位の算定（固有周期ののび $\alpha = 1 + L Z C_\alpha T_0 / \sum H_i$）と、応答スペクトル法の加速度 $L Z S_{a0}(T)$ に掛けます（既定 1.0）。建設地で 1 つに決まる値なので、すべての地盤に同じ値を使います。変えて保存すると、<strong>すべての地盤の地盤変位を計算し直し</strong>、解析結果は「再解析が必要」になります。告示の値（0.7〜1.0）の外は解析前の確認で知らせます。1.0.40-beta までは入力欄が無く、1.0 に固定していました。</li>
+                <li><strong>性能グレード</strong>: 耐震性能グレード（S / A）の選択。グレードによりレベル2地震時の検定に用いる限界状態が異なります</li>
             </ul>
             <p>
                 プロジェクト番号・名称と標高の表記は
