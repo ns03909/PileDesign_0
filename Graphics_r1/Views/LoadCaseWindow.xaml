@@ -193,7 +193,7 @@
 
                             <TextBlock Grid.Row="2" Grid.Column="0" Foreground="Red" Text="・" VerticalAlignment="Top"/>
                             <TextBlock Grid.Row="2" Grid.Column="1" Foreground="Red" TextWrapping="Wrap"
-                                Text="現状、各杭に入力する軸方向力は、"/>
+                                Text="既定では、各杭に入力する地震時の軸方向力は、"/>
 
                             <TextBlock Grid.Row="3" Grid.Column="0" Foreground="Red"/>
                             <TextBlock Grid.Row="3" Grid.Column="1" Foreground="Red" TextWrapping="Wrap">
@@ -205,8 +205,9 @@
                                 <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
                                 <Run Text="の乗算を考慮しません。"/>
                             </TextBlock>
+                            <!-- 1.0.39-beta で分離入力を足したのに「考慮しません」のままだった (外部レビュー #27 の調べで発見 2026-11-21) -->
                             <TextBlock Grid.Row="4" Grid.Column="1" Foreground="Red" TextWrapping="Wrap"
-                                Text="(杭軸力はすべての重ね合わせケースで同一)"/>
+                                Text="(杭軸力はすべての重ね合わせケースで同一。データタブの軸力タブで「分離入力」にすると、上部構造分・基礎部分に分けて入力し、それぞれ βU・βL を掛けます)"/>
                         </Grid>
 
                     </Grid>
@@ -434,11 +435,11 @@
 
                             <DataGridTextColumn Width="*" Binding="{Binding Alpha1, StringFormat=N1}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                 <DataGridTextColumn.Header>
-                                    <TextBlock>
-                                    <Run Text="α"/>
-                                    <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
-                                        
-                                    </TextBlock>
+                                    <!-- 記号だけでは紛れる (βL は液状化の低減率にも使う) ので名前を添える (外部レビュー #27) -->
+                                    <StackPanel ToolTip="地盤変位の組合せ係数 αL (地盤変位の最大値に対する比)">
+                                        <TextBlock Text="地盤変位" TextAlignment="Center"/>
+                                        <TextBlock TextAlignment="Center"><Run Text="α"/><Run Text="L" BaselineAlignment="Subscript" FontSize="10"/></TextBlock>
+                                    </StackPanel>
                                 </DataGridTextColumn.Header>
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
@@ -449,10 +450,10 @@
 
                             <DataGridTextColumn Width="*" Binding="{Binding Beta1, StringFormat=N1}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                 <DataGridTextColumn.Header>
-                                    <TextBlock>
-                                    <Run Text="β"/>
-                                    <Run Text="U" BaselineAlignment="Subscript" FontSize="10"/>
-                                    </TextBlock>
+                                    <StackPanel ToolTip="上部構造の慣性力の組合せ係数 βU">
+                                        <TextBlock Text="上部構造" TextAlignment="Center"/>
+                                        <TextBlock TextAlignment="Center"><Run Text="β"/><Run Text="U" BaselineAlignment="Subscript" FontSize="10"/></TextBlock>
+                                    </StackPanel>
                                 </DataGridTextColumn.Header>
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">
@@ -463,10 +464,10 @@
 
                             <DataGridTextColumn Width="*" Binding="{Binding Beta2, StringFormat=N1}" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}">
                                 <DataGridTextColumn.Header>
-                                    <TextBlock>
-                                    <Run Text="β"/>
-                                    <Run Text="L" BaselineAlignment="Subscript" FontSize="10"/>
-                                    </TextBlock>
+                                    <StackPanel ToolTip="基礎部の慣性力の組合せ係数 βL (地盤の液状化の低減率 βL とは別の値)">
+                                        <TextBlock Text="基礎部" TextAlignment="Center"/>
+                                        <TextBlock TextAlignment="Center"><Run Text="β"/><Run Text="L" BaselineAlignment="Subscript" FontSize="10"/></TextBlock>
+                                    </StackPanel>
                                 </DataGridTextColumn.Header>
                                 <DataGridTextColumn.ElementStyle>
                                     <Style TargetType="TextBlock">

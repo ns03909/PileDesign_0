@@ -1015,9 +1015,10 @@
                     <Fluent:ToggleButton Header="断面名称" ToolTip="梁要素の断面名称ラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsBeamSectionNameVisible}"
                                Icon="pack://application:,,,/Icons/BeamSectionNameVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="断面名称"/>
-                    <Fluent:ToggleButton Header="β" ToolTip="梁要素のβ角度ラベルの表示／非表示を切り替えます。"
+                    <!-- β は液状化の低減率・耐力の低減係数などにも使う記号なので、名前を添える (外部レビュー #27) -->
+                    <Fluent:ToggleButton Header="角度β" ToolTip="梁要素の回転角度 β のラベルの表示／非表示を切り替えます。"
                                IsChecked="{Binding IsBeamAngleBetaVisible}"
-                               Icon="pack://application:,,,/Icons/BeamAngleBetaVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="β"/>
+                               Icon="pack://application:,,,/Icons/BeamAngleBetaVisible.png" SizeDefinition="Small, Small, Small" AutomationProperties.Name="角度β"/>
                 </Fluent:RibbonGroupBox>
 
                 <!-- 節点ラベル -->
@@ -2796,7 +2797,11 @@
                                                                 ElementStyle="{StaticResource RightAlignedTextBlockStyle}"
                                                                 EditingElementStyle="{StaticResource SignedDecimalEditingTextBoxStyle}" Width="50" MinWidth="50">
                                                     <DataGridTextColumn.Header>
-                                                        <TextBlock Text="&#x03B2;(&#x00B0;)" TextAlignment="Center"/>
+                                                        <!-- 回転角度 β。β だけでは液状化の低減率などと紛れるので名前を添える (外部レビュー #27) -->
+                                                        <StackPanel ToolTip="梁要素の回転角度 β (度)">
+                                                            <TextBlock Text="角度" TextAlignment="Center"/>
+                                                            <TextBlock Text="&#x03B2;(&#x00B0;)" TextAlignment="Center"/>
+                                                        </StackPanel>
                                                     </DataGridTextColumn.Header>
                                                 </DataGridTextColumn>
 

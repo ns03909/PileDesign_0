@@ -1038,7 +1038,7 @@
             <div class="purpose-card" data-purpose="theory">
                 <p class="purpose-name">計算方法を調べる</p>
                 <p>液状化・水平抵抗・杭種ごとの強度と変形性能・支持力と沈下・解析手法の式と仮定、用語。</p>
-                <p><a href="#h-設計式・計算理論編">設計式・計算理論編</a>・<a href="#h-有限要素法による解析手法">有限要素法による解析手法</a>・<a href="#design-practice">設計実務上の扱い</a>・<a href="#h-用語集">用語集</a></p>
+                <p><a href="#h-設計式・計算理論編">設計式・計算理論編</a>・<a href="#h-有限要素法による解析手法">有限要素法による解析手法</a>・<a href="#design-practice">設計実務上の扱い</a>・<a href="#h-用語集">用語集</a>・<a href="#h-記号一覧">記号一覧</a></p>
                 <button type="button" class="purpose-search" data-purpose="theory">この目的で検索</button>
             </div>
             <div class="purpose-card" data-purpose="history">
@@ -7478,7 +7478,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     <tr><td>$K_2$</td><td>杭頭回転ばね定数</td><td>kN·m/rad</td></tr>
                     <tr><td>$K_\theta$</td><td>杭頭半剛接合の回転剛性（M-θ 関係の弾性勾配）</td><td>kN·m/rad</td></tr>
                     <tr><td>$\Delta Z_c$</td><td>基礎梁芯から杭頭までの偏心量（鉛直方向）</td><td>m</td></tr>
-                    <tr><td>$\xi$</td><td>群杭係数（杭間相互作用による単杭支持力低減）</td><td>—</td></tr>
+                    <tr><td>$\xi$</td><td>群杭係数（杭間相互作用による水平地盤反力係数 $k_{h0}$ の低減）</td><td>—</td></tr>
                     <tr><td>$R/B$</td><td>杭間隔比（杭中心間隔 / 杭径）</td><td>—</td></tr>
                 </tbody>
             </table>
@@ -7534,7 +7534,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 <tbody>
                     <tr><td>$F_L$</td><td>液状化抵抗率（$F_L < 1$ で液状化判定）</td><td>—</td></tr>
                     <tr><td>$P_L$</td><td>液状化指数（深度方向の累積指標）</td><td>—</td></tr>
-                    <tr><td>$D_{CY}$</td><td>累積損傷度</td><td>—</td></tr>
+                    <tr><td>$D_{cy}$</td><td>液状化による地表面の水平変位（$D_{cy} = \sum \gamma_{cy} H_i / 100$）</td><td>m</td></tr>
                     <tr><td>$R$</td><td>液状化抵抗比</td><td>—</td></tr>
                     <tr><td>$L$</td><td>地震時せん断応力比</td><td>—</td></tr>
                 </tbody>
@@ -10024,7 +10024,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 <li class="symbol-intro">ここに、</li>
                 <li><span class="symbol-label">$N_1$</span>換算N値</li>
                 <li><span class="symbol-label">$C_N'$</span>拘束圧に関する換算係数</li>
-                <li><span class="symbol-label">$\Delta N_f$</span>細粒分含有率$F_L$に応じた補正N値増分で、図3.2.2による</li>
+                <li><span class="symbol-label">$\Delta N_f$</span>細粒分含有率$F_c$に応じた補正N値増分で、図3.2.2による</li>
                 <li><span class="symbol-label">$N$</span>自動落下法による実測N値</li>
             </ul>
 
@@ -11479,8 +11479,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     <ul class="symbol-list">
                         <li class="symbol-intro">記号</li>
                         <li><span class="symbol-label">$j_t$</span>主筋重心間距離 $= b - 2d_t$（応力中心間距離 $j$ とは別の量）</li>
-                        <li><span class="symbol-label">$
-u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
+                        <li><span class="symbol-label">$\nu$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                         <li><span class="symbol-label">$p_w$</span>0.3% を上限として算定します。</li>
                     </ul>
                     <p>
@@ -14477,7 +14476,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
             <li><span class="symbol-label">$I_p$</span>杭体の断面二次モーメント、絞り部ありの場合は絞り部径を杭径とみなす(m<sup>4</sup>)</li>
             <li><span class="symbol-label">$H_p$</span>杭体とPCリングの重なり長さ(m)</li>
             <li><span class="symbol-label">$K_c$</span>PCリング内コンクリート回転剛性(kNm/rad)$K_c=\frac{E_c \cdot I_c}{H_c}$</li>
-            <li><span class="symbol-label">$E_c$</span>杭体のヤング係数(kN/m<sup>2</sup>)</li>
+            <li><span class="symbol-label">$E_c$</span>PCリング内のパイルキャップコンクリートのヤング係数(kN/m<sup>2</sup>)</li>
             <li><span class="symbol-label">$I_c$</span>PCリング内側コンクリートの断面二次モーメント、絞り部有無によらない(m<sup>4</sup>)</li>
             <li><span class="symbol-label">$H_c$</span>杭頭接合面からPCリング上端までの長さ(m)</li>
             <li><span class="symbol-label">$K_b$</span>パイルキャップ部分の回転剛性(kNm/rad)$K_b=\frac{E_b \cdot I_b}{H_b}$</li>
@@ -16418,6 +16417,62 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                 <dt><strong>レベル1地震動 / レベル2地震動</strong></dt>
                 <dd>レベル1は建物の供用期間中に数回程度発生する中程度の地震、レベル2は極めてまれに発生する地震を指します。</dd>
             </dl>
+
+            <!-- 記号一覧 (外部レビュー #27 2026-11-21)。同じ記号を別の量に使っているものを、記号ごとに並べる。
+                 解析結果の記号は「解析結果の記号 (凡例)」(symbol-reference)、各式の記号は式の直下の「ここに、」にある -->
+            <h2 id="h-記号一覧" data-purpose="theory">記号一覧（同じ記号を別の意味で使うもの）</h2>
+            <p>
+                本プログラムとヘルプは、基礎指針'19 などの文献の記号をそのまま使っています。そのため、<strong>同じ記号が別の量を表す</strong>ことがあります。
+                下の表は、取り違えやすい記号を記号ごとに並べたものです。画面や計算書で記号だけが出ているときは、ここで意味を確かめてください。
+                解析結果の図や表の記号は<a href="#symbol-reference">解析結果の記号 (凡例)</a>、各式の記号は式の直下の「ここに、」にあります。
+            </p>
+            <p>
+                とくに <strong>$\beta_L$ は 2 つの意味</strong>で使っています。荷重の重ね合わせの「基礎部の慣性力の組合せ係数」と、地盤の「液状化による地盤反力係数の低減率」です。
+                前者は荷重ウィンドウ、後者は地盤ウィンドウの値で、互いに関係しません。
+            </p>
+            <table class="table-doc" id="symbol-list-table">
+                <thead>
+                    <tr><th>記号</th><th>意味</th><th>単位</th><th>入力・表示する場所</th><th>使うところ</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td>$\alpha_L$</td><td>地盤変位の組合せ係数（杭の曲げが最大のときの地盤変位 ÷ 地盤変位の最大値）</td><td>—</td><td>荷重ウィンドウ（重ね合わせ）</td><td><a href="#loadcase-superposition">荷重の重ね合わせ</a></td></tr>
+                    <tr><td>$\alpha$</td><td>基準水平地盤反力係数 $k_{h0}$ の係数（= 80）</td><td>m⁻¹</td><td>固定値</td><td><a href="#h-杭の水平地盤反力係数">水平地盤反力係数</a></td></tr>
+                    <tr><td>$\alpha$</td><td>杭先端の支持力係数（Smart-MAGNUM・Hybrid ニーディング工法）</td><td>—</td><td>計算値</td><td><a href="#section-smart-magnum">Smart-MAGNUM</a>・<a href="#section-hybrid-kneading">Hybrid ニーディング</a></td></tr>
+                    <tr><td>$\alpha$, $n$</td><td>杭先端の荷重-沈下曲線の係数・次数</td><td>—</td><td>単杭沈下解析ウィンドウ</td><td><a href="#h-単杭の沈下">単杭の沈下</a></td></tr>
+                    <tr><td>$\beta_U$</td><td>上部構造の慣性力の組合せ係数</td><td>—</td><td>荷重ウィンドウ（重ね合わせ）</td><td><a href="#loadcase-superposition">荷重の重ね合わせ</a>・<a href="#h-地震時軸力の分離入力">地震時軸力の分離入力</a></td></tr>
+                    <tr><td>$\beta_L$</td><td>基礎部の慣性力の組合せ係数</td><td>—</td><td>荷重ウィンドウ（重ね合わせ）</td><td><a href="#loadcase-superposition">荷重の重ね合わせ</a>・<a href="#h-地震時軸力の分離入力">地震時軸力の分離入力</a></td></tr>
+                    <tr><td>$\beta_L$（$\beta$）</td><td>液状化による地盤反力係数の低減率（液状化した土層で $k_{h0}$ と $p_y$ に掛かる）</td><td>—</td><td>地盤ウィンドウ（土質点の表、計算値）</td><td><a href="#h-地盤の液状化">地盤の液状化</a>・<a href="#section-ground-input">地盤の入力</a>・<a href="#h-許容圧縮応力度">鋼管杭の座屈長</a></td></tr>
+                    <tr><td>$\beta_1$, $\beta_2$, $\beta = \beta_1 \beta_2$</td><td>杭体の耐力の低減係数（$\beta_1$ 設計式の信頼性、$\beta_2$ 変形性能・軸力）</td><td>—</td><td>杭種ごとの固定値（SC 杭の安全限界せん断は基本設定で入力）</td><td><a href="#h-杭体応力検討における低減係数-\beta_1-\beta_2">杭体応力検討における低減係数</a>・<a href="#fund-opt-sc-shear-beta">SC 杭のせん断の β</a></td></tr>
+                    <tr><td>$\beta$</td><td>梁要素の回転角度</td><td>°</td><td>データタブの梁要素の表・プロパティパネル「角度β」</td><td><a href="#data-beam-element-tab">梁要素</a></td></tr>
+                    <tr><td>$\beta$</td><td>Chang の式の特性値 $\beta = \sqrt[4]{k_h B / 4EI}$</td><td>m⁻¹</td><td>Chang の式ウィンドウ（計算値）</td><td><a href="#chang-uniform-ground">Chang の式</a></td></tr>
+                    <tr><td>$\beta$</td><td>鋼管杭の変形性能の式の径厚比パラメータ（$\beta = (D/t)\,{}_s\sigma_{ty}/{}_sE$）</td><td>—</td><td>計算値</td><td><a href="#h-M-φ・M-θ-関係">鋼管杭の M-φ・M-θ 関係</a></td></tr>
+                    <tr><td>$\beta$</td><td>1 次モード参加係数</td><td>—</td><td>地盤ウィンドウの応答スペクトル（計算値）</td><td><a href="#h-応答スペクトル法-MDOF--等価線形化">応答スペクトル法</a></td></tr>
+                    <tr><td>$\beta$, $\gamma$</td><td>杭周面の摩擦力の係数（$\beta$ 砂質土、$\gamma$ 粘性土）</td><td>—</td><td>工法ごとの値（計算値）</td><td><a href="#section-smart-magnum">Smart-MAGNUM</a>・<a href="#section-hybrid-kneading">Hybrid ニーディング</a></td></tr>
+                    <tr><td>$\gamma$</td><td>単位体積重量</td><td>kN/m³</td><td>地盤ウィンドウの土層・杭断面・パイルキャップ</td><td><a href="#section-ground-input">地盤の入力</a></td></tr>
+                    <tr><td>$\gamma_{cy}$</td><td>液状化判定の繰返しせん断ひずみ</td><td>%</td><td>地盤ウィンドウ（計算値）</td><td><a href="#h-地盤の液状化">地盤の液状化</a></td></tr>
+                    <tr><td>$\xi$</td><td>群杭係数（杭の相互作用による $k_{h0}$ の低減）</td><td>—</td><td>データタブの杭配置「群杭係数」</td><td><a href="#h-杭の水平地盤反力係数">水平地盤反力係数</a></td></tr>
+                    <tr><td>$\xi$</td><td>施工品質管理係数（場所打ち杭のコンクリート強度に掛かる $\xi F_c$）</td><td>—</td><td>杭断面ウィンドウ「施工品質管理係数ξ」</td><td><a href="#h-場所打ち杭のコンクリート強度について">場所打ち杭のコンクリート強度</a></td></tr>
+                    <tr><td>$\xi_e$</td><td>等価減衰定数</td><td>—</td><td>地盤ウィンドウの応答スペクトル（計算値）</td><td><a href="#h-応答スペクトル法-MDOF--等価線形化">応答スペクトル法</a></td></tr>
+                    <tr><td>$n$</td><td>ヤング係数比（既製コンクリート杭は 5）</td><td>—</td><td>固定値</td><td><a href="#h-PHC-杭の換算断面性能">PHC 杭の換算断面性能</a></td></tr>
+                    <tr><td>$N$</td><td>N 値（$\bar{N}$, $N_1$, $N_a$ など）</td><td>回</td><td>地盤ウィンドウ</td><td><a href="#h-地盤の液状化">地盤の液状化</a>・<a href="#h-杭の水平地盤反力係数">水平地盤反力係数</a></td></tr>
+                    <tr><td>$N$</td><td>杭の軸力</td><td>kN</td><td>データタブの杭軸力</td><td><a href="#symbol-reference">解析結果の記号</a></td></tr>
+                    <tr><td>$D$</td><td>杭径</td><td>mm または m</td><td>杭断面ウィンドウ</td><td>各杭種の式</td></tr>
+                    <tr><td>$D$</td><td>地盤変位の最大値（重ね合わせの $\alpha_L \times D$）</td><td>m</td><td>荷重ウィンドウの凡例</td><td><a href="#loadcase-superposition">荷重の重ね合わせ</a></td></tr>
+                    <tr><td>$D_{cy}$</td><td>液状化による地表面の水平変位</td><td>m</td><td>地盤ウィンドウ（計算値）</td><td><a href="#h-地盤の液状化">地盤の液状化</a></td></tr>
+                    <tr><td>$F_c$</td><td>コンクリートの設計基準強度</td><td>N/mm²</td><td>杭断面ウィンドウ・パイルキャップ</td><td>各杭種の式</td></tr>
+                    <tr><td>$F_c$</td><td>細粒分含有率</td><td>%</td><td>地盤ウィンドウの土質点の表</td><td><a href="#h-地盤の液状化">地盤の液状化</a></td></tr>
+                    <tr><td>$E_s$</td><td>鋼材（鉄筋・鋼管・鋼棒）のヤング係数</td><td>N/mm²</td><td>杭断面ウィンドウ</td><td>各杭種の式</td></tr>
+                    <tr><td>$E_s$</td><td>地盤の変形係数（沈下）</td><td>kN/m²</td><td>沈下の土層の表</td><td><a href="#h-土層の沈下">土層の沈下</a></td></tr>
+                    <tr><td>$K_0$</td><td>静止土圧係数</td><td>—</td><td>要素分割ウィンドウ（土圧合力ばね）</td><td><a href="#h-土圧合力ばね">土圧合力ばね</a></td></tr>
+                    <tr><td>$K_0$, $K_1$, $K_2$</td><td>杭頭の軸方向・水平・回転ばね（解析結果）</td><td>—</td><td>解析結果</td><td><a href="#symbol-reference">解析結果の記号</a></td></tr>
+                    <tr><td>$K_p$</td><td>受働土圧係数</td><td>—</td><td>要素分割ウィンドウ（土圧合力ばね）</td><td><a href="#h-土圧合力ばね">土圧合力ばね</a></td></tr>
+                    <tr><td>$K_p$</td><td>杭頭工法の杭体部分の回転剛性</td><td>kN·m/rad</td><td>杭頭部ウィンドウ（計算値）</td><td><a href="#h-キャプテンパイル工法">キャプテンパイル工法</a></td></tr>
+                    <tr><td>$R$</td><td>液状化抵抗比</td><td>—</td><td>地盤ウィンドウ（計算値）</td><td><a href="#h-地盤の液状化">地盤の液状化</a></td></tr>
+                    <tr><td>$R/B$</td><td>杭間隔比（杭中心間隔 ÷ 杭径）</td><td>—</td><td>データタブの杭配置</td><td><a href="#soil-nonlinearity-mode">群杭の p-y</a></td></tr>
+                    <tr><td>$\nu$</td><td>ポアソン比</td><td>—</td><td>地盤ウィンドウ・沈下の土層の表</td><td><a href="#h-土層の沈下">土層の沈下</a></td></tr>
+                    <tr><td>$\nu$</td><td>コンクリート圧縮強度の有効係数（$= 0.7 - F_c/200$）</td><td>—</td><td>計算値</td><td><a href="#h-高強度せん断補強筋の工法">高強度せん断補強筋の工法</a></td></tr>
+                </tbody>
+            </table>
         </section>
 
     </div>
