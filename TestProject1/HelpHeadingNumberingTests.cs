@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -40,6 +41,25 @@ namespace TestProject1
             Assert.AreEqual(0, skipped.Count,
                 "見出しのレベルが飛んでいて、節番号に 0 が入ります (例: 3.0.1)。1 段ずつ深くしてください:\n"
                 + string.Join("\n", skipped));
+        }
+
+        /// <summary>
+        /// 振り直しのために前の番号を外すとき、番号の後ろの空白を必須にする。空白を要らないとしていたので、
+        /// 版の見出し「1.0.38-beta（2026-10-25）」の「1.0.38」を番号とみなして消し、目次と検索に
+        /// 「-beta（2026-10-25）」と出ていた (2026-11-21 に検索の絞り込みを確かめていて発見)。
+        /// </summary>
+        [TestMethod]
+        public void StrippingTheOldNumberKeepsVersionHeadings()
+        {
+            string help = TestSource.Read("Graphics_r1", "Help", "help.html");
+            string body = TestSource.MethodBody(help, "function numberHeadings(");
+            var strips = Regex.Matches(body, @"\.replace\(/\^(\\d\+\\\.)+\\d\+\\s(.)/").Cast<Match>().ToList();
+            Assert.AreEqual(4, strips.Count, "(前提) 番号を外す正規表現 4 つを読めていない");
+            foreach (var m in strips)
+                Assert.AreEqual("+", m.Groups[2].Value, $"番号の後ろの空白を必須にしていません: {m.Value}");
+
+            // 版の見出しが本当にある (無くなったらこの検査の意味を見直す)
+            StringAssert.Contains(help, ">1.0.38-beta（2026-10-25）</h4>");
         }
     }
 }

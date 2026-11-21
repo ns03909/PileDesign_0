@@ -899,6 +899,47 @@
                 overflow: auto;
                 text-align: left;
             }
+
+        /* 目的から探す (本文の先頭)。カードは幅に応じて折り返す */
+        .purpose-guide {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+            margin: 8px 0 20px;
+        }
+
+            .purpose-guide .purpose-guide-title {
+                grid-column: 1 / -1;
+                margin: 0;
+                font-weight: bold;
+                font-size: 1.1em;
+            }
+
+        .purpose-card {
+            border: 1px solid #62B0E2;
+            border-radius: 6px;
+            padding: 8px 12px;
+            background: #F4F9FD;
+        }
+
+            .purpose-card p {
+                margin: 4px 0;
+            }
+
+            .purpose-card .purpose-name {
+                font-weight: bold;
+                color: #1F5F8B;
+            }
+
+        .purpose-search {
+            margin-top: 4px;
+            font-size: 0.9em;
+        }
+
+        #searchScope {
+            margin: 4px 0;
+            max-width: 100%;
+        }
     </style>
 </head>
 
@@ -923,6 +964,15 @@
         <!-- 検索機能 -->
         <div class="tab-content" id="search" style="display:none;">
             <input type="text" id="searchInput" placeholder="検索語を入力 (Ctrl+F / Esc で目次へ)">
+            <!-- 目的で絞る (章の data-purpose)。本文先頭の「目的から探す」の「この目的で検索」でも切り替わる -->
+            <select id="searchScope" aria-label="検索する範囲" title="検索する章を目的で絞ります">
+                <option value="">すべての章</option>
+                <option value="start">初めて使う</option>
+                <option value="input">入力する</option>
+                <option value="result">結果を確認する</option>
+                <option value="theory">計算方法を調べる</option>
+                <option value="history">以前の版との差を調べる</option>
+            </select>
             <div class="controls">
                 <span id="matchCount">一致数: 0</span>
                 <button onclick="prevMatch()">←</button>
@@ -962,10 +1012,47 @@
             <p><strong>杭基礎検討プログラム</strong> <span id="app-version" style="color:red; visibility:hidden;">ver</span></p>
         </section>
 
+        <!-- 目的別の入口 (外部レビュー #26 2026-11-21)。操作方法・計算方法・更新履歴が 1 つの文書にあり、目的から探しにくかった。
+             各章 (h2) の data-purpose と同じ区分で、「この目的で検索」は検索をその区分の章に絞る。
+             区分の名前は PurposeLabels (下のスクリプト) と HelpPurposeGuideTests が見ている -->
+        <nav id="purpose-guide" class="purpose-guide" aria-label="目的から探す">
+            <p class="purpose-guide-title">目的から探す</p>
+            <div class="purpose-card" data-purpose="start">
+                <p class="purpose-name">初めて使う</p>
+                <p>例題を開いて解析し、結果を見るまでの流れと、扱う杭のモデル。</p>
+                <p><a href="#h-クイックスタートガイド">クイックスタートガイド</a>・<a href="#h-はじめに">はじめに (扱う範囲)</a>・<a href="#h-杭モデル">杭モデル</a>・<a href="#h-よくある質問-FAQ">よくある質問</a></p>
+                <button type="button" class="purpose-search" data-purpose="start">この目的で検索</button>
+            </div>
+            <div class="purpose-card" data-purpose="input">
+                <p class="purpose-name">入力する</p>
+                <p>地盤・杭体・杭配置・荷重などの入力画面と、リボン・データタブの操作。</p>
+                <p><a href="#section-ribbon-analysis">解析条件/解析メニュー ― 入力</a>・<a href="#h-データタブ">データタブ</a>・<a href="#h-操作方法">操作方法</a>・<a href="#h-便利な機能">便利な機能</a></p>
+                <button type="button" class="purpose-search" data-purpose="input">この目的で検索</button>
+            </div>
+            <div class="purpose-card" data-purpose="result">
+                <p class="purpose-name">結果を確認する</p>
+                <p>解析の実行、未収束などの知らせ、検定・グラフ・計算書の見方。</p>
+                <p><a href="#h-解析条件-解析メニュー-解析の実行">解析の実行</a>・<a href="#h-解析結果メニュー">解析結果メニュー</a></p>
+                <button type="button" class="purpose-search" data-purpose="result">この目的で検索</button>
+            </div>
+            <div class="purpose-card" data-purpose="theory">
+                <p class="purpose-name">計算方法を調べる</p>
+                <p>液状化・水平抵抗・杭種ごとの強度と変形性能・支持力と沈下・解析手法の式と仮定、用語。</p>
+                <p><a href="#h-設計式・計算理論編">設計式・計算理論編</a>・<a href="#h-有限要素法による解析手法">有限要素法による解析手法</a>・<a href="#design-practice">設計実務上の扱い</a>・<a href="#h-用語集">用語集</a></p>
+                <button type="button" class="purpose-search" data-purpose="theory">この目的で検索</button>
+            </div>
+            <div class="purpose-card" data-purpose="history">
+                <p class="purpose-name">以前の版との差を調べる</p>
+                <p>版ごとの変更点。結果が変わる変更には「結果が変わります」と書いています。</p>
+                <p><a href="#h-プログラム更新履歴概要">プログラム更新履歴概要</a></p>
+                <button type="button" class="purpose-search" data-purpose="history">この目的で検索</button>
+            </div>
+        </nav>
+
         <section id="section0">
 
             <h1 id="h-利用マニュアル">利用マニュアル</h1>
-            <h2 id="h-はじめに">はじめに</h2>
+            <h2 id="h-はじめに" data-purpose="start">はじめに</h2>
             <h3 id="h-アプリケーションの目的">アプリケーションの目的</h3>
             <p>
                 多くの荷重ケースに対する非線形解析や繰り返し計算を<strong>手軽に</strong>行い、
@@ -1223,7 +1310,7 @@
         <section id="quickstart">
             <!-- id は section 側だけに持たせる (h2 にも同じ id があると重複になり、
                  getElementById がどちらを返すか実装依存になる) -->
-            <h2 id="h-クイックスタートガイド">クイックスタートガイド</h2>
+            <h2 id="h-クイックスタートガイド" data-purpose="start">クイックスタートガイド</h2>
             <p>
                 本プログラムを初めて使用する方向けに、基本的な操作の流れを説明します。<br>
                 下図の順序で入力・解析を進めてください。
@@ -1573,7 +1660,7 @@
         </section>
 
         <section id="section2">
-            <h2 id="h-杭モデル">杭モデル</h2>
+            <h2 id="h-杭モデル" data-purpose="start">杭モデル</h2>
             <p>１本の杭は、「杭頭」、「杭体」、「杭先端」で構成されます。</p>
 
             <p>
@@ -2098,7 +2185,7 @@
 
         <section>
 
-            <h2 id="h-操作方法" style="font-weight: bold; font-size: 1.5em;">操作方法</h2>
+            <h2 id="h-操作方法" data-purpose="input" style="font-weight: bold; font-size: 1.5em;">操作方法</h2>
 
             <h3 id="h-マウス操作" style="font-weight: bold;"><img class="heading-icon" src="icons/Mouse.svg" alt="">マウス操作</h3>
 
@@ -2676,7 +2763,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
 
 
         <section>
-            <h2 id="h-リボンメニュー">リボンメニュー</h2>
+            <h2 id="h-リボンメニュー" data-purpose="input">リボンメニュー</h2>
             <p>
                 本プログラムのリボンメニューは、ファイルメニュー（アプリケーションメニュー）と
                 6つのリボンタブで構成されています。以下に各メニューの全項目を一覧します。
@@ -2954,7 +3041,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
 
         </section>
         <section>
-            <h2 id="section-ribbon-analysis">解析条件/解析メニュー ― 入力</h2>
+            <h2 id="section-ribbon-analysis" data-purpose="input">解析条件/解析メニュー ― 入力</h2>
             <p>
                 リボンメニューの「解析条件/解析(S)」タブには、解析条件の設定と解析実行に関するボタンが配置されています。
                 左側の「解析条件設定」グループと右側の「解析実行」グループに分かれています。
@@ -4659,7 +4746,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
 
         </section>
         <section id="left-pane-reference">
-            <h2 id="h-データタブ"><img class="heading-icon" src="icons/DataTabVisible.svg" alt="">データタブ</h2>
+            <h2 id="h-データタブ" data-purpose="input"><img class="heading-icon" src="icons/DataTabVisible.svg" alt="">データタブ</h2>
             <p>
                 メイン画面の左側には、入力データを編集するタブパネルがあります。
                 AvalonDock ベースの可動パネルで、各タブは <strong>独立したドキュメントとしてフロート / ドッキング / 自動非表示</strong> が可能です。
@@ -5652,7 +5739,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
             </p>
         </section>
         <section>
-            <h2 id="h-解析条件-解析メニュー-解析の実行">解析条件/解析メニュー ― 解析の実行</h2>
+            <h2 id="h-解析条件-解析メニュー-解析の実行" data-purpose="result">解析条件/解析メニュー ― 解析の実行</h2>
             <p>
                 「解析条件/解析(S)」タブ右側の<strong>解析実行</strong>グループを扱います。
                 入力側は <a href="#section-ribbon-analysis">「解析条件/解析メニュー ― 入力」</a> を参照してください。
@@ -6996,7 +7083,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
         </section>
         <section>
-            <h2 id="h-解析結果メニュー"><img class="heading-icon" src="icons/AnalysisResult.svg" alt="">解析結果メニュー</h2>
+            <h2 id="h-解析結果メニュー" data-purpose="result"><img class="heading-icon" src="icons/AnalysisResult.svg" alt="">解析結果メニュー</h2>
             <p>解析結果の表示と出力を制御するタブです。各ボタンは解析結果ダイアグラムの表示切替、グラフ・テーブル・ログの起動、テキスト・ダイアグラムスケール調整に分かれます。</p>
             <p style="background:#FFF8E1; border-left:4px solid #FFB300; padding:6px 10px; margin:8px 0;">
                 ※ <strong>本タブの各表示項目（ダイアグラム種別・コンタ・バブル・矢印・変形後形状・カラーバー・凡例 等）の意味と読み方は、本章の各節 (解析結果の見方/結果グラフの読み方/限界状態設計/検定 等) で詳しく説明します。</strong>
@@ -7886,7 +7973,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
         </section>
         <section>
-            <h2 id="h-ツール-ウィンドウ-ヘルプ-メニュー">ツール / ウィンドウ / ヘルプ メニュー</h2>
+            <h2 id="h-ツール-ウィンドウ-ヘルプ-メニュー" data-purpose="input">ツール / ウィンドウ / ヘルプ メニュー</h2>
             <p>リボンの「ツール(T)」「ウィンドウ(W)」「ヘルプ(H)」の 3 タブをまとめて扱います。</p>
             <h3 id="section-tool-menu">ツールメニュー</h3>
             <p>計算書出力、補助ツール、ライブラリ、画像操作、エクスポート機能を提供するタブです。</p>
@@ -8374,7 +8461,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
         </section>
         <section id="new-features">
-            <h2 id="h-便利な機能">便利な機能</h2>
+            <h2 id="h-便利な機能" data-purpose="input">便利な機能</h2>
 
             <h3 id="h-プロパティパネル"><img class="heading-icon" src="icons/PropertyVisible.svg" alt="">プロパティパネル</h3>
             <p>
@@ -8592,7 +8679,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             </p>
         </section>
         <section id="faq">
-            <h2 id="h-よくある質問-FAQ">よくある質問 (FAQ)</h2>
+            <h2 id="h-よくある質問-FAQ" data-purpose="start">よくある質問 (FAQ)</h2>
 
             <h3 id="h-入力に関する質問">入力に関する質問</h3>
 
@@ -8743,7 +8830,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
         </section>
 
         <section id="design-practice-section">
-            <h2 id="design-practice">設計実務上の扱いについて</h2>
+            <h2 id="design-practice" data-purpose="theory">設計実務上の扱いについて</h2>
 
             <div class="warning" style="background:#FFFAEB; border:1px solid #E0A030; padding:8px 12px; margin:8px 0; color:#8A4500;">
                 ⚠ <strong>注意</strong>：本プログラムが参照する文献（特に日本建築学会「基礎部材の強度と変形性能」2022 など）には、
@@ -8974,7 +9061,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
 
         <section id="release-notes">
-            <h2 id="h-プログラム更新履歴概要">プログラム更新履歴概要</h2>
+            <h2 id="h-プログラム更新履歴概要" data-purpose="history">プログラム更新履歴概要</h2>
             <p>
                 お使いのバージョンは、リボンの「ヘルプ」タブ →
                 <img class="button-icon" src="icons/Help.svg" alt="">「バージョン情報」で確認できます。
@@ -9859,7 +9946,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
         <section>
             <h1 id="h-設計式・計算理論編">設計式・計算理論編</h1>
 
-            <h2 id="h-地盤の液状化">地盤の液状化</h2>
+            <h2 id="h-地盤の液状化" data-purpose="theory">地盤の液状化</h2>
 
 
             <p>
@@ -10006,7 +10093,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 土中の有効応力は、調査時地表以下の任意の高さに対して算定可能としています。
             </p>
 
-            <h2 id="h-杭の水平抵抗">杭の水平抵抗</h2>
+            <h2 id="h-杭の水平抵抗" data-purpose="theory">杭の水平抵抗</h2>
             <h3 id="h-地盤の変位" style="font-weight: bold;">地盤の変位</h3>
 
 
@@ -11085,7 +11172,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 </section>
 
                 <section>
-                    <h2 id="h-場所打ち鉄筋コンクリート杭の強度と変形性能">場所打ち鉄筋コンクリート杭の強度と変形性能</h2>
+                    <h2 id="h-場所打ち鉄筋コンクリート杭の強度と変形性能" data-purpose="theory">場所打ち鉄筋コンクリート杭の強度と変形性能</h2>
 
                     <h3 id="h-場所打ち鉄筋コンクリート杭のコンクリートのヤング係数">場所打ち鉄筋コンクリート杭のコンクリートのヤング係数</h3>
                     <div class="formula-block">
@@ -11718,7 +11805,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
 
 
                 <section>
-                    <h2 id="h-場所打ち鋼管コンクリート杭の強度と変形性能">場所打ち鋼管コンクリート杭の強度と変形性能</h2>
+                    <h2 id="h-場所打ち鋼管コンクリート杭の強度と変形性能" data-purpose="theory">場所打ち鋼管コンクリート杭の強度と変形性能</h2>
 
                     <h3 id="h-場所打ち鋼管コンクリート杭の使用限界曲げモーメント">場所打ち鋼管コンクリート杭の使用限界曲げモーメント</h3>
                     <div class="formula-block">
@@ -11955,7 +12042,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                 <!-- ============================================== -->
 
                 <section>
-                    <h2 id="h-PHC-杭の強度と変形性能">PHC 杭の強度と変形性能</h2>
+                    <h2 id="h-PHC-杭の強度と変形性能" data-purpose="theory">PHC 杭の強度と変形性能</h2>
                     <p>
                         プレストレストコンクリート (PHC) 杭は、PC 鋼材によりプレストレスを導入した
                         既製コンクリート杭。本節は基礎部材の強度と変形性能 (日本建築学会、2022年) 5 章に基づく。
@@ -12143,7 +12230,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                 </section>
 
                 <section>
-                    <h2 id="h-PRC-杭の強度と変形性能">PRC 杭の強度と変形性能</h2>
+                    <h2 id="h-PRC-杭の強度と変形性能" data-purpose="theory">PRC 杭の強度と変形性能</h2>
                     <p>
                         プレテンション式遠心力高強度コンクリート (PRC) 杭は、PHC 杭に異形主筋による
                         補強を加えた既製杭。本節は基礎部材の強度と変形性能 6 章に基づき、
@@ -12296,7 +12383,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                 </section>
 
                 <section>
-                    <h2 id="h-SC-杭の強度と変形性能">SC 杭の強度と変形性能</h2>
+                    <h2 id="h-SC-杭の強度と変形性能" data-purpose="theory">SC 杭の強度と変形性能</h2>
                     <p>
                         外殻鋼管付きコンクリート (SC) 杭は、外殻鋼管とその内側のコンクリートで構成される複合断面の既製杭。
                         本節は基礎部材の強度と変形性能 7 章に基づき、
@@ -12561,7 +12648,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                 </section>
 
                 <section>
-                    <h2 id="h-鋼管杭の強度と変形性能">鋼管杭の強度と変形性能</h2>
+                    <h2 id="h-鋼管杭の強度と変形性能" data-purpose="theory">鋼管杭の強度と変形性能</h2>
 
                     <p>
                         鋼管杭の杭体は <strong>「鋼管部」</strong>(杭中間部・杭下部、鋼管内にコンクリート充填なし)
@@ -13147,7 +13234,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                 </section>
 
                 <section>
-                    <h2 id="h-鉛直支持力と沈下">鉛直支持力と沈下</h2>
+                    <h2 id="h-鉛直支持力と沈下" data-purpose="theory">鉛直支持力と沈下</h2>
 
 
                     <p>
@@ -14161,7 +14248,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
         </p>
 
 
-        <h2 id="h-杭頭工法の検討式">杭頭工法の検討式</h2>
+        <h2 id="h-杭頭工法の検討式" data-purpose="theory">杭頭工法の検討式</h2>
         <p>
             場所打ち鉄筋コンクリート杭ではキャプテンパイル工法、既製コンクリート杭では F.T.Pile 構法 または キャプリングパイル工法を、
             鋼管杭ではキャプリングパイル工法を、杭頭半固定工法として適用できます。各工法の計算式を以下に示します。
@@ -15141,7 +15228,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
             <li><strong>θ-M グラフ</strong>: 複数軸力に対する $K_\theta$ 線形ばね曲線が描画されます</li>
         </ul>
 
-            <h2 id="h-有限要素法による解析手法">有限要素法による解析手法</h2>
+            <h2 id="h-有限要素法による解析手法" data-purpose="theory">有限要素法による解析手法</h2>
 
             <p>
                 本プログラムでは、杭基礎の水平抵抗解析に有限要素法（FEM）を用いています。<br>
@@ -15960,7 +16047,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
             <h1 id="h-用語集">用語集</h1>
             <p>本プログラムで使用される主な専門用語を解説します。</p>
 
-            <h2 id="h-杭に関する用語">杭に関する用語</h2>
+            <h2 id="h-杭に関する用語" data-purpose="theory">杭に関する用語</h2>
             <dl>
                 <dt><strong>杭頭（くいとう）</strong></dt>
                 <dd>杭の最上部。建物の基礎（フーチング）と接合する部分です。接合方法により「杭頭固定」「半固定」に分かれます。</dd>
@@ -15987,7 +16074,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                 <dd>FEM モデル上、杭頭位置の標高 +ΔZc（基礎梁図心レベル）に配置される論理節点。基礎梁を「一般梁要素」として連結する場合の梁端点として使用されます。剛体連結モードでも剛床モードでも作成され、剛体連結モードでは RigidBody[0] の slave、剛床モードでは基礎梁の端点として作用します。</dd>
             </dl>
 
-            <h2 id="h-地盤に関する用語">地盤に関する用語</h2>
+            <h2 id="h-地盤に関する用語" data-purpose="theory">地盤に関する用語</h2>
             <dl>
                 <dt><strong>N値</strong></dt>
                 <dd>標準貫入試験で得られる地盤の硬さの指標。値が大きいほど硬い地盤です。水平地盤反力係数 kh の算定に使います。</dd>
@@ -16002,7 +16089,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                 <dd>液状化等により地盤が水平方向に変位する現象。杭にとって強制変位として作用し、追加の曲げモーメントが発生します。</dd>
             </dl>
 
-            <h2 id="h-解析に関する用語">解析に関する用語</h2>
+            <h2 id="h-解析に関する用語" data-purpose="theory">解析に関する用語</h2>
             <dl>
                 <dt><strong>杭要素分割（ようそぶんかつ）</strong></dt>
                 <dd>
@@ -16317,7 +16404,7 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                 </dd>
             </dl>
 
-            <h2 id="h-設計に関する用語">設計に関する用語</h2>
+            <h2 id="h-設計に関する用語" data-purpose="theory">設計に関する用語</h2>
             <dl>
                 <dt><strong>使用限界状態（SLS）</strong></dt>
                 <dd>長期荷重に対する限界状態<a href="#section-sls">詳細</a></dd>
@@ -16601,10 +16688,23 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                 }
                 if (synonymNote) results.insertAdjacentHTML('beforeend', synonymNote);
                 if (matches.length > 0) {
-                    const groups = _groupMatchesByHeading();
+                    const allGroups = _groupMatchesByHeading();
+                    // 目的で絞る (章の data-purpose)。←/→ も絞った範囲の一致だけを巡る
+                    const scope = document.getElementById('searchScope').value;
+                    const groups = scope ? allGroups.filter(g => g.purpose === scope) : allGroups;
+                    if (scope) {
+                        const kept = new Set(groups.flatMap(g => g.marks));
+                        matches.forEach(m => m.classList.remove('active'));
+                        matches = matches.filter(m => kept.has(m));
+                        currentMatchIndex = -1;
+                        document.getElementById('matchCount').textContent = `一致数: ${matches.length}`;
+                    }
                     const status = document.createElement('p');
                     status.className = 'search-result-status';
-                    status.textContent = `${groups.length} 件のセクションでヒット (一致 ${matches.length} 件)`;
+                    const scopeNote = scope ? `「${PurposeLabels[scope]}」の章で ` : '';
+                    const others = scope ? allGroups.length - groups.length : 0;
+                    status.textContent = `${scopeNote}${groups.length} 件のセクションでヒット (一致 ${matches.length} 件)`
+                        + (others > 0 ? `。ほかの章にも ${others} 件あります (範囲を「すべての章」にすると出ます)` : '');
                     results.appendChild(status);
                     results.appendChild(_buildSearchResultList(groups));
                 } else {
@@ -16620,55 +16720,78 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
             }
         }
 
-        // 各 <mark> から最寄りの先行見出し (h2/h3/h4) を辿って、見出し単位で集約する。
-        // 戻り値: [{ heading, path, count, firstMark }] (DOM 出現順)
+        // 各 <mark> を、文書の順で直前にある見出し (h2/h3/h4) ごとに集約する。
+        // 戻り値: [{ heading, path, count, firstMark, marks, purpose }] (DOM 出現順)
+        //
+        // 以前は mark から main 直下の要素まで上り、その前の兄弟から見出しを探していた。見出しは <section> の中に
+        // あるので、本文のほとんどの一致で見出しが見つからず結果の一覧から落ちていた (「液状化」で一致 176 件・一覧 2 節。
+        // 2026-11-21 に目的での絞り込みを足したときに発見)。いまは見出しの一覧と一致を文書の順に突き合わせる。
         function _groupMatchesByHeading() {
             const main = document.getElementById('mainText');
+            const heads = Array.from(main.querySelectorAll('h2, h3, h4'));
             const map = new Map(); // heading element -> data
             const order = [];
+            let hi = -1;
+            // matches は TreeWalker の順 (文書の順) に並んでいるので、見出しの位置を前へ進めるだけでよい
             for (const mark of matches) {
-                const h = _findEnclosingHeading(mark, main);
-                if (!h) continue;
+                while (hi + 1 < heads.length
+                    && (heads[hi + 1].compareDocumentPosition(mark) & Node.DOCUMENT_POSITION_FOLLOWING)) hi++;
+                if (hi < 0) continue;   // 最初の章より前 (表紙・目的から探す) の一致
+                const h = heads[hi];
                 let data = map.get(h);
                 if (!data) {
-                    data = { heading: h, path: _buildHeadingPath(h, main), count: 0, firstMark: mark };
+                    data = { heading: h, path: _buildHeadingPath(heads, hi), count: 0, firstMark: mark, marks: [], purpose: _purposeOf(heads, hi) };
                     map.set(h, data);
                     order.push(data);
                 }
                 data.count++;
+                data.marks.push(mark);
             }
             return order;
         }
 
-        // mark の祖先を main 直下まで上り、そこから前方兄弟をたどって最寄りの h2-h4 を返す。
-        function _findEnclosingHeading(node, main) {
-            // main 直下のブロック要素まで上る
-            let block = node;
-            while (block && block.parentElement !== main) {
-                block = block.parentElement;
+        // 目的の区分の表示名。章 (h2) の data-purpose と、本文先頭の「目的から探す」・検索の範囲の選択肢がこの区分を使う
+        const PurposeLabels = {
+            start: '初めて使う',
+            input: '入力する',
+            result: '結果を確認する',
+            theory: '計算方法を調べる',
+            history: '以前の版との差を調べる',
+        };
+
+        // heads[index] が属する章 (直前の h2。自分が h2 なら自分) の目的
+        function _purposeOf(heads, index) {
+            for (let i = index; i >= 0; i--) {
+                if (heads[i].tagName === 'H2') return heads[i].dataset.purpose || '';
             }
-            if (!block) return null;
-            let prev = block;
-            while (prev) {
-                if (/^H[234]$/.test(prev.tagName)) return prev;
-                prev = prev.previousElementSibling;
-            }
-            return null;
+            return '';
         }
 
-        // 見出しのパンくず (上位章: 当該節タイトル) を組み立てる
-        function _buildHeadingPath(heading, main) {
-            const tag = heading.tagName; // H2/H3/H4
+        // 範囲を変えたら同じ語で検索し直す。本文先頭の「この目的で検索」は範囲を選んで検索欄を開く
+        document.getElementById('searchScope').addEventListener('change', function () {
+            _lastAppliedQuery = '';
+            _runSearch(document.getElementById('searchInput').value);
+        });
+        document.querySelectorAll('.purpose-search').forEach(button => {
+            button.addEventListener('click', function () {
+                document.getElementById('searchScope').value = button.dataset.purpose;
+                helpOpenSearch();
+                _lastAppliedQuery = '';
+                _runSearch(document.getElementById('searchInput').value);
+            });
+        });
+
+        // 見出しのパンくず (上位章: 当該節タイトル) を組み立てる。heads は文書の順の h2/h3/h4
+        function _buildHeadingPath(heads, index) {
+            const tag = heads[index].tagName; // H2/H3/H4
             const parents = [];
             // h4 → 上位の h3 と h2、h3 → 上位の h2
             if (tag === 'H4' || tag === 'H3') {
-                let p = heading.previousElementSibling;
                 let needH3 = (tag === 'H4');
-                let needH2 = true;
-                while (p && (needH3 || needH2)) {
-                    if (needH3 && p.tagName === 'H3') { parents.unshift(p.textContent.trim()); needH3 = false; }
-                    else if (needH2 && p.tagName === 'H2') { parents.unshift(p.textContent.trim()); needH2 = false; }
-                    p = p.previousElementSibling;
+                for (let i = index - 1; i >= 0; i--) {
+                    const t = heads[i].tagName;
+                    if (needH3 && t === 'H3') { parents.unshift(heads[i].textContent.trim()); needH3 = false; }
+                    else if (t === 'H2') { parents.unshift(heads[i].textContent.trim()); break; }
                 }
             }
             return parents.join(' › ');
@@ -16736,10 +16859,12 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
                 const originalText = heading.textContent
                     .replace(/^第\d+部\s*/, '')
                     .replace(/^第\d+章\s*/, '')
-                    .replace(/^\d+\.\d+\.\d+\.\d+\.\d+\s*/, '')
-                    .replace(/^\d+\.\d+\.\d+\.\d+\s*/, '')
-                    .replace(/^\d+\.\d+\.\d+\s*/, '')
-                    .replace(/^\d+\.\d+\s*/, '');
+                    // 振った番号の後ろには必ず空白がある。空白を要らないとしていたので、版の見出し「1.0.38-beta」の
+                    // 「1.0.38」を番号とみなして消し、目次と検索に「-beta（2026-10-25）」と出ていた (2026-11-21 に修正)
+                    .replace(/^\d+\.\d+\.\d+\.\d+\.\d+\s+/, '')
+                    .replace(/^\d+\.\d+\.\d+\.\d+\s+/, '')
+                    .replace(/^\d+\.\d+\.\d+\s+/, '')
+                    .replace(/^\d+\.\d+\s+/, '');
 
                 let prefix = '';
                 switch (heading.tagName) {
@@ -16877,6 +17002,13 @@ u$</span>コンクリート圧縮強度の有効係数 $= 0.7 - F_c/200$</li>
             const nav = document.createElement('nav');
             nav.setAttribute('aria-label', '目次');
             tocContainer.appendChild(nav);
+
+            // 先頭に「目的から探す」(本文先頭の入口) へのリンク
+            const purposeLink = document.createElement('a');
+            purposeLink.href = '#purpose-guide';
+            purposeLink.textContent = '目的から探す';
+            purposeLink.classList.add('toc-link', 'h1');
+            nav.appendChild(purposeLink);
 
             const headings = document.querySelectorAll('#mainText h1, h2, h3, h4, h5, h6');
             let currentPart = null;
