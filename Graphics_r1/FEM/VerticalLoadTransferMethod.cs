@@ -263,7 +263,8 @@ namespace PileDesign.FEM
             PileWeight = 0;
             foreach (var pileCircumVertical in soilPile.PileCircumVerticals)
             {
-                PileWeight += pileCircumVertical.PileBodySegment.PileSection.W * pileCircumVertical.L;
+                // 引抜き抵抗の W と同じく、地下水位より下は浮力を差し引く。
+                PileWeight += soilPile.EffectiveSegmentWeight(pileCircumVertical);
 
                 // 杭周長は PileCircumVertical.Psi (= π×杭径) が唯一の定義。
                 // ここで π×D をインライン再計算していると、周長の定義を変えたとき
@@ -607,25 +608,8 @@ namespace PileDesign.FEM
         // 重量[kN]の取得メソッド
         public void SetWeights()
         {
-            if (soilPile.PileCircumVerticals.Count == 0)
-            { return; }
-
-            for (int i = 0; i < soilPile.PileCircumVerticals.Count + 1; i++)
-            {
-                if (i == 0)
-                {
-                    Weights.Add((soilPile.PileCircumVerticals[i].PileBodySegment.PileSection.W * soilPile.PileCircumVerticals[i].L * 0.5)); // kN
-                }
-                else if (i < soilPile.PileCircumVerticals.Count)
-                {
-                    Weights.Add(soilPile.PileCircumVerticals[i - 1].PileBodySegment.PileSection.W * soilPile.PileCircumVerticals[i - 1].L * 0.5 +
-                                soilPile.PileCircumVerticals[i].PileBodySegment.PileSection.W * soilPile.PileCircumVerticals[i].L * 0.5);
-                }
-                else // if (i = soilPile.PileCircumVerticals.Count)
-                {
-                    Weights.Add(soilPile.PileCircumVerticals[i - 1].PileBodySegment.PileSection.W * soilPile.PileCircumVerticals[i - 1].L * 0.5);
-                }
-            }
+            // 地下水位より下は浮力を差し引いた自重 (SoilPile.NodeSelfWeights が唯一の定義)。
+            Weights.AddRange(soilPile.NodeSelfWeights()); // kN
         }
 
         // 剛性マトリクスの杭体部分を組み立てる共通メソッド

@@ -242,6 +242,21 @@ namespace TestProject1
             double wBuoyant = section.W * 20 - 10.0 * section.DisplacedVolumePerM * 15;
             Assert.AreEqual(-(friction + wBuoyant), pile.Rtu, 1e-6, "地下水位より下の浮力を差し引いていない");
             Assert.AreEqual(-(friction / 1.2 + wBuoyant), pile.Rtr, 1e-6);
+            // 荷重伝達法の節点自重 (FEM へ入れる自重も同じ) も同じ浮力を差し引く (利用者の判断 2026-11-22)。
+            // 区間 0〜−10 は水面 −5 で半分だけ沈む → 上の節点へ半分・下の節点へ半分
+            var nodes = pile.NodeSelfWeights();
+            Assert.AreEqual(4, nodes.Count, "節点は区間数 + 1");
+            Assert.AreEqual(wBuoyant, nodes.Sum(), 1e-6, "節点自重の合計が引抜きの W と違う");
+            double seg0 = section.W * 10 - 10.0 * section.DisplacedVolumePerM * 5;
+            double seg1 = section.W * 8 - 10.0 * section.DisplacedVolumePerM * 8;
+            Assert.AreEqual(seg0 / 2, nodes[0], 1e-9);
+            Assert.AreEqual(seg0 / 2 + seg1 / 2, nodes[1], 1e-9);
+            string vltm = TestSource.Read("Graphics_r1", "FEM", "VerticalLoadTransferMethod.cs");
+            StringAssert.Contains(vltm, "Weights.AddRange(soilPile.NodeSelfWeights())", "沈下解析の節点自重が NodeSelfWeights を使っていない");
+            StringAssert.Contains(vltm, "PileWeight += soilPile.EffectiveSegmentWeight(", "沈下解析の自重の合計が浮力を差し引いていない");
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "FEM", "AnalysisModelling.cs"), "soilPile.NodeSelfWeights()", "FEM へ入れる自重が沈下解析と別の式");
+            StringAssert.DoesNotMatch(vltm + TestSource.Read("Graphics_r1", "FEM", "AnalysisModelling.cs"),
+                new System.Text.RegularExpressions.Regex(@"PileSection\.W \*"), "自重の写しが残っている");
             // 評定式の工法 (Smart-MAGNUM・Hybridニーディング) も同じ W を使う (利用者の判断 2026-11-22)。ヘルプがそう書いていること
             string help = Help();
             StringAssert.Contains(help, "$W_s$: 杭の自重。地下水位以下の部分は浮力を差し引きます", "Hybridニーディングの W_s の説明がない");

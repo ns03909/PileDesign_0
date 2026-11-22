@@ -180,7 +180,7 @@ namespace TestProject1
         // ── 単杭の沈下 ─────────────────────────────────────────────
 
         /// <summary>
-        /// 周面抵抗を考えない杭: 杭頭荷重 P と自重 W はすべて先端が受ける。杭頭の沈下 (自重だけの状態からの増分) は
+        /// 周面抵抗を考えない杭: 杭頭荷重 P と自重 W (地下水位より下は浮力を差し引く) はすべて先端が受ける。杭頭の沈下 (自重だけの状態からの増分) は
         ///   ΔS0 = Sp(P + W) − Sp(W) + P·L/EA、Sp(R) = 0.1·Dp·{α(R/Rpu) + (1−α)(R/Rpu)^n}
         /// (自重による杭体の縮みは自重の状態に含まれ、増分には P による縮みだけが出る)。
         /// α = 0.3, n = 2 で非線形の範囲まで、荷重-沈下曲線の各点を照合する。
@@ -192,7 +192,10 @@ namespace TestProject1
             foreach (var pcv in pile.PileCircumVerticals) { pcv.IsPositiveCircumResistance = false; pcv.IsNegativeCircumResistance = false; }
 
             var section = pile.PileCircumVerticals[0].PileBodySegment.PileSection;
-            double ea = section.EA, w = section.W * 20.0;
+            // 自重は地下水位より下の浮力 (γw = 10 × 材料の体積) を差し引く (引抜きの W と同じ。2026-11-22 から)
+            double gwl = pile.GroundInput!.GroundWaterTableAltitude;
+            double submerged = Math.Clamp(gwl - (-20.0), 0.0, 20.0);
+            double ea = section.EA, w = section.W * 20.0 - 10.0 * section.DisplacedVolumePerM * submerged;
             Assert.IsTrue(ea > 0 && w > 0, "杭の EA・単位重量が組めていません");
             double rpu = Math.PI * 1.2 * 1.2 / 4.0 * 4320; // 支持力の試験と同じ先端
             double dp = 1.2, alpha = 0.3, n = 2.0;

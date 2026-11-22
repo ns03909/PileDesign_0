@@ -524,27 +524,15 @@ namespace PileDesign.FEM
             // (要素分割の違い等)。最小本数で対応付けする (先頭から順番に)。
             int mapCount = Math.Min(pileNodeCount, analysisNodeCount);
 
-            // 杭節点別自重 [kN] を沈下解析 SetWeights() と同一ロジックで事前計算。
-            // 0番目: pcv[0].W × pcv[0].L × 0.5
-            // 中間 : pcv[k-1].W × pcv[k-1].L × 0.5 + pcv[k].W × pcv[k].L × 0.5
-            // 先端 : pcv[count-1].W × pcv[count-1].L × 0.5
+            // 杭節点別自重 [kN]。沈下解析 SetWeights() と同じ SoilPile.NodeSelfWeights を使う
+            // (地下水位より下は浮力を差し引く)。曲線はこの自重を載せた沈下解析から作るので、
+            // 写しで別の式を持つと曲線と注入する自重が食い違う。
             var pcvList = soilPile.PileCircumVerticals;
-            int pcvCount = pcvList?.Count ?? 0;
+            var nodeWeights = soilPile.NodeSelfWeights();
             var weights = new List<double>(mapCount);
             for (int k = 0; k < mapCount; k++)
             {
-                double w = 0.0;
-                if (pcvCount > 0) // pcvCount > 0 なら pcvList は null ではない
-                {
-                    if (k == 0)
-                        w = pcvList![0].PileBodySegment.PileSection.W * pcvList[0].L * 0.5;
-                    else if (k < pcvCount)
-                        w = pcvList![k - 1].PileBodySegment.PileSection.W * pcvList[k - 1].L * 0.5
-                          + pcvList[k].PileBodySegment.PileSection.W * pcvList[k].L * 0.5;
-                    else // k == pcvCount (= 先端)
-                        w = pcvList![pcvCount - 1].PileBodySegment.PileSection.W * pcvList[pcvCount - 1].L * 0.5;
-                }
-                weights.Add(w);
+                weights.Add(k < nodeWeights.Count ? nodeWeights[k] : 0.0);
             }
 
             // 杭先端パラメータ (PileVerticalSoilSpringModel 先端ノード用)

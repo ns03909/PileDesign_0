@@ -1197,16 +1197,57 @@ namespace PileDesign.Models.InputData
         internal double UpliftSelfWeight()
         {
             if (PileCircumVerticals == null) return 0.0;
-            double waterLevel = GroundInput?.GroundWaterTableAltitude ?? double.NegativeInfinity;
             double w = 0.0;
             foreach (var pcv in PileCircumVerticals)
             {
-                var section = pcv.PileBodySegment.PileSection;
-                double upper = Math.Max(pcv.Top, pcv.Bottom), lower = Math.Min(pcv.Top, pcv.Bottom);
-                double submerged = Math.Max(Math.Min(upper, waterLevel) - lower, 0.0);
-                w += section.W * pcv.L - UnitConversion.WATER_UNIT_WEIGHT * section.DisplacedVolumePerM * submerged;
+                w += EffectiveSegmentWeight(pcv);
             }
             return w;
+        }
+
+        /// <summary>
+        /// 杭区間 1 つの自重 (kN)。地下水位より下の部分は浮力 (γw × 押しのける体積) を差し引く。
+        /// 引抜き抵抗の W・荷重伝達法の節点自重・FEM へ入れる杭の自重はすべてここから取る。
+        /// 地下水位より上だけの区間は W·L そのもの (浮力を入れる前と同じ値)。
+        /// </summary>
+        internal double EffectiveSegmentWeight(PileCircumVertical pcv)
+        {
+            var section = pcv.PileBodySegment.PileSection;
+            double waterLevel = GroundInput?.GroundWaterTableAltitude ?? double.NegativeInfinity;
+            double upper = Math.Max(pcv.Top, pcv.Bottom), lower = Math.Min(pcv.Top, pcv.Bottom);
+            double submerged = Math.Max(Math.Min(upper, waterLevel) - lower, 0.0);
+            double w = section.W * pcv.L;
+            if (submerged > 0.0)
+            {
+                w -= UnitConversion.WATER_UNIT_WEIGHT * section.DisplacedVolumePerM * submerged;
+            }
+            return w;
+        }
+
+        /// <summary>
+        /// 荷重伝達法の節点ごとの自重 (kN、杭頭から順に区間数 + 1 個)。各区間の
+        /// <see cref="EffectiveSegmentWeight"/> を上下の節点へ半分ずつ分ける。
+        /// 沈下解析 (<c>VerticalLoadTransferMethod.SetWeights</c>) と、その曲線を使う FEM の
+        /// 自重の注入 (<c>AnalysisModelling</c>) が同じ値を使うための唯一の定義。
+        /// </summary>
+        /// <remarks>
+        /// 2026-11-22 まで両者は空中の重量 W·L を写しで計算していた。引抜きの R_TR だけが浮力を
+        /// 差し引くと曲線のつり合いと止める位置が食い違うので、利用者の判断でそろえた。
+        /// </remarks>
+        internal List<double> NodeSelfWeights()
+        {
+            var list = new List<double>();
+            var pcvs = PileCircumVerticals;
+            if (pcvs == null || pcvs.Count == 0) return list;
+            var seg = new double[pcvs.Count];
+            for (int i = 0; i < pcvs.Count; i++) seg[i] = EffectiveSegmentWeight(pcvs[i]);
+            for (int i = 0; i < pcvs.Count + 1; i++)
+            {
+                if (i == 0) list.Add(seg[0] * 0.5);
+                else if (i < pcvs.Count) list.Add(seg[i - 1] * 0.5 + seg[i] * 0.5);
+                else list.Add(seg[i - 1] * 0.5);
+            }
+            return list;
         }
 
         // 抵抗力の計算メソッド
