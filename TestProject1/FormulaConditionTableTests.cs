@@ -536,6 +536,52 @@ namespace TestProject1
             StringAssert.Contains(table, "終点より先は最後の区間の勾配のまま延ばす");
         }
 
+        /// <summary>
+        /// PRC 杭の M-φ の表: 計算例の各点が実装 (PRCSection) と一致し、N = 0 は (a)・N = 800 kN は (b) の場合になること、
+        /// 終点がひび割れ点と主筋の降伏点を結ぶ線上の β1β2·Mu0 にあること。
+        /// </summary>
+        [TestMethod]
+        public void ThePrcMPhiExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-prc-mphi"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.Prc]();
+            if (s.CreateSectionCalculator() is not PRCSection c) { Assert.Fail("(前提) PRC の断面計算オブジェクトを作れない"); return; }
+            Assert.AreEqual(("CPRC-300-85-Ⅰ", 6.7, "SD390", "D13", 6), (s.SelectedPrecastPile?.Name, c.SigmaE, c.MainBars.Grade, c.MainBars.BarSize, c.MainBars.Number), "(前提) 代表断面が変わった");
+            Assert.AreEqual(205000.0, c.MainBars.Er);
+            string K(double nmm) => (nmm / 1e6).ToString("0.00", CultureInfo.InvariantCulture);
+            string P3(double perMm) => (perMm * 1e6).ToString("0.000", CultureInfo.InvariantCulture); // ×10⁻³ 1/m
+            string P2(double perMm) => (perMm * 1e6).ToString("0.00", CultureInfo.InvariantCulture);
+
+            var (mcr, pcr) = c.GetCrackMoment(0);
+            var (myt, pyt) = c.GetMomentCurvatureForN(0, "RebarTensionYield");
+            var (_, pyc) = c.GetMomentCurvatureForN(0, "ReBarCompressionYield");
+            var (mcu, _) = c.GetMomentCurvatureForN(0, "ConcreteCompressiveFailure");
+            var (mtf, _) = c.GetMomentCurvatureForN(0, "TendonTensileFailure");
+            Assert.IsTrue(pcr < pyt && pyt < pyc, "(前提) N = 0 は (a)");
+            StringAssert.Contains(table, $"$M_{{cr}} = {K(mcr)}$ kN·m・$\\phi_{{cr}} = {P3(pcr)} \\times 10^{{-3}}$ 1/m");
+            StringAssert.Contains(table, $"$M_{{yt}} = {K(myt)}$ kN·m・$\\phi_{{yt}} = {P2(pyt)} \\times 10^{{-3}}$ 1/m");
+            StringAssert.Contains(table, $"$\\phi_{{yc}} = {P2(pyc)} \\times 10^{{-3}}$ 1/m なので (a)");
+            StringAssert.Contains(table, $"圧壊 ${K(mcu)}$・破断 ${K(mtf)}$ で $M_{{u0}} = {K(Math.Min(mcu, mtf))}$ kN·m");
+
+            var (phis, ms) = s.GetMPhiRelationship(0); // 1/m・kN·m
+            Assert.AreEqual(3, phis.Count, "折れ線は原点・ひび割れ・終点の 3 点");
+            double mf = 0.8 * 0.75 * Math.Min(mcu, mtf);
+            Assert.AreEqual(mf / 1e6, ms[2], 1e-6 * ms[2], "終点は β1β2·Mu0");
+            StringAssert.Contains(table, $"= {K(mf)}$ kN·m、$\\phi_f = {(phis[2] * 1e3).ToString("0.000", CultureInfo.InvariantCulture)} \\times 10^{{-3}}$ 1/m");
+            double onLine = (pcr + (pyt - pcr) * (mf - mcr) / (myt - mcr)) * 1e3;
+            Assert.AreEqual(onLine, phis[2], 1e-9 * onLine, "(a) の終点がひび割れ点と引張降伏点を結ぶ線上にない");
+
+            // N = 800 kN は (b): 圧縮降伏が先
+            var (myc8, pyc8) = c.GetMomentCurvatureForN(800e3, "ReBarCompressionYield");
+            var (_, pyt8) = c.GetMomentCurvatureForN(800e3, "RebarTensionYield");
+            var (mcr8, pcr8) = c.GetCrackMoment(800e3);
+            Assert.IsTrue(pcr8 < pyc8 && pyc8 < pyt8, "N = 800 kN が (b) でない");
+            var (phis8, ms8) = s.GetMPhiRelationship(800);
+            double mf8 = ms8[^1] * 1e6;
+            double onLine8 = (pcr8 + (pyc8 - pcr8) * (mf8 - mcr8) / (myc8 - mcr8)) * 1e3;
+            Assert.AreEqual(onLine8, phis8[^1], 1e-6 * onLine8, "(b) の終点がひび割れ点と圧縮降伏点を結ぶ線上にない");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>

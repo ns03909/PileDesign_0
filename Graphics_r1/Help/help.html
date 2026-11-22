@@ -12361,7 +12361,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     <table class="formula-conditions" id="cond-phc-mphi">
                         <tr><th>適用対象</th><td>PHC 杭 (節杭を含む) の杭体の M-φ 関係。水平解析の杭要素の曲げ剛性 (割線・接線) と、杭断面ウィンドウの M-φ 図に使う</td></tr>
                         <tr><th>入力</th><td>杭断面ウィンドウの製品 (杭径・肉厚・$F_c$・有効プレストレス $\sigma_e$・PC 鋼材の本数と径・配置径)、解析の各段階の杭の軸力 $N$ (常時軸力から地震時へ段階的に増やす。1 kN 単位に丸めて曲線を作る)。基本設定の「解析用 M-φ 関係」で<a href="#fund-opt-fiber-mphi">ファイバーモデル</a>を選ぶと、この折れ線の代わりに断面のファイバー解析の曲線 ($\beta_1$・$\beta_2$ を掛けない) を使う</td></tr>
-                        <tr><th>採用値</th><td>$E_c = 40{,}000$ N/mm²、コンクリートは $F_c/E_c$ で $F_c$ に達して一定・引張は 0、$\varepsilon_{cu} = 0.0025$ ($F_c \geq 105$ は $F_c/E_c$)。PC 鋼材は $E_p = 200{,}000$、$f_{py} = 1{,}226$・$f_{pu} = 1{,}418$ N/mm² (ひずみ 0.015 で $f_{pu}$)。プレストレスひずみは断面積分の側で足す。$\sigma_{0e} = N/A_e$。$\beta_1 = 0.8$、$\beta_2$ は $\sigma_e + \sigma_{0e}$ が 10 N/mm² 未満で 0.75、以上で 0.65。折れ線は場合分けする: (a) ひび割れ→PC 鋼材の降伏→圧壊の順なら、終点はひび割れ点と降伏点を結ぶ線上の $M = \beta_1\beta_2 M_{u0}$ の点。(b) PC 鋼材が降伏する前に圧壊するなら、ひび割れ点と圧壊点を結ぶ線上の点。(c) 圧壊だけなら、また $M_{cr} \geq \beta_1\beta_2 M_{u0}$ なら、弾性 ($E_c I_e$) で $\beta_1\beta_2 M_{u0}$ まで。解析ではこの折れ線を単調にしてから使い、終点より先は最後の区間の勾配のまま延ばす (その勾配が終点の割線剛性の 1% より小さければ 1%)</td></tr>
+                        <tr><th>採用値</th><td>$E_c = 40{,}000$ N/mm²、コンクリートは $F_c/E_c$ で $F_c$ に達して一定・引張は 0、$\varepsilon_{cu} = 0.0025$ ($F_c \geq 105$ は $F_c/E_c$)。PC 鋼材は $E_p = 200{,}000$ N/mm²、$f_{py}$・$f_{pu}$ は製品の値 (カタログに無ければ 1,226・1,418 N/mm²) で、降伏後はひずみ 0.015 で $f_{pu}$ に達する。プレストレスひずみは断面積分の側で足す。$\sigma_{0e} = N/A_e$。$\beta_1 = 0.8$、$\beta_2$ は $\sigma_e + \sigma_{0e}$ が 10 N/mm² 未満で 0.75、以上で 0.65。折れ線は場合分けする: (a) ひび割れ→PC 鋼材の降伏→圧壊の順なら、終点はひび割れ点と降伏点を結ぶ線上の $M = \beta_1\beta_2 M_{u0}$ の点。(b) PC 鋼材が降伏する前に圧壊するなら、ひび割れ点と圧壊点を結ぶ線上の点。(c) 圧壊だけなら、また $M_{cr} \geq \beta_1\beta_2 M_{u0}$ なら、弾性 ($E_c I_e$) で $\beta_1\beta_2 M_{u0}$ まで。解析ではこの折れ線を単調にしてから使い、終点より先は最後の区間の勾配のまま延ばす (その勾配が終点の割線剛性の 1% より小さければ 1%)</td></tr>
                         <tr><th>適用外</th><td>終点 ($\beta_1\beta_2 M_{u0}$) より先の頭打ち (解析では最後の区間の勾配でモーメントが上がり続ける。そこまで達した要素は安全限界の曲げの検定で NG になる)。繰り返し載荷の履歴。軸力の適用範囲 ($\sigma_e + \sigma_{0e}$ 4〜65 N/mm²) の外でも曲線は作る (検定は<a href="#cond-phc-bending">曲げの表</a>のとおり「範囲外」)</td></tr>
                         <tr><th>参照箇所</th><td>「基礎部材の強度と変形性能」5 章、<a href="#h-杭体の非線形性（M-φ関係）">杭体の非線形性</a>、<a href="#cond-phc-bending">PHC 杭の曲げ</a></td></tr>
                         <tr><th>計算例</th><td>PHC-600-標準-85-B ($\sigma_e = 8.0$)、$N = 0$ ($\beta_2 = 0.75$): $M_{cr} = 220.5$ kN·m・$\phi_{cr} = 1.097 \times 10^{-3}$ 1/m、$M_y = 365.8$ kN·m・$\phi_y = 5.550 \times 10^{-3}$ 1/m、圧壊 $468.7$・破断 $493.4$ で $M_{u0} = 468.7$ kN·m。(a) の場合で $M_f = 0.8 \times 0.75 \times 468.7 = 281.2$ kN·m、$\phi_f = 2.959 \times 10^{-3}$ 1/m</td></tr>
@@ -12525,9 +12525,32 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
                     <h3 id="h-PRC-杭の-M-φ-関係">PRC 杭の M-φ 関係</h3>
                     <p>
-                        PHC と同様 4 点折れ線で構築する。曲げ降伏パターン (a〜d) に応じて分岐し、
-                        終局点には $\beta_1\beta_2$ を乗じる。
+                        <a href="#h-PHC-杭の-M-φ-関係">PHC 杭</a>と同じく、原点・ひび割れ点・低減後の安全限界点の 3 点の折れ線
+                        (ひび割れ前に安全限界に達するときは 2 点) で構築する。ひび割れ点から延ばす線の向きは、
+                        PC 鋼材の降伏点ではなく<strong>主筋</strong>が先に降伏する点 (引張か圧縮か) で決める。
+                        安全限界のモーメントには $\beta_1\beta_2$ を乗じる。
                     </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$\phi_f = \phi_{cr} + (\phi_y - \phi_{cr})\,\frac{\beta_1\beta_2 M_{u0} - M_{cr}}{M_y - M_{cr}},\quad M_f = \beta_1\beta_2 M_{u0}$$</p>
+                        </div>
+                        <div class="formula-right">基礎部材の強度と変形性能 6 章</div>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">ここに、</li>
+                        <li><span class="symbol-label">$M_{cr}, \phi_{cr}$</span>ひび割れモーメント・曲率。$M_{cr} = Z_e (0.56\sqrt{F_c} + \sigma_e + \sigma_{0e})$、$\phi_{cr} = M_{cr}/(E_c I_e)$ ($Z_e$・$I_e$ は主筋を含む<a href="#h-PRC-杭の換算断面性能">換算断面</a>)</li>
+                        <li><span class="symbol-label">$M_y, \phi_y$</span>主筋が先に降伏する点。引張側の最外縁の主筋が引張降伏する点 ($M_{yt}, \phi_{yt}$) と、圧縮側の最外縁の主筋が圧縮降伏する点 ($M_{yc}, \phi_{yc}$) の、曲率の小さい方</li>
+                        <li><span class="symbol-label">$M_{u0}$</span>コンクリートの圧壊 ($\varepsilon_{cu}$) と PC 鋼材の破断 ($\varepsilon_{pu} = 0.02$) の小さい方</li>
+                    </ul>
+
+                    <table class="formula-conditions" id="cond-prc-mphi">
+                        <tr><th>適用対象</th><td>PRC 杭の杭体の M-φ 関係。水平解析の杭要素の曲げ剛性と、杭断面ウィンドウの M-φ 図に使う</td></tr>
+                        <tr><th>入力</th><td>杭断面ウィンドウの製品 (杭径・肉厚・$F_c$・$\sigma_e$・PC 鋼材・主筋の規格と本数と配置径)、解析の各段階の杭の軸力 $N$ (1 kN 単位に丸める)。基本設定の「解析用 M-φ 関係」で<a href="#fund-opt-fiber-mphi">ファイバーモデル</a>を選ぶと、ファイバー解析の曲線 ($\beta_1$・$\beta_2$ を掛けない) を使う</td></tr>
+                        <tr><th>採用値</th><td>コンクリート・PC 鋼材は<a href="#cond-phc-mphi">PHC 杭</a>と同じ ($E_c = 40{,}000$、$\varepsilon_{cu} = 0.0025$、$\varepsilon_{pu} = 0.02$、$f_{py}$・$f_{pu}$ は製品の値)。主筋は $E_r = 205{,}000$ N/mm²、規格の降伏点 ($\sigma_y$) で頭打ちのバイリニア。主筋にもプレストレスのひずみ ($\sigma_e/E_c$) を入れる。$\beta_1 = 0.8$、$\beta_2$ は $\sigma_e + \sigma_{0e}$ が 10 N/mm² 未満で 0.75、以上で 0.65。折れ線は場合分けする: (a) ひび割れ→主筋の引張降伏の順 ($\phi_{cr} < \phi_{yt} < \phi_{yc}$) なら、終点はひび割れ点と引張降伏点を結ぶ線上の $M = \beta_1\beta_2 M_{u0}$ の点。(b) ひび割れ→主筋の圧縮降伏の順 ($\phi_{cr} < \phi_{yc} < \phi_{yt}$) なら、ひび割れ点と圧縮降伏点を結ぶ線上の点。(c) それ以外 (軸力だけで主筋が圧縮降伏するなど)、また $M_{cr} \geq \beta_1\beta_2 M_{u0}$ なら、弾性 ($E_c I_e$) で $\beta_1\beta_2 M_{u0}$ まで。解析では終点より先を最後の区間の勾配のまま延ばす (PHC 杭と同じ)</td></tr>
+                        <tr><th>適用外</th><td>終点より先の頭打ち (そこまで達した要素は安全限界の曲げの検定で NG)。繰り返し載荷の履歴。軸力の適用範囲 (<a href="#cond-prc-bending">曲げの表</a>) の外でも曲線は作る (検定は「範囲外」)</td></tr>
+                        <tr><th>参照箇所</th><td>「基礎部材の強度と変形性能」6 章、<a href="#h-杭体の非線形性（M-φ関係）">杭体の非線形性</a>、<a href="#cond-phc-mphi">PHC 杭の M-φ</a></td></tr>
+                        <tr><th>計算例</th><td>CPRC-300-85-Ⅰ ($\sigma_e = 6.7$、主筋 SD390 D13 × 6 本)、$N = 0$ ($\beta_2 = 0.75$): $M_{cr} = 30.18$ kN·m・$\phi_{cr} = 1.977 \times 10^{-3}$ 1/m、引張降伏 $M_{yt} = 72.19$ kN·m・$\phi_{yt} = 12.05 \times 10^{-3}$ 1/m、圧縮降伏 $\phi_{yc} = 43.95 \times 10^{-3}$ 1/m なので (a)。圧壊 $99.11$・破断 $109.92$ で $M_{u0} = 99.11$ kN·m、$M_f = 0.8 \times 0.75 \times M_{u0} = 59.46$ kN·m、$\phi_f = 9.000 \times 10^{-3}$ 1/m。$N = 800$ kN では $\phi_{yc} < \phi_{yt}$ で (b) になる</td></tr>
+                    </table>
                 </section>
 
                 <section>
