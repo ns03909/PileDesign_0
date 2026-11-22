@@ -424,6 +424,56 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// SC 杭のせん断の計算例が、検定と同じ関数 (DescribeShearLimit) の値と一致する。
+        /// 使用限界・損傷限界は軸力に依らず低減の前後で同じ、安全限界は β = β1·β2 (基本設定の既定 1.0 × 0.75)、
+        /// 鋼管だけの降伏軸力 sNy 以上で Qu = 0 (曲線の範囲の圧縮側より手前)。
+        /// </summary>
+        [TestMethod]
+        public void TheScShearExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-sc-shear"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.Sc]();
+            if (s.CreateSectionCalculator() is not SCSection c) { Assert.Fail("(前提) SC の断面計算オブジェクトを作れない"); return; }
+            Assert.AreEqual(("SC-400-標準-80-4.5", 398.0, 3.5, 235.0), (s.SelectedPrecastPile?.Name, c.PrecastSteelPipe.OutDia, c.PrecastSteelPipe.T, c.PrecastSteelPipe.F), "(前提) 代表断面が変わった");
+
+            double b1 = ConcreteModelOptions.ScUltimateShearBeta1, b2 = ConcreteModelOptions.ScUltimateShearBeta2;
+            ConcreteModelOptions.ScUltimateShearBeta1 = ConcreteModelOptions.DefaultScUltimateShearBeta1;
+            ConcreteModelOptions.ScUltimateShearBeta2 = ConcreteModelOptions.DefaultScUltimateShearBeta2;
+            try
+            {
+                double Q(SectionLimitState limit, bool factored, double monQd, double n) => s.DescribeShearLimit(limit, 2, factored, monQd, n)!.ValueN / 1000;
+
+                StringAssert.Contains(table, $"$Q_s = {N1(Q(SectionLimitState.Service, true, 3, 500))}$ kN、$Q_d = {N1(Q(SectionLimitState.Damage, true, 3, 500))}$ kN");
+                foreach (var limit in new[] { SectionLimitState.Service, SectionLimitState.Damage })
+                {
+                    Assert.AreEqual(Q(limit, false, 3, 500), Q(limit, true, 3, 500), 1e-9, $"{limit}: 低減係数は 1.0");
+                    Assert.AreEqual(Q(limit, true, 3, 500), Q(limit, true, 0.5, -300), 1e-9, $"{limit}: 軸力にも M/(Q·d) にも依らない");
+                }
+                Assert.AreEqual(Math.PI * 3.5 * (398 - 3.5) * 235 / (1.5 * Math.Sqrt(3)) / 2 / 1000, Q(SectionLimitState.Service, true, 3, 500), 1e-6, "Qs = fs·As/κs");
+
+                double sNy = 1.1 * 235 * c.PrecastSteelPipe.As / 1000;
+                StringAssert.Contains(table, $"${{}}_sN_y = {N1(sNy)}$ kN、$\\eta = {500 / sNy:0.000}$");
+                foreach (var (monQd, aOverD) in new[] { (3.0, "2.7"), (1.0, "0.9") })
+                {
+                    double un = Q(SectionLimitState.Ultimate, false, monQd, 500), fa = Q(SectionLimitState.Ultimate, true, monQd, 500);
+                    StringAssert.Contains(table, $"$M/(Q\\!\\cdot\\!d) = {monQd:0.0}$ ($a/D = {aOverD}$) なら ${{}}_sQ_{{un}} = {N1(un)}$ kN・$Q_u = {N1(fa)}$ kN");
+                    Assert.AreEqual(0.75 * un, fa, 1e-9, "安全限界の β は既定 1.0 × 0.75");
+                }
+                double q0 = 2 * 3.5 * (398 - 3.5) * 1.1 * 235 / Math.Sqrt(3) / 1000;
+                Assert.AreEqual(0.5 * q0 * Math.Sqrt(1 - Math.Pow(500 / sNy, 2)), Q(SectionLimitState.Ultimate, false, 3, 500), 1e-6, "a/D > 1.0 は (8.26) の 1/2");
+
+                Assert.AreEqual(0.0, Q(SectionLimitState.Ultimate, true, 3, sNy + 1), 1e-9, "sNy 以上で Qu = 0");
+                Assert.IsTrue(sNy < c.ShearNMaxUltimate / 1000, "(前提) sNy は曲線の範囲の圧縮側より手前");
+                StringAssert.Contains(table, $"$N = {N1(c.ShearNMinUltimate / 1000)}$〜${N1(c.ShearNMaxUltimate / 1000)}$ kN");
+            }
+            finally
+            {
+                ConcreteModelOptions.ScUltimateShearBeta1 = b1;
+                ConcreteModelOptions.ScUltimateShearBeta2 = b2;
+            }
+        }
+
+        /// <summary>
         /// 単杭沈下の表: 杭先端の曲線の計算例が実装 (VerticalLoadTransferMethod.GetSettlementPileToe) と一致し、
         /// 例に使った α・n がプリセットにあること、τ-s の折れ点が表のとおりであること。
         /// </summary>

@@ -1763,6 +1763,12 @@ namespace PileDesign.Models.InputData
             return maxM;
         }
 
+        /// <summary>SC 杭のせん断の低減係数 β1 (使用限界・損傷限界)。</summary>
+        private const double ScShearBeta1 = 1.0;
+
+        /// <summary>SC 杭のせん断の形状係数 κs (鋼管の平均せん断応力度を最大値に直す)。</summary>
+        private const double ScShearKappa = 2.0;
+
         /// <summary>
         /// 使用限界せん断力を返す。
         ///
@@ -1771,22 +1777,15 @@ namespace PileDesign.Models.InputData
         /// 入らないため）。Q-N 図が水平線になるのは正しい。軸力が入るのは
         /// <see cref="GetUltimateLimitShear"/> の η = N/Ny だけ。
         /// この依存関係は <c>ShearAxialDependenceTableTests</c> で表として固定している。
+        ///
+        /// β1 は低減後だけに掛ける (以前は低減前の値にも β1 が入っていて、低減後は β1² になっていた。
+        /// β1 = 1.0 なので値は変わらない)。
         /// </summary>
-        /// <summary>SC 杭のせん断の低減係数 β1 (使用限界・損傷限界)。</summary>
-        private const double ScShearBeta1 = 1.0;
-
-        /// <summary>SC 杭のせん断の形状係数 κs (鋼管の平均せん断応力度を最大値に直す)。</summary>
-        private const double ScShearKappa = 2.0;
-
         private double GetServiceLimitShear(bool isFactored)
         {
-            double beta1 = ScShearBeta1;
-            double kappaS = ScShearKappa;
             double fs = PrecastSteelPipe.F / (1.5 * Math.Sqrt(3));
-            double As = PrecastSteelPipe.As;
-
-            double unfactoredQs = beta1 / kappaS * fs * As;
-            return isFactored ? beta1 * unfactoredQs : unfactoredQs;
+            double unfactoredQs = fs * PrecastSteelPipe.As / ScShearKappa;
+            return isFactored ? ScShearBeta1 * unfactoredQs : unfactoredQs;
         }
         /// <summary>
         /// 損傷限界せん断力を返す。使用限界と同じく軸力に依存しない
@@ -1794,13 +1793,9 @@ namespace PileDesign.Models.InputData
         /// </summary>
         private double GetDamageLimitShear(bool isFactored)
         {
-            double beta1 = ScShearBeta1;
-            double kappaS = ScShearKappa;
-            double fd = PrecastSteelPipe.F / (Math.Sqrt(3));
-            double As = PrecastSteelPipe.As;
-
-            double unfactoredQd = beta1 / kappaS * fd * As;
-            return isFactored ? beta1 * unfactoredQd : unfactoredQd;
+            double fd = PrecastSteelPipe.F / Math.Sqrt(3);
+            double unfactoredQd = fd * PrecastSteelPipe.As / ScShearKappa;
+            return isFactored ? ScShearBeta1 * unfactoredQd : unfactoredQd;
         }
         // ── 軸力の適用範囲 (§7.2) ────────────────────────────────────────
         //
@@ -1842,7 +1837,7 @@ namespace PileDesign.Models.InputData
         private static double ShearSpanRatio(double monQd) => 0.9 * monQd;
 
         /// <summary>
-        /// 安全限界せん断の低減係数 β = β1·β2 (7.8)。基本設定から採る。既定は 1.0。
+        /// 安全限界せん断の低減係数 β = β1·β2 (7.8)。基本設定から採る。既定は β1 = 1.0・β2 = 0.75。
         /// </summary>
         private static double UltimateShearBeta
             => ConcreteModelOptions.ScUltimateShearBeta1 * ConcreteModelOptions.ScUltimateShearBeta2;
