@@ -256,6 +256,26 @@ namespace TestProject1
                 + $"$R_{{TY}} = {N0(2.0 / 3.0 * friction + 500)}$ kN、$R_{{TR}} = {N0(friction / 1.2 + 500)}$ kN");
         }
 
+        /// <summary>場所打ち RC 杭のせん断の計算例が、検定と同じ関数 (DescribeShearLimit) の値と一致する。</summary>
+        [TestMethod]
+        public void TheInsituRcShearExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-insitu-rc-shear"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.RcSection]();
+            Assert.AreEqual((1000.0, 27.0, 0.75, 20, "D25", "D13", 150.0), (s.PileDiameter, s.ConcreteFc, s.ConcreteGsi, s.MainBarNum, s.MainBarSize, s.HoopSize, s.HoopSpacing), "(前提) 代表断面が変わった");
+            double Q(SectionLimitState limit, int level) => s.DescribeShearLimit(limit, level, true, 2.0, 3000.0)!.ValueN / 1000;
+            StringAssert.Contains(table, $"$p_w = {s.HoopPw * 100:0.000}$%");
+            StringAssert.Contains(table, $"$Q_s = {F1(Q(SectionLimitState.Service, 1))}$ kN");
+            StringAssert.Contains(table, $"$Q_d = {F1(Q(SectionLimitState.Damage, 1))}$ kN (レベル1)・${F1(Q(SectionLimitState.Damage, 2))}$ kN (レベル2)");
+            StringAssert.Contains(table, $"$Q_u = {F1(Q(SectionLimitState.Ultimate, 2))}$ kN");
+
+            // 表の「採用値」: β2 は σ0 ≦ ξFc/3 で 0.75、レベル1 の損傷限界は β2 を掛けない、安全限界の β1 は 0.8
+            Assert.AreEqual(0.75, Q(SectionLimitState.Damage, 2) / Q(SectionLimitState.Damage, 1), 1e-9);
+            string code = TestSource.Read("Graphics_r1", "Models", "InputData", "InsituReinforcedConcreteSection.cs");
+            StringAssert.Contains(code, "private const double ShearKc = 0.72;");
+            StringAssert.Contains(code, "private const double ShearBeta1Ultimate = 0.8;");
+        }
+
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
         [TestMethod]
         public void ThePyExamplesMatchTheImplementation()
