@@ -320,19 +320,7 @@ namespace TestProject1
             if (s.CreateSectionCalculator() is not PrecastPileSection c) { Assert.Fail("(前提) PHC の断面計算オブジェクトを作れない"); return; }
             Assert.AreEqual((600.0, 90.0, 85.0, 8.0), (s.PileDiameter, s.ConcreteThickness, c.Fc, c.SigmaE), "(前提) 代表断面が変わった");
 
-            double M(bool factored, SectionLimitState limit, int level, double nKN)
-            {
-                var (ns, ms) = s.GetLimitNMCurve(factored, limit, level);
-                double best = double.NaN;
-                for (int i = 0; i + 1 < ns.Count; i++)
-                    if (Math.Min(ns[i], ns[i + 1]) <= nKN && nKN <= Math.Max(ns[i], ns[i + 1]))
-                    {
-                        double t = ns[i + 1] == ns[i] ? 0 : (nKN - ns[i]) / (ns[i + 1] - ns[i]);
-                        double v = ms[i] + t * (ms[i + 1] - ms[i]);
-                        if (double.IsNaN(best) || v > best) best = v;
-                    }
-                return best;
-            }
+            double M(bool factored, SectionLimitState limit, int level, double nKN) => CurveMomentAt(s, factored, limit, level, nKN);
 
             double s0e = 1000e3 / c.Ae, sum = c.SigmaE + s0e;
             double ms1 = c.Ze * (-c.Fts + sum) / 1e6, ms2 = c.Ze * (c.Fcs - sum) / 1e6;
@@ -348,6 +336,48 @@ namespace TestProject1
             Assert.AreEqual(NAt(4), s.GetLimitNMCurve(true, SectionLimitState.Service, 1).N.Min(), 1e-6);
             Assert.AreEqual(NAt(4), s.GetLimitNMCurve(true, SectionLimitState.Damage, 2).N.Min(), 1e-6);
             Assert.AreEqual(NAt(35), s.GetLimitNMCurve(true, SectionLimitState.Damage, 2).N.Max(), 1e-6);
+        }
+
+        /// <summary>N-M 曲線から軸力 <paramref name="nKN"/> の曲げモーメントを読む (同じ軸力に区間が複数あれば大きい方)。</summary>
+        private static double CurveMomentAt(PileSection s, bool factored, SectionLimitState limit, int level, double nKN)
+        {
+            var (ns, ms) = s.GetLimitNMCurve(factored, limit, level);
+            double best = double.NaN;
+            for (int i = 0; i + 1 < ns.Count; i++)
+                if (Math.Min(ns[i], ns[i + 1]) <= nKN && nKN <= Math.Max(ns[i], ns[i + 1]))
+                {
+                    double t = ns[i + 1] == ns[i] ? 0 : (nKN - ns[i]) / (ns[i + 1] - ns[i]);
+                    double v = ms[i] + t * (ms[i + 1] - ms[i]);
+                    if (double.IsNaN(best) || v > best) best = v;
+                }
+            return best;
+        }
+
+        /// <summary>
+        /// PRC 杭の曲げの計算例が、検定と同じ N-M 曲線の値と一致する。損傷限界はレベル1 にも β1 = 0.8 を掛ける (PHC は 1.0)。
+        /// 低減後の曲線は範囲の外で M = 0 になり、検定はそれを「範囲外」とする (M &gt; 0 でないと判定しない)。
+        /// </summary>
+        [TestMethod]
+        public void ThePrcBendingExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-prc-bending"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.Prc]();
+            if (s.CreateSectionCalculator() is not PrecastPileSection c) { Assert.Fail("(前提) PRC の断面計算オブジェクトを作れない"); return; }
+            Assert.AreEqual(("CPRC-300-85-Ⅰ", 300.0, 60.0, 85.0, 6.7), (s.SelectedPrecastPile?.Name, s.PileDiameter, s.ConcreteThickness, c.Fc, c.SigmaE), "(前提) 代表断面が変わった");
+            double M(bool factored, SectionLimitState limit, int level) => CurveMomentAt(s, factored, limit, level, 500);
+            static string F2(double v) => v.ToString("0.00", CultureInfo.InvariantCulture);
+
+            double ms2 = c.Ze * (c.Fcs - c.SigmaE - 500e3 / c.Ae) / 1e6;
+            StringAssert.Contains(table, $"$M_{{s2}} = {F2(ms2)}$ kN·m が小さく $M_s = 0.8 \\times {F2(ms2)} = {F2(M(true, SectionLimitState.Service, 1))}$ kN·m");
+            double md0 = M(false, SectionLimitState.Damage, 2);
+            StringAssert.Contains(table, $"$M_{{d0}} = {F2(md0)}$ で $M_d = {F2(M(true, SectionLimitState.Damage, 1))}$ kN·m (レベル1)・${F2(M(true, SectionLimitState.Damage, 2))}$ kN·m (レベル2)");
+            Assert.AreEqual(0.8 * md0, M(true, SectionLimitState.Damage, 1), 1e-6, "PRC の損傷限界レベル1 は β1 = 0.8");
+            double mu0 = M(false, SectionLimitState.Ultimate, 2);
+            StringAssert.Contains(table, $"$M_{{u0}} = {F2(mu0)}$ で $M_u = {F2(M(true, SectionLimitState.Ultimate, 2))}$ kN·m");
+            Assert.AreEqual(0.8 * 0.65 * mu0, M(true, SectionLimitState.Ultimate, 2), 1e-6);
+
+            // σe + σ0e が 4 N/mm² 未満の損傷限界は 0 (検定は「範囲外」)
+            Assert.AreEqual(0.0, CurveMomentAt(s, true, SectionLimitState.Damage, 2, (2.0 - c.SigmaE) * c.Ae / 1000), 1e-9);
         }
 
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
