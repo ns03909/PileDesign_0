@@ -324,10 +324,14 @@ namespace PileDesign.Models.Results
 
         /// <summary>
         /// 検定比 = 応答値 / 限界値。1 を超えるほど厳しい。
-        /// 限界値が 0 以下の項目は検定対象から外しているので、分母は 0 にならない。
+        /// 限界値が 0 の項目は、範囲の中で耐力が無い (SC 杭の安全限界せん断で軸力が鋼管の降伏軸力を超える) ときだけ作る。
+        /// そのとき応答が正なら比は +∞ (NG)。NaN にすると降順の並べ替えで最後に回り、
+        /// NG なのに最大検定比 (支配ケース) から漏れる。
         /// </summary>
         [ResultColumn("検定比", 0, "N2", "応答値 ÷ 限界値。1 を超えると NG")]
-        public double Ratio => Limit > 0 ? Response / Limit : double.NaN;
+        public double Ratio => Limit > 0 ? Response / Limit
+            : Limit == 0 && Response > 0 ? double.PositiveInfinity
+            : double.NaN;
 
         /// <summary>
         /// 一覧に出す判定の文字列。

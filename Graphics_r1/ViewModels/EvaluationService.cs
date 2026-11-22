@@ -987,11 +987,17 @@ namespace PileDesign.ViewModels
 
                 var located = PileSection.LocateLimitAtAxialForce(nqCurve.Ns, nqCurve.Qs, axialN_kN);
                 double allowableQ = located.Value;
-                // 範囲外の軸力では NaN が返る (NaN <= 0 は false なので、必ず > 0 で判定すること)
-                if (!(allowableQ > 0))
+                // 範囲外の軸力では NaN が返る。判定しない (検定不能)
+                if (double.IsNaN(allowableQ))
                 {
                     Unavailable(OutsideCurveReason(axialN_kN, $"{limitName}のせん断耐力", "Q-N"), DiagnosticTarget.Pile(pileItem.PileNo, pb)); return;
                 }
+                // 曲線の範囲の中で耐力が 0 なのは、軸力だけで断面が降伏に達していて、せん断に回せる分が
+                // 残っていない状態 (SC 杭の安全限界は鋼管だけの降伏軸力 sNy で 0 になり、適用範囲の
+                // 圧縮側 (軸力比 0.50) よりずっと手前)。耐力が無いのだから NG とする (2026-11-23 利用者の判断)。
+                // 以前は範囲外と同じく「検定不能」で、理由も「曲線の範囲の外」と事実と違っていた。
+                bool noCapacity = !(allowableQ > 0);
+                if (noCapacity) allowableQ = 0.0;
 
                 // i端・j端のせん断力 |Q| = √(Fy² + Fz²)
                 double qI = result.CumulativeForce.Fi;
@@ -1039,6 +1045,8 @@ namespace PileDesign.ViewModels
                         ? $"要素端のせん断力 |Q| × 設計用せん断力の割増 {magnification:0.##}"
                         : "要素端のせん断力 |Q|"),
                 };
+                if (noCapacity)
+                    basis.Add(new("耐力 0", $"軸力 {axialN_kN:N1} kN では軸力だけで断面が降伏に達していて、せん断耐力が 0 です (応答があれば NG)"));
                 var formula = new Models.Results.ShearFormulaSource(section, ToSectionLimit(shearLimit), damageLevel, factored, monQd, axialN_kN);
 
                 found.Add(MakeShearItem(qI * magnification, allowableQ, "i端", magnification));
