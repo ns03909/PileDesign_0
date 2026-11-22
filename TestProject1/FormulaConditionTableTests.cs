@@ -308,6 +308,48 @@ namespace TestProject1
             Assert.AreEqual(qu, Q(SectionLimitState.Ultimate, 3000), 1e-6, "安全限界の p が鋼管の分担軸力から求まっていない");
         }
 
+        /// <summary>
+        /// PHC 杭の曲げの計算例が、検定と同じ N-M 曲線 (GetLimitNMCurve) の値と一致する。
+        /// あわせて、低減後の曲線の軸力の範囲 (σe + σ0e が 4〜35 / 65 N/mm²) が表のとおりであること。
+        /// </summary>
+        [TestMethod]
+        public void ThePhcBendingExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-phc-bending"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.Phc]();
+            if (s.CreateSectionCalculator() is not PrecastPileSection c) { Assert.Fail("(前提) PHC の断面計算オブジェクトを作れない"); return; }
+            Assert.AreEqual((600.0, 90.0, 85.0, 8.0), (s.PileDiameter, s.ConcreteThickness, c.Fc, c.SigmaE), "(前提) 代表断面が変わった");
+
+            double M(bool factored, SectionLimitState limit, int level, double nKN)
+            {
+                var (ns, ms) = s.GetLimitNMCurve(factored, limit, level);
+                double best = double.NaN;
+                for (int i = 0; i + 1 < ns.Count; i++)
+                    if (Math.Min(ns[i], ns[i + 1]) <= nKN && nKN <= Math.Max(ns[i], ns[i + 1]))
+                    {
+                        double t = ns[i + 1] == ns[i] ? 0 : (nKN - ns[i]) / (ns[i + 1] - ns[i]);
+                        double v = ms[i] + t * (ms[i + 1] - ms[i]);
+                        if (double.IsNaN(best) || v > best) best = v;
+                    }
+                return best;
+            }
+
+            double s0e = 1000e3 / c.Ae, sum = c.SigmaE + s0e;
+            double ms1 = c.Ze * (-c.Fts + sum) / 1e6, ms2 = c.Ze * (c.Fcs - sum) / 1e6;
+            StringAssert.Contains(table, $"$M_{{s1}} = {ms1:0.0}$・$M_{{s2}} = {ms2:0.0}$ で $M_s = 0.9 \\times {ms2:0.0} = {M(true, SectionLimitState.Service, 1, 1000):0.0}$ kN·m");
+            Assert.AreEqual(0.9 * Math.Min(ms1, ms2), M(true, SectionLimitState.Service, 1, 1000), 1e-6);
+            StringAssert.Contains(table, $"$M_d = {M(true, SectionLimitState.Damage, 1, 1000):0.0}$ kN·m (レベル1)・${M(true, SectionLimitState.Damage, 2, 1000):0.0}$ kN·m (レベル2)");
+            double mu0 = M(false, SectionLimitState.Ultimate, 2, 1000);
+            StringAssert.Contains(table, $"$M_{{u0}} = {mu0:0.0}$ で $M_u = 0.8 \\times 0.65 \\times {mu0:0.0} = {M(true, SectionLimitState.Ultimate, 2, 1000):0.0}$ kN·m");
+            Assert.AreEqual(0.8 * 0.65 * mu0, M(true, SectionLimitState.Ultimate, 2, 1000), 1e-6);
+
+            // 低減後の曲線の範囲: σe + σ0e = 4 N/mm² から (使用限界・損傷限界)。損傷限界は 35 N/mm² まで
+            double NAt(double stress) => (stress - c.SigmaE) * c.Ae / 1000;
+            Assert.AreEqual(NAt(4), s.GetLimitNMCurve(true, SectionLimitState.Service, 1).N.Min(), 1e-6);
+            Assert.AreEqual(NAt(4), s.GetLimitNMCurve(true, SectionLimitState.Damage, 2).N.Min(), 1e-6);
+            Assert.AreEqual(NAt(35), s.GetLimitNMCurve(true, SectionLimitState.Damage, 2).N.Max(), 1e-6);
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
