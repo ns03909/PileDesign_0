@@ -242,6 +242,10 @@ namespace TestProject1
             double wBuoyant = section.W * 20 - 10.0 * section.DisplacedVolumePerM * 15;
             Assert.AreEqual(-(friction + wBuoyant), pile.Rtu, 1e-6, "地下水位より下の浮力を差し引いていない");
             Assert.AreEqual(-(friction / 1.2 + wBuoyant), pile.Rtr, 1e-6);
+            // 評定式の工法 (Smart-MAGNUM・Hybridニーディング) も同じ W を使う (利用者の判断 2026-11-22)。ヘルプがそう書いていること
+            string help = Help();
+            StringAssert.Contains(help, "$W_s$: 杭の自重。地下水位以下の部分は浮力を差し引きます", "Hybridニーディングの W_s の説明がない");
+            StringAssert.Contains(help, "杭の自重（地下水位以下の部分は浮力を差し引く）を抵抗に足しています", "Smart-MAGNUM の引抜きの自重の説明がない");
 
             // 計算例 (W = 500 kN と置く)
             string table = Tables()["cond-uplift"];
