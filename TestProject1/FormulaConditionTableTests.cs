@@ -285,6 +285,31 @@ namespace TestProject1
             }
         }
 
+        /// <summary>
+        /// 場所打ち鋼管コンクリート杭のせん断の計算例が、検定と同じ関数 (DescribeShearLimit) の値と一致する。
+        /// 安全限界の p は鋼管の分担軸力 Ns から (ヘルプは 2026-11-22 まで N/(fcy·A) と書いていた)。
+        /// </summary>
+        [TestMethod]
+        public void TheInsituSteelPipeShearExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-insitu-steel-pipe-shear"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.SteelPipeConcreteSection]();
+            Assert.AreEqual((1000.0, 12.0, "SKK400", 1.0, 27.0, 1.0, 976.0), (s.PipeDia, s.PipeTs, s.PipeGrade, s.CorrosionDepth, s.ConcreteFc, s.ConcreteGsi, s.ConcreteOutDia), "(前提) 代表断面が変わった");
+            double Q(SectionLimitState limit, double n) => s.DescribeShearLimit(limit, 2, true, 2.0, n)!.ValueN / 1000;
+            StringAssert.Contains(table, $"$Q_s = {N1(Q(SectionLimitState.Service, 3000))}$ kN、$Q_d = {N1(Q(SectionLimitState.Damage, 3000))}$ kN");
+            StringAssert.Contains(table, $"$Q_u = {N1(Q(SectionLimitState.Ultimate, 3000))}$ kN ($N = 0$ なら ${N1(Q(SectionLimitState.Ultimate, 0))}$ kN)");
+            Assert.AreEqual(Q(SectionLimitState.Service, 0), Q(SectionLimitState.Service, 3000), 1e-9, "使用限界は軸力に依らない");
+
+            // p は鋼管の分担軸力から: Ns = N·fcy·A/(ξFc·Ac + fcy·A)
+            double area = Math.PI * 11 * (998 - 11), fcyA = 1.1 * 235 * area / 1000, fcAc = 27 * Math.PI / 4 * 976 * 976 / 1000;
+            double ns = 3000 * fcyA / (fcAc + fcyA);
+            StringAssert.Contains(table, $"$N_s = {ns:0.0}$ kN・$p = {ns / fcyA:0.000}$");
+            double qu = 2.0 / 3.0 * Math.PI * 11 * (998 - 11) * 1.1 * 235 / Math.Sqrt(3) * Math.Sqrt(1 - Math.Pow(ns / fcyA, 2)) / 1000;
+            Assert.AreEqual(qu, Q(SectionLimitState.Ultimate, 3000), 1e-6, "安全限界の p が鋼管の分担軸力から求まっていない");
+        }
+
+        private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
+
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
         [TestMethod]
         public void ThePyExamplesMatchTheImplementation()
