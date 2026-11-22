@@ -497,6 +497,45 @@ namespace TestProject1
             Assert.AreEqual(cross[0].Q, cross[1].Q, 1e-9, "十字の荷重度が一様でない");
         }
 
+        /// <summary>
+        /// PHC 杭の M-φ の表: 計算例の各点 (ひび割れ・降伏・圧壊・破断・終点) が実装 (PHCSection) と一致し、
+        /// 折れ線が 3 点 (原点・ひび割れ・低減後の安全限界) で終わること、終点より先を解析が最後の区間の勾配で延ばすこと。
+        /// </summary>
+        [TestMethod]
+        public void ThePhcMPhiExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-phc-mphi"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.Phc]();
+            if (s.CreateSectionCalculator() is not PHCSection c) { Assert.Fail("(前提) PHC の断面計算オブジェクトを作れない"); return; }
+            Assert.AreEqual(("PHC-600-標準-85-B", 8.0), (s.SelectedPrecastPile?.Name, c.SigmaE), "(前提) 代表断面が変わった");
+            Assert.AreEqual(0.75, c.GetBeta2(0));
+            var (mcr, pcr) = c.GetCrackMoment(0);
+            var (my, py) = c.GetMomentCurvatureForN(0, "TendonYield");
+            var (mcf, _) = c.GetMomentCurvatureForN(0, "ConcreteCompressiveFailure");
+            var (mtf, _) = c.GetMomentCurvatureForN(0, "TendonTensileFailure");
+            string K(double nmm) => (nmm / 1e6).ToString("0.0", CultureInfo.InvariantCulture);
+            string Phi(double perMm) => (perMm * 1e3 * 1e3).ToString("0.000", CultureInfo.InvariantCulture); // 1/m を ×10⁻³ で
+            StringAssert.Contains(table, $"$M_{{cr}} = {K(mcr)}$ kN·m・$\\phi_{{cr}} = {Phi(pcr)} \\times 10^{{-3}}$ 1/m");
+            StringAssert.Contains(table, $"$M_y = {K(my)}$ kN·m・$\\phi_y = {Phi(py)} \\times 10^{{-3}}$ 1/m");
+            StringAssert.Contains(table, $"圧壊 ${K(mcf)}$・破断 ${K(mtf)}$ で $M_{{u0}} = {K(Math.Min(mcf, mtf))}$ kN·m");
+            Assert.IsTrue(pcr < py, "(前提) 計算例は (a) ひび割れ → 降伏の順");
+
+            var (phis, ms) = s.GetMPhiRelationship(0); // 1/m・kN·m
+            Assert.AreEqual(3, phis.Count, "折れ線は原点・ひび割れ・終点の 3 点");
+            double mf = 0.8 * 0.75 * Math.Min(mcf, mtf) / 1e6;
+            Assert.AreEqual(mf, ms[2], 1e-6 * mf, "終点は β1β2·Mu0");
+            StringAssert.Contains(table, $"= {mf.ToString("0.0", CultureInfo.InvariantCulture)}$ kN·m、$\\phi_f = {(phis[2] * 1e3).ToString("0.000", CultureInfo.InvariantCulture)} \\times 10^{{-3}}$ 1/m");
+            // 終点はひび割れ点と降伏点を結ぶ線上
+            double onLine = (pcr + (py - pcr) * (mf * 1e6 - mcr) / (my - mcr)) * 1e3;
+            Assert.AreEqual(onLine, phis[2], 1e-9 * onLine);
+
+            // 終点より先: 解析は最後の区間の勾配で延ばす (頭打ちにしない)。直したら表の「適用外」も直す
+            var curve = new PileDesign.FEM.MomentCurvatureCurve(phis.Zip(ms, (p, m) => (p, m)));
+            double slope = (ms[2] - ms[1]) / (phis[2] - phis[1]);
+            Assert.AreEqual(ms[2] + slope * phis[2], curve.EvaluateMoment(2 * phis[2]), 1e-6 * ms[2], "終点より先の延ばし方が変わった");
+            StringAssert.Contains(table, "終点より先は最後の区間の勾配のまま延ばす");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
