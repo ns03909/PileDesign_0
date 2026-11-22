@@ -274,6 +274,15 @@ namespace TestProject1
             string code = TestSource.Read("Graphics_r1", "Models", "InputData", "InsituReinforcedConcreteSection.cs");
             StringAssert.Contains(code, "private const double ShearKc = 0.72;");
             StringAssert.Contains(code, "private const double ShearBeta1Ultimate = 0.8;");
+
+            // M/(Q·d) は 1.0〜3.0 に収める (3 つの限界状態とも)。2026-11-22 まで頭打ちせず、1 未満で耐力を大きく見ていた
+            foreach (var (limit, level) in new[] { (SectionLimitState.Service, 1), (SectionLimitState.Damage, 2), (SectionLimitState.Ultimate, 2) })
+            {
+                double At(double monQd) => s.DescribeShearLimit(limit, level, true, monQd, 3000.0)!.ValueN;
+                Assert.AreEqual(At(1.0), At(0.5), 1e-9, $"{limit}: M/(Q·d) = 0.5 を 1.0 に収めていない");
+                Assert.AreEqual(At(3.0), At(5.0), 1e-9, $"{limit}: M/(Q·d) = 5 を 3.0 に収めていない");
+                Assert.IsTrue(At(1.5) > At(2.5), $"{limit}: 範囲内では M/(Q·d) が大きいほど耐力が小さいはず");
+            }
         }
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>

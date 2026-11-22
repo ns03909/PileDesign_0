@@ -218,6 +218,13 @@ namespace PileDesign.Models.InputData
         /// <summary>応力中心距離 j = (7/8)d。</summary>
         private double ShearJ => 7.0 / 8.0 * ShearD;
 
+        /// <summary>
+        /// 式に入れる M/(Q·d)。1.0 以下は 1.0、3.0 以上は 3.0 (「基礎部材の強度と変形性能」3.3〜3.7 の記号の定義)。
+        /// 2026-11-22 まで頭打ちせず解析の値をそのまま使っていた (1 未満で耐力を大きく見る危険側。ヘルプには 1.0〜3.0 と
+        /// 書いてあった。#31 の適用条件の表を書いて発見、利用者の判断で直した)。工法の式は工法ごとの範囲で別に収める。
+        /// </summary>
+        internal static double ShearSpanRatio(double monQd) => Math.Clamp(monQd, 1.0, 3.0);
+
         /// <summary>円形断面の断面形状係数 kc。使用限界と損傷限界の式に掛かる。</summary>
         private const double ShearKc = 0.72;
 
@@ -263,7 +270,7 @@ namespace PileDesign.Models.InputData
                 // （軸力・M/(Q·d) 非依存、低減係数を乗じないため 低減前/低減後 は同値）。
                 return GetNotification1113LongTermShearStress() * b * j;
             }
-            return (isFactored ? beta1 : 1.0) * 2.0 / 3.0 * 0.065 * kc * (49.0 + InsituConcrete.Gsi * InsituConcrete.Fc) / (MonQd + 1.7) * (1 + sigma0 / 14.7) * b * j;
+            return (isFactored ? beta1 : 1.0) * 2.0 / 3.0 * 0.065 * kc * (49.0 + InsituConcrete.Gsi * InsituConcrete.Fc) / (ShearSpanRatio(MonQd) + 1.7) * (1 + sigma0 / 14.7) * b * j;
         }
 
         /// <summary>
@@ -298,7 +305,7 @@ namespace PileDesign.Models.InputData
                 // （レベル・軸力・M/(Q·d) 非依存、低減係数なし）。
                 return 1.5 * GetNotification1113LongTermShearStress() * b * j;
             }
-            return (isFactored ? beta : 1.0) * 0.065 * kc * (49.0 + InsituConcrete.Gsi * InsituConcrete.Fc) / (MonQd + 1.7) * (1 + sigma0 / 14.7) * b * j;
+            return (isFactored ? beta : 1.0) * 0.065 * kc * (49.0 + InsituConcrete.Gsi * InsituConcrete.Fc) / (ShearSpanRatio(MonQd) + 1.7) * (1 + sigma0 / 14.7) * b * j;
         }
 
         /// <summary>
@@ -310,7 +317,7 @@ namespace PileDesign.Models.InputData
             double beta2 = ShearBeta2(sigma0);
             double b = ShearB;
             double j = ShearJ;
-            return (isFactored ? beta1 * beta2 : 1.0) * (0.053 * Math.Pow(pt, 0.23) * (18 + InsituConcrete.Gsi * InsituConcrete.Fc) / (MonQd + 0.12) + 0.85 * Math.Sqrt(pw * sigmaWy) + 0.1 * sigma0) * b * j;
+            return (isFactored ? beta1 * beta2 : 1.0) * (0.053 * Math.Pow(pt, 0.23) * (18 + InsituConcrete.Gsi * InsituConcrete.Fc) / (ShearSpanRatio(MonQd) + 0.12) + 0.85 * Math.Sqrt(pw * sigmaWy) + 0.1 * sigma0) * b * j;
         }
 
         /// <summary>
@@ -346,7 +353,7 @@ namespace PileDesign.Models.InputData
 
             rows.Add(("σ0 = N/Ae", $"{F3(sigma0)} N/mm² (N = {F3(axialN / 1000)} kN, Ae = {F3(Ae)} mm²)"));
             rows.Add(("ξ·Fc", $"{F3(xi)} × {F3(fc)} = {F3(xi * fc)} N/mm²"));
-            rows.Add(("M/(Q·d)", F3(monQd)));
+            rows.Add(("M/(Q·d) (1.0〜3.0 に収める)", ShearSpanRatio(monQd) == monQd ? F3(monQd) : $"{F3(monQd)} → {F3(ShearSpanRatio(monQd))}"));
             rows.Add(("b = πD/4", $"{F3(b)} mm"));
             rows.Add(("j = (7/8)·0.9D", $"{F3(j)} mm"));
 

@@ -102,7 +102,12 @@ namespace TestProject1
         ///
         /// <para>1 段目までは杭頭付近の要素がまだ長く、計算例8 で曲げの検定比が 15% 動く (2026-10-02 の実測)。
         /// 2 段と 3 段では曲げが 2% 程度、せん断 (安全限界) が 5〜6% (計算例9 1.050 → 0.988、計算例8 0.730 → 0.693) 動く。
-        /// せん断は曲げモーメントの勾配で、要素端の値を拾うので分割に敏感。許容は曲げ 5%・せん断 8%。</para>
+        /// せん断は曲げモーメントの勾配で、要素端の値を拾うので分割に敏感。許容は曲げ 5%・せん断 10%。</para>
+        ///
+        /// <para>せん断の許容は 2026-11-22 に 8% から 10% にした。場所打ち RC 杭のせん断耐力の M/(Q·d) を 1.0〜3.0 に
+        /// 収めるようにしたため (それまで頭打ちなし)。頭打ちが無いと、細かくして Qmax が増えると M/(Q·d) が下がって耐力も
+        /// 上がり、検定比の動きが打ち消されていた。M/(Q·d) が 3 を超える杭では耐力が固定になり、Qmax の分割依存が
+        /// そのまま出る (計算例9 の損傷限界 1.157 → 1.058、8.6%)。断面力そのものの離散化誤差で、判定の不具合ではない。</para>
         ///
         /// <para><b>杭頭回転角 (杭頭固定の場所打ち杭) は比べない。</b>計算例8 の安全限界では、細かくするたびに
         /// 0.71 → 1.11 → 0.90 → 1.23 (荷重の段数を 2 倍にしても同じ) と行き来し、収束しない。
@@ -158,7 +163,7 @@ namespace TestProject1
                 if (!b.TryGetValue(key, out double rb)) { problems.Add($"3 段で無くなった: {key}"); continue; }
                 double rel = Math.Abs(rb - ra) / Math.Max(Math.Abs(ra), 0.05);
                 Console.WriteLine($"{ground} {key}: {ra:F4} → {rb:F4} ({rel:P2})");
-                double tol = key.StartsWith("杭体せん断", StringComparison.Ordinal) ? 0.08 : 0.05;
+                double tol = key.StartsWith("杭体せん断", StringComparison.Ordinal) ? 0.10 : 0.05;
                 if (rel > tol) problems.Add($"{key}: 検定比 {ra:F3} → {rb:F3} (差 {rel:P1}、許容 {tol:P0})");
             }
             Assert.AreEqual(0, problems.Count,
