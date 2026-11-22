@@ -693,6 +693,59 @@ namespace TestProject1
             Assert.IsFalse(M(true, SectionLimitState.Ultimate, 2, 0.4 * xfc * ag / 1000 + 50) > 0, "範囲の外で曲げ耐力が残っている");
         }
 
+        /// <summary>
+        /// 場所打ち RC 杭の M-φ の表: 低い軸力は O・ひび割れ・降伏・C (式 3.12)、高い軸力はひび割れ点と C を結ぶ線上の β1β2·Mu0 で止める。
+        /// 計算例の値が実装 (InsituReinforcedConcreteSection) と一致し、Mcr が式 3.10 とほぼ同じであること。
+        /// </summary>
+        [TestMethod]
+        public void TheInsituRcMPhiExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-insitu-rc-mphi"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.RcSection]();
+            if (s.CreateSectionCalculator() is not InsituReinforcedConcreteSection c) { Assert.Fail("(前提) RC の断面計算オブジェクトを作れない"); return; }
+            Assert.AreEqual((1000.0, 27.0, 0.75, "SD390", 20, "D25"), (s.PileDiameter, s.ConcreteFc, s.ConcreteGsi, c.MainBars.Grade, s.MainBarNum, s.MainBarSize), "(前提) 代表断面が変わった");
+            string P(double perMm) => (perMm * 1e6).ToString("0.000", CultureInfo.InvariantCulture); // ×10⁻³ 1/m
+            string K(double nmm) => (nmm / 1e6).ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}"); // 数式の中
+            string Kp(double nmm) => (nmm / 1e6).ToString("#,0.0", CultureInfo.InvariantCulture); // 括弧の点の中
+
+            // 低い軸力 N = 3,000 kN: O・ひび割れ・降伏・C(φc, 0.95·Mu0)
+            {
+                var (mcr, pcr) = c.GetCrackMoment(3000e3, false);
+                var (mcrLinear, _) = c.GetCrackMoment(3000e3, true);
+                Assert.AreEqual(mcrLinear, mcr, 1e-3 * mcr, "断面解析の Mcr が式 3.10 と離れている");
+                var (my, py) = c.GetSteelYieldMoment(3000e3);
+                var (mu0, _) = c.GetUltimateMomentForSpecificN(3000e3);
+                var (phis, ms) = s.GetMPhiRelationship(3000);
+                Assert.AreEqual(4, phis.Count, "低い軸力は O・ひび割れ・降伏・C");
+                double phiC = InsituReinforcedConcreteSection.GetPhiC(pcr, mcr, py, my, mu0, 0.95);
+                Assert.AreEqual(pcr + (py - pcr) * (0.95 * mu0 - mcr) / (my - mcr), phiC, 1e-12, "式 3.12");
+                Assert.AreEqual(phiC * 1e3, phis[3], 1e-9 * phis[3]);
+                Assert.AreEqual(0.95 * mu0 / 1e6, ms[3], 1e-9 * ms[3]);
+                StringAssert.Contains(table, $"ひび割れ ({P(pcr)}, {Kp(mcr)})・降伏 ({P(py)}, {Kp(my)})・$M_{{u0}} = {K(mu0)}$ で C ({P(phiC)}, {Kp(0.95 * mu0)})");
+            }
+            // 高い軸力 N = 6,000 kN: ひび割れ点と C を結ぶ線上の 0.52·Mu0 で止める
+            {
+                var (mcr, pcr) = c.GetCrackMoment(6000e3, false);
+                var (my, py) = c.GetSteelYieldMoment(6000e3);
+                var (mu0, _) = c.GetUltimateMomentForSpecificN(6000e3);
+                var (phis, ms) = s.GetMPhiRelationship(6000);
+                Assert.AreEqual(3, phis.Count, "高い軸力は O・ひび割れ・終点");
+                double mEnd = 0.80 * 0.65 * mu0;
+                double phiC = InsituReinforcedConcreteSection.GetPhiC(pcr, mcr, py, my, mu0, 0.80);
+                double phiEnd = pcr + (phiC - pcr) * (mEnd - mcr) / (0.80 * mu0 - mcr);
+                Assert.AreEqual(phiEnd * 1e3, phis[2], 1e-9 * phis[2], "終点がひび割れ点と C を結ぶ線上にない");
+                Assert.AreEqual(mEnd / 1e6, ms[2], 1e-9 * ms[2]);
+                StringAssert.Contains(table, $"ひび割れ ({P(pcr)}, {Kp(mcr)})・終点 ({P(phiEnd)}, {Kp(mEnd)}) ($= 0.52 \\times {K(mu0)}$)");
+            }
+            // Mcr ≥ β1β2·Mu0 なら弾性で終点まで (N = 9,000 kN)
+            {
+                var (mcr, _) = c.GetCrackMoment(9000e3, false);
+                var (mu0, _) = c.GetUltimateMomentForSpecificN(9000e3);
+                Assert.IsTrue(mcr >= 0.52 * mu0, "(前提) N = 9,000 kN は Mcr ≥ β1β2·Mu0");
+                Assert.AreEqual(2, s.GetMPhiRelationship(9000).Phis.Count, "ひび割れ前に終点へ達するときは O と終点の 2 点");
+            }
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
