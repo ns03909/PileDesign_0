@@ -449,6 +449,54 @@ namespace TestProject1
             StringAssert.Contains(table, "砂質土 $0.8\\tau$ ($s = 5$ mm)・$\\tau$ (20 mm)、礫質土 $0.7\\tau$ (10 mm)・$\\tau$ (30 mm)、粘性土 $0.8\\tau$ (3 mm)・$\\tau$ (10 mm)");
         }
 
+        /// <summary>
+        /// 群杭沈下 (土層の沈下) の表: 計算例を実装 (Steinnbrener.CalcSettlement) で解いて一致すること、
+        /// 荷重面で土層を切ること (GetEffectiveLayersForAnalysis)、個別十字の 5 枚の面積が円と同じこと。
+        /// </summary>
+        [TestMethod]
+        public void TheGroupSettlementTableMatchesTheImplementation()
+        {
+            string table = Tables()["cond-group-settlement"];
+            var load = new System.Collections.ObjectModel.ObservableCollection<RectLoad>
+            {
+                new RectLoad { X1 = 0, X2 = 10, Y1 = 0, Y2 = 10, QA = 100 * 10 * 10 },
+            };
+            Assert.AreEqual(100.0, load[0].Q, 1e-9, "(前提) q = 荷重 ÷ 面積");
+            SettlementSoilLayer L(double h, double e) => new() { Thickness = h, Ek = e, PoissonsRatio = 0.3 };
+            var center = new System.Windows.Point(5, 5);
+            double one = Steinnbrener.CalcSettlement(center, load, [L(20, 50000)]) * 1000;
+            StringAssert.Contains(table, $"= {one:0.00}$ mm。");
+            double two = Steinnbrener.CalcSettlement(center, load, [L(10, 30000), L(10, 80000)]) * 1000;
+            StringAssert.Contains(table, $"= {two:0.00}$ mm</td>");
+
+            // 外側の点は 4 枚の足し引き: 荷重を 2 つに割っても同じ沈下 (隣の矩形の寄与の和)
+            var outside = new System.Windows.Point(15, 5);
+            var split = new System.Collections.ObjectModel.ObservableCollection<RectLoad>
+            {
+                new RectLoad { X1 = 0, X2 = 5, Y1 = 0, Y2 = 10, QA = 100 * 5 * 10 },
+                new RectLoad { X1 = 5, X2 = 10, Y1 = 0, Y2 = 10, QA = 100 * 5 * 10 },
+            };
+            Assert.AreEqual(Steinnbrener.CalcSettlement(outside, load, [L(20, 50000)]),
+                Steinnbrener.CalcSettlement(outside, split, [L(20, 50000)]), 1e-12, "外側の点の足し引きが合わない");
+
+            // 荷重面より上は除き、荷重面を含む層は荷重面から下だけ
+            var layers = new System.Collections.ObjectModel.ObservableCollection<SettlementSoilLayer>
+            {
+                new() { BottomAltitude = -5, Thickness = 5, Ek = 1000, PoissonsRatio = 0.3 },
+                new() { BottomAltitude = -15, Thickness = 10, Ek = 2000, PoissonsRatio = 0.3 },
+            };
+            var cut = PileGroupSettlement.GetEffectiveLayersForAnalysis(0, -8, layers);
+            Assert.AreEqual(1, cut.Count);
+            Assert.AreEqual(7.0, cut[0].Thickness, 1e-12, "荷重面を含む層を荷重面から下だけにしていない");
+
+            // 個別十字: 5 枚の合計の面積は π r²、荷重は面積で配る
+            var cross = PileGroupSettlement.GetCrossRectLoads(new System.Windows.Point(0, 0), 0.6, 1000);
+            Assert.AreEqual(5, cross.Count);
+            Assert.AreEqual(Math.PI * 0.36, cross.Sum(r => r.A), 1e-9, "十字の面積が円と違う");
+            Assert.AreEqual(1000, cross.Sum(r => r.QA), 1e-9, "十字の荷重の合計が杭の荷重と違う");
+            Assert.AreEqual(cross[0].Q, cross[1].Q, 1e-9, "十字の荷重度が一様でない");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
