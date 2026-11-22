@@ -746,6 +746,45 @@ namespace TestProject1
             }
         }
 
+        /// <summary>
+        /// 場所打ち RC 杭の M-θ の表: 計算例の 4 点 (θcr・θy・θu と Mcr・My・0.95Mu0) が実装と一致し、
+        /// 軸応力度の範囲 (−ft〜ξFc/4、σ0 = N/Ae) の外では剛にすること。
+        /// </summary>
+        [TestMethod]
+        public void TheInsituRcMThetaExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-insitu-rc-mtheta"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.RcSection]();
+            if (s.CreateSectionCalculator() is not InsituReinforcedConcreteSection c) { Assert.Fail("(前提) RC の断面計算オブジェクトを作れない"); return; }
+            Assert.AreEqual("D25", s.MainBarSize, "(前提) 代表断面が変わった");
+            string F3(double v) => v.ToString("0.000", CultureInfo.InvariantCulture);
+            string F2(double v) => v.ToString("0.00", CultureInfo.InvariantCulture);
+            string K(double knm) => knm.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
+
+            var (thetas, ms) = s.GetMThetaRelationship(3000)!.Value; // rad・kN·m
+            Assert.AreEqual(4, thetas.Count);
+            var (mcr, _) = c.GetCrackMoment(3000e3, false);
+            var (my, py) = c.GetSteelYieldMoment(3000e3);
+            var (mu0, _) = c.GetUltimateMomentForSpecificN(3000e3);
+            double thetaY = 0.5 * 32 * 25 * py;
+            Assert.AreEqual(thetaY, thetas[2], 1e-12, "θy = α·db·φy/2 (α = 32)");
+            Assert.AreEqual(mcr / (InsituReinforcedConcreteSection.PostCrackInitialStiffnessFactor * my / thetaY), thetas[1], 1e-15, "θcr = Mcr/K0");
+            Assert.AreEqual(10.0, InsituReinforcedConcreteSection.PostCrackInitialStiffnessFactor);
+            Assert.AreEqual(0.01, thetas[3], 1e-15, "θu = 1/100");
+            Assert.AreEqual(0.95 * mu0 / 1e6, ms[3], 1e-9 * ms[3]);
+            StringAssert.Contains(table, $"= {F3(thetaY * 1e3)} \\times 10^{{-3}}$ rad、$M_y = {K(my / 1e6)}$ kN·m");
+            StringAssert.Contains(table, $"$\\theta_{{cr}} = {F2(thetas[1] * 1e5)} \\times 10^{{-5}}$ rad ($M_{{cr}} = {(mcr / 1e6):0.0}$)");
+            StringAssert.Contains(table, $"$0.95 M_{{u0}} = {K(ms[3])}$ kN·m");
+
+            // 軸応力度の範囲: σ0 = N/Ae が −ft〜ξFc/4 の外は剛
+            double upper = 0.25 * 0.75 * 27 * c.Ae / 1000, lower = -c.Ft * c.Ae / 1000;
+            Assert.IsTrue(s.IsWithinMThetaValidAxialRange(3000));
+            Assert.IsTrue(s.IsWithinMThetaValidAxialRange(upper - 1) && !s.IsWithinMThetaValidAxialRange(upper + 1), "上限は ξFc/4");
+            Assert.IsTrue(s.IsWithinMThetaValidAxialRange(lower + 1) && !s.IsWithinMThetaValidAxialRange(lower - 1), "下限は −ft");
+            Assert.IsFalse(s.IsWithinMThetaValidAxialRange(5000));
+            StringAssert.Contains(table, $"$N = 5{{,}}000$ kN は $\\sigma_0 = {F2(5000e3 / c.Ae)} &gt; {F2(0.25 * 0.75 * 27)}$ で剛");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>

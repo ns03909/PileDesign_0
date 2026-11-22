@@ -11776,6 +11776,15 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                         完全に平らにすると剛性行列が特異になり解けなくなるため）。
                     </p>
 
+                    <table class="formula-conditions" id="cond-insitu-rc-mtheta">
+                        <tr><th>適用対象</th><td>杭頭が「鉄筋定着工法」の場所打ち鉄筋コンクリート杭の、杭頭接合面の回転ばね (水平解析)。基本設定「場所打ち杭・鋼管杭の杭頭回転角」で<a href="#fund-opt-pile-head-rotation">考慮する</a> (既定) としたとき。杭体の線形・非線形の設定にはよらない</td></tr>
+                        <tr><th>入力</th><td>杭体のいちばん上の区間の杭断面 (杭径・$F_c$・$\xi$・$\gamma$・主筋の規格・本数・径・配置径)、杭の軸力 $N$ (荷重ケースの設定時は地震時軸力、各段階では常時から地震時へ段階的に。1 kN 単位に丸める)</td></tr>
+                        <tr><th>採用値</th><td>$\alpha = 32$、$d_b$ は主筋の呼び径 (D25 なら 25 mm)。$M_{cr}$・$M_y$・$\phi_y$・$M_{u0}$ は<a href="#cond-insitu-rc-mphi">M-φ の表</a>と同じ断面解析 (いつもバイリニア)。$\beta_1 = 0.95$ (軸力の範囲が $\xi F_c/4$ までなので、M-φ の高い軸力側の $\beta$ は使わない)。$\theta_{cr} = M_{cr}/K_0$、$K_0 = 10 M_y/\theta_y$ (ただし $\theta_y/2$ を超えない。求められないときは $10^{-8}$)。$\theta_u = 1/100$ rad (固定。$\theta_y$ 以下になるときは $2\theta_y$)。終局点より先は割線剛性の 1% の勾配。軸応力度 $\sigma_0 = N/A_e$ が $-f_t \le \sigma_0 \le \xi F_c/4$ の外なら回転ばねを剛 ($10^{10}$ kN·m/rad) にする</td></tr>
+                        <tr><th>適用外</th><td>杭頭が鉄筋定着工法でない杭 (半剛接合の工法はそれぞれの M-θ、ほかは剛)。場所打ち鋼管コンクリート杭・既製杭の鉄筋定着工法 (剛)。$\alpha$ の杭主筋比・パイルキャップの形状・軸力による違い (32 で固定)</td></tr>
+                        <tr><th>参照箇所</th><td>「基礎部材の強度と変形性能」3.13、<a href="#cond-insitu-rc-mphi">場所打ち RC 杭の M-φ</a>、<a href="#pile-head-rotation-beyond-yield">杭頭のばねが降伏後の枝にあるとき</a></td></tr>
+                        <tr><th>計算例</th><td><a href="#cond-insitu-rc-bending">曲げの表</a>と同じ断面 (D25)、$N = 3{,}000$ kN ($\sigma_0 = 3.44 \le \xi F_c/4 = 5.06$): $\theta_y = 0.5 \times 32 \times 25 \times \phi_y = 1.905 \times 10^{-3}$ rad、$M_y = 1{,}709.1$ kN·m、$K_0 = 10 M_y/\theta_y$ で $\theta_{cr} = 7.04 \times 10^{-5}$ rad ($M_{cr} = 631.6$)、終局点 ($0.01$ rad, $0.95 M_{u0} = 1{,}795.0$ kN·m)。$N = 5{,}000$ kN は $\sigma_0 = 5.73 &gt; 5.06$ で剛</td></tr>
+                    </table>
+
                     <h5>ひび割れまでは剛、ひび割れ後は初期剛性 $K_0$</h5>
                     <p>
                         杭頭は<strong>ひび割れるまで剛</strong>として解きます（回転しない）。
