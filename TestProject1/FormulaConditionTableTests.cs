@@ -785,6 +785,36 @@ namespace TestProject1
             StringAssert.Contains(table, $"$N = 5{{,}}000$ kN は $\\sigma_0 = {F2(5000e3 / c.Ae)} &gt; {F2(0.25 * 0.75 * 27)}$ で剛");
         }
 
+        /// <summary>
+        /// 場所打ち鋼管コンクリート杭の曲げの表: 計算例が検定と同じ N-M 曲線の値と一致し、β = 1.0 (低減前 = 低減後)、
+        /// 安全限界の軸力の範囲 (−0.2(σy·Ag + 1.1F·As)〜0.4ξFc·Ae) と腐食代の差し引きが表のとおりであること。
+        /// </summary>
+        [TestMethod]
+        public void TheInsituSteelPipeBendingExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-insitu-steel-pipe-bending"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.SteelPipeConcreteSection]();
+            if (s.CreateSectionCalculator() is not InsituSteelPipeReinforcedConcreteSection c) { Assert.Fail("(前提) 断面計算オブジェクトを作れない"); return; }
+            var p = c.InsituSteelPipe;
+            Assert.AreEqual((998.0, 11.0, 235.0, 1.0, "SD390", 20, "D25"), (p.OutDia, p.T, p.F, s.ConcreteGsi, c.MainBars.Grade, s.MainBarNum, s.MainBarSize), "(前提) 代表断面が変わった (腐食代 1 mm を引いた φ998 × 11)");
+            Assert.AreEqual(0.003, c.UltimateCompressiveStrain);
+            string K(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
+
+            double M(bool f, SectionLimitState l, int lv) => CurveMomentAt(s, f, l, lv, 3000);
+            double ms = M(true, SectionLimitState.Service, 1), md = M(true, SectionLimitState.Damage, 1), mu = M(true, SectionLimitState.Ultimate, 2);
+            Assert.AreEqual(M(false, SectionLimitState.Service, 1), ms, 1e-9 * ms, "β1 = 1.0");
+            Assert.AreEqual(md, M(true, SectionLimitState.Damage, 2), 1e-9 * md, "損傷限界はレベル1・2 同値");
+            Assert.AreEqual(M(false, SectionLimitState.Ultimate, 2), mu, 1e-9 * mu, "β1β2 = 1.0");
+            StringAssert.Contains(table, $"$M_s = {K(ms)}$ kN·m、$M_d = {K(md)}$ kN·m、$M_u = M_{{u0}} = {K(mu)}$ kN·m");
+
+            double lo = -0.2 * (c.MainBars.RSigmaY * c.MainBars.Ag + 1.1 * p.F * p.AMinus);
+            double hi = 0.4 * 1.0 * 27 * c.Ae;
+            Assert.AreEqual(lo, c.UltimateLimitAxialForceThresholds[0], 1e-6);
+            Assert.AreEqual(hi, c.UltimateLimitAxialForceThresholds[^1], 1e-6);
+            StringAssert.Contains(table, $"$-{K(-lo / 1000)}$〜${K(hi / 1000)}$ kN");
+            Assert.IsFalse(CurveMomentAt(s, true, SectionLimitState.Ultimate, 2, hi / 1000 + 100) > 0, "範囲の外で曲げ耐力が残っている");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
