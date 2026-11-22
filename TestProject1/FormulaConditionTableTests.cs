@@ -408,6 +408,32 @@ namespace TestProject1
             Assert.IsFalse(CurveMomentAt(s, true, SectionLimitState.Ultimate, 2, c.BendNMin / 1000 - 10) > 0, "範囲の外で曲げ耐力が残っている");
         }
 
+        /// <summary>
+        /// 単杭沈下の表: 杭先端の曲線の計算例が実装 (VerticalLoadTransferMethod.GetSettlementPileToe) と一致し、
+        /// 例に使った α・n がプリセットにあること、τ-s の折れ点が表のとおりであること。
+        /// </summary>
+        [TestMethod]
+        public void TheSinglePileSettlementTableMatchesTheImplementation()
+        {
+            string table = Tables()["cond-single-pile-settlement"];
+            var toe = typeof(PileDesign.FEM.VerticalLoadTransferMethod).GetMethod("GetSettlementPileToe",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            Assert.IsNotNull(toe, "(前提) 杭先端の曲線の関数 GetSettlementPileToe が見つからない (名前を変えたらここも直す)");
+            double Sp(double ratio) => (double)toe!.Invoke(null, [1.2, ratio * 1000.0, 1000.0, 0.23, 2.7])! * 1000.0; // mm
+            StringAssert.Contains(table, $"= {Sp(0.5):0.00}$ mm");
+            Assert.AreEqual(120.0, Sp(1.0), 1e-9, "Rp = Rpu で 0.1·dp");
+
+            string csv = TestSource.Read("Graphics_r1", "Models", "PileLibrary", "PresetSettlementParameterSet.csv");
+            StringAssert.Contains(csv, "\"(2019)場所打ちコンクリート杭\",\"砂質土\",0.23,2.7", "計算例の α・n がプリセットに無い");
+
+            // τ-s の折れ点 (τ1/τ2・S1・S2 [mm])
+            string code = TestSource.Read("Graphics_r1", "Models", "InputData", "SoilPile.cs");
+            StringAssert.Contains(code, "\"砂質土\" => (0.8 * pileCircumVertical.Tau2, 5.0, 20.0,");
+            StringAssert.Contains(code, "\"礫質土\" => (0.7 * pileCircumVertical.Tau2, 10.0, 30.0,");
+            StringAssert.Contains(code, "\"粘性土\" => (0.8 * pileCircumVertical.Tau2, 3.0, 10.0,");
+            StringAssert.Contains(table, "砂質土 $0.8\\tau$ ($s = 5$ mm)・$\\tau$ (20 mm)、礫質土 $0.7\\tau$ (10 mm)・$\\tau$ (30 mm)、粘性土 $0.8\\tau$ (3 mm)・$\\tau$ (10 mm)");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
