@@ -582,6 +582,76 @@ namespace TestProject1
             Assert.AreEqual(onLine8, phis8[^1], 1e-6 * onLine8, "(b) の終点がひび割れ点と圧縮降伏点を結ぶ線上にない");
         }
 
+        /// <summary>
+        /// SC 杭の M-φ の表: (a)〜(d) の折れ点が「基礎部材の強度と変形性能」の骨格曲線 (利用者が示した O・A・B・D と φD の式) どおりで、
+        /// 計算例の値が実装 (SCSection) と一致すること。
+        /// (b) は 2026-11-22 まで B に鋼管の「引張」降伏点を使っていた (D は圧縮降伏点の線から求めていた)。
+        /// </summary>
+        [TestMethod]
+        public void TheScMPhiFollowsTheSkeletonCurves()
+        {
+            string table = Tables()["cond-sc-mphi"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.Sc]();
+            if (s.CreateSectionCalculator() is not SCSection c) { Assert.Fail("(前提) SC の断面計算オブジェクトを作れない"); return; }
+            Assert.AreEqual("SC-400-標準-80-4.5", s.SelectedPrecastPile?.Name, "(前提) 代表断面が変わった");
+            Assert.AreEqual((1.0, 1.0), (SCSection.MPhiBeta1, SCSection.MPhiBeta2));
+            const double b1 = SCSection.MPhiBeta1;
+            string P(double perM) => (perM * 1e3).ToString("0.000", CultureInfo.InvariantCulture);
+            string M(double knm) => knm.ToString("0.0", CultureInfo.InvariantCulture);
+            string Pt(List<double> phis, List<double> ms, int i) => $"({P(phis[i])}, {M(ms[i])})";
+
+            (double M, double P) Cr(double n) => c.GetCrackMoment(n * 1e3);
+            (double M, double P) Y1(double n) => c.GetMomentCurvatureForN(n * 1e3, "SteelPipeTensionYield");
+            (double M, double P) Y2(double n) => c.GetMomentCurvatureForN(n * 1e3, "SteelPipeCompressionYield_b");
+            (double M, double P) U(double n) => c.GetUltimateMomentForSpecificN(n * 1e3);
+            const double toPerM = 1e3, toKnm = 1e-6;
+
+            // (a) N = 0: O・A・B(φy1, My1)・D、φD = φcr + (φy1 − φcr)(β1Mu0 − Mcr)/(My1 − Mcr)
+            {
+                var (cr, y1, y2, u) = (Cr(0), Y1(0), Y2(0), U(0));
+                Assert.IsTrue(cr.P < y1.P && y1.P < y2.P, "(前提) N = 0 は (a)");
+                var (phis, ms) = s.GetMPhiRelationship(0);
+                Assert.AreEqual(4, phis.Count);
+                double phiD = cr.P + (y1.P - cr.P) * (b1 * u.M - cr.M) / (y1.M - cr.M);
+                Assert.AreEqual(y1.P * toPerM, phis[2], 1e-9 * phis[2], "(a) の B が引張降伏点でない");
+                Assert.AreEqual(phiD * toPerM, phis[3], 1e-9 * phis[3], "(a) の φD");
+                Assert.AreEqual(b1 * u.M * toKnm, ms[3], 1e-9 * ms[3]);
+                StringAssert.Contains(table, $"$N = 0$ は (a): A {Pt(phis, ms, 1)}・B {Pt(phis, ms, 2)}・D {Pt(phis, ms, 3)}");
+            }
+            // (b) N = 1,500 kN: O・A・B(φy2, My2)・D、φD = φcr + (φy2 − φcr)(β1Mu0 − Mcr)/(My2 − Mcr)
+            {
+                var (cr, y1, y2, u) = (Cr(1500), Y1(1500), Y2(1500), U(1500));
+                Assert.IsTrue(cr.P < y2.P && y2.P < y1.P, "(前提) N = 1,500 kN は (b)");
+                var (phis, ms) = s.GetMPhiRelationship(1500);
+                Assert.AreEqual(4, phis.Count);
+                double phiD = cr.P + (y2.P - cr.P) * (b1 * u.M - cr.M) / (y2.M - cr.M);
+                Assert.AreEqual(y2.P * toPerM, phis[2], 1e-9 * phis[2], "(b) の B が圧縮降伏点でない");
+                Assert.AreEqual(y2.M * toKnm, ms[2], 1e-9 * ms[2]);
+                Assert.AreEqual(phiD * toPerM, phis[3], 1e-9 * phis[3], "(b) の φD");
+                Assert.AreEqual(b1 * u.M * toKnm, ms[3], 1e-9 * ms[3]);
+                StringAssert.Contains(table, $"$N = 1{{,}}500$ kN は (b): A {Pt(phis, ms, 1)}・B {Pt(phis, ms, 2)}・D {Pt(phis, ms, 3)}");
+            }
+            // (c) N = 3,000 kN: O・B(φy2, My2)・D、φD = β1Mu0 / (My2/φy2)
+            {
+                var (cr, y1, y2, u) = (Cr(3000), Y1(3000), Y2(3000), U(3000));
+                Assert.IsTrue(y2.P < cr.P && y2.P < y1.P, "(前提) N = 3,000 kN は (c)");
+                var (phis, ms) = s.GetMPhiRelationship(3000);
+                Assert.AreEqual(3, phis.Count);
+                Assert.AreEqual(y2.P * toPerM, phis[1], 1e-9 * phis[1]);
+                Assert.AreEqual(b1 * u.M / (y2.M / y2.P) * toPerM, phis[2], 1e-9 * phis[2], "(c) の φD");
+                StringAssert.Contains(table, $"$N = 3{{,}}000$ kN は (c): B {Pt(phis, ms, 1)}・D {Pt(phis, ms, 2)}");
+            }
+            // (d) N = 5,000 kN: O・D(φu, β1Mu0)
+            {
+                var u = U(5000);
+                var (phis, ms) = s.GetMPhiRelationship(5000);
+                Assert.AreEqual(2, phis.Count, "(d) は O と D の 2 点");
+                Assert.AreEqual(u.P * toPerM, phis[1], 1e-9 * phis[1], "(d) の φD は φu");
+                Assert.AreEqual(b1 * u.M * toKnm, ms[1], 1e-9 * ms[1]);
+                StringAssert.Contains(table, $"$N = 5{{,}}000$ kN は (d): D {Pt(phis, ms, 1)}");
+            }
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>

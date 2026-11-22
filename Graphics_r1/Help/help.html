@@ -12826,11 +12826,33 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
                     <h3 id="h-SC-杭の-M-φ-関係">SC 杭の M-φ 関係</h3>
                     <p>
-                        4 点折れ線で構築する ($\beta_1 = 0.9$ を乗じる)。<br>
-                        鋼管とコンクリートの応力-ひずみ関係（コンクリートは線形弾性＝引張無視・圧縮応力度に上限を設ける）を断面積分し、目標軸力に対応する曲率を Newton-Raphson で求める。
-                        ひび割れ点を含む場合は 4 点以上の折れ線となる。
-                        軸力のみで降伏する場合 (case d) は曲げ耐力なしと判定する。
+                        どの限界状態が先に起きるかで (a)〜(d) に分け、O・A・B・D の折れ線で構築する。
+                        鋼管とコンクリートの応力-ひずみ関係（コンクリートは引張無視・圧縮応力度に上限を設けたバイリニア、鋼管はバイリニア）を断面積分し、
+                        目標軸力に釣り合う曲率を求める (範囲を走査してから二分法とセカント法で解く)。
                     </p>
+                    <table class="table-doc">
+                        <tr><th>場合</th><th>条件</th><th>折れ点</th><th>$\phi_D$</th></tr>
+                        <tr><td>(a) 鋼管が引張降伏する</td><td>$\phi_{cr} &lt; \phi_{y1} &lt; \phi_{y2}$</td><td>O・A $(\phi_{cr}, M_{cr})$・B $(\phi_{y1}, M_{y1})$・D $(\phi_D, \beta_1 M_{u0})$</td><td>$\phi_{cr} + (\phi_{y1} - \phi_{cr})\dfrac{\beta_1 M_{u0} - M_{cr}}{M_{y1} - M_{cr}}$</td></tr>
+                        <tr><td>(b) 曲げひび割れ後、鋼管が圧縮降伏する</td><td>$\phi_{cr} &lt; \phi_{y2} &lt; \phi_{y1}$</td><td>O・A・B $(\phi_{y2}, M_{y2})$・D</td><td>$\phi_{cr} + (\phi_{y2} - \phi_{cr})\dfrac{\beta_1 M_{u0} - M_{cr}}{M_{y2} - M_{cr}}$</td></tr>
+                        <tr><td>(c) 鋼管が圧縮降伏する</td><td>$\phi_{y2} &lt; \phi_{cr}$、$\phi_{y2} &lt; \phi_{y1}$</td><td>O・B $(\phi_{y2}, M_{y2})$・D</td><td>$\beta_1 M_{u0} / (M_{y2}/\phi_{y2})$</td></tr>
+                        <tr><td>(d) 軸力のみで鋼管が降伏する</td><td>$N \geq f_y A_s + (E_c/E_s) f_y A_c$</td><td>O・D</td><td>$\phi_u$ (圧縮縁が $\varepsilon_{cu}$ に達するときの曲率)</td></tr>
+                    </table>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">ここに、</li>
+                        <li><span class="symbol-label">$M_{cr}, \phi_{cr}$</span>ひび割れモーメント・曲率。$M_{cr} = Z_e (0.56\sqrt{F_c} + \sigma_0)$、$\phi_{cr} = M_{cr}/(E_c I_e)$ ($\sigma_0 = N/A_e$)</li>
+                        <li><span class="symbol-label">$M_{y1}, \phi_{y1}$</span>引張縁の鋼管が引張降伏するときのモーメント・曲率</li>
+                        <li><span class="symbol-label">$M_{y2}, \phi_{y2}$</span>圧縮縁の鋼管が圧縮降伏するときのモーメント・曲率</li>
+                        <li><span class="symbol-label">$M_{u0}$</span>コンクリート圧縮縁が $\varepsilon_{cu}$ に達するときのモーメント (<a href="#cond-sc-bending">SC 杭の曲げ</a>の $\varepsilon_{cu}$)</li>
+                    </ul>
+
+                    <table class="formula-conditions" id="cond-sc-mphi">
+                        <tr><th>適用対象</th><td>SC 杭の杭体の M-φ 関係。水平解析の杭要素の曲げ剛性と、杭断面ウィンドウの M-φ 図に使う</td></tr>
+                        <tr><th>入力</th><td>杭断面ウィンドウの製品 (杭径・コンクリートの肉厚・$F_c$・鋼管の規格と厚さ)、鋼管の腐食代、解析の各段階の杭の軸力 $N$ (1 kN 単位に丸める)。基本設定の「解析用 M-φ 関係」で<a href="#fund-opt-fiber-mphi">ファイバーモデル</a>を選ぶと、ファイバー解析の曲線を使う</td></tr>
+                        <tr><th>採用値</th><td>$\beta_1 = \beta_2 = 1.0$ (SC 杭の曲げの低減係数と同じ)。鋼管は $E_s = 205{,}000$ N/mm²、$f_y = 1.1F$ で頭打ち、厚さは腐食代を差し引く。コンクリートは $E_c = 40{,}000$ N/mm²、$F_c$ で頭打ち・引張は 0。$Z_e$・$I_e$・$A_e$ は $n = 5$ の換算断面。$\varepsilon_{cu}$ は <a href="#cond-sc-bending">SC 杭の曲げ</a>と同じく $N/N_0$ と $(D - 2t_s)/t_c$ で決める。$M_{cr} \leq 0$ (引張軸力で既にひび割れている) なら A を置かない。(b) で $\beta_1 M_{u0} \leq M_{y2}$ なら B を置かない (D が A-B の途中に来る)。(c) で $\beta_1 M_{u0} &lt; M_{y2}$ なら O と D の 2 点。(a)〜(d) のどれにも当たらなければ弾性 ($E_c I_e$) で $\beta_1 M_{u0}$ まで。解析では終点 D より先を最後の区間の勾配のまま延ばす (<a href="#cond-phc-mphi">PHC 杭</a>と同じ)</td></tr>
+                        <tr><th>適用外</th><td>D より先の頭打ち (D に達した要素は安全限界の曲げの検定で判定する)。繰り返し載荷の履歴。軸力の適用範囲 ($N/N_0$ が $-0.40$〜$0.50$) の外でも曲線は作る (検定は「範囲外」)</td></tr>
+                        <tr><th>参照箇所</th><td>「基礎部材の強度と変形性能」7 章、<a href="#cond-sc-bending">SC 杭の曲げ</a>、<a href="#h-杭体の非線形性（M-φ関係）">杭体の非線形性</a></td></tr>
+                        <tr><th>計算例</th><td>SC-400-標準-80-4.5 (SKK400) の折れ点 ($\phi$ は $\times 10^{-3}$ 1/m、$M$ は kN·m)。$N = 0$ は (a): A (0.641, 33.5)・B (4.668, 122.5)・D (7.868, 193.2)。$N = 1{,}500$ kN は (b): A (2.910, 152.3)・B (4.500, 206.2)・D (8.953, 357.2)。$N = 3{,}000$ kN は (c): B (1.939, 102.3)・D (6.665, 351.5)。$N = 5{,}000$ kN は (d): D (6.056, 150.5)</td></tr>
+                    </table>
                 </section>
 
                 <section>

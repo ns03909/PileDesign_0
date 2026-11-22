@@ -2051,46 +2051,24 @@ namespace PileDesign.Models.InputData
             }
             else if (phiCr < phiYC && phiYC < phiYT) // b 曲げひび割れ後、鋼管が圧縮降伏する場合
             {
+                // O(0,0)-A(φcr, Mcr)-B(φy2, My2)-D(φD, β1·Mu0)。B は鋼管が圧縮降伏する点、
+                // D は A-B の線を β1·Mu0 まで延ばした点 ((a) の A-B が引張降伏点なのと対になる)。
+                // 2026-11-22 まで、D は A と圧縮降伏点を結ぶ線から求めながら、B に鋼管の「引張」降伏点
+                // (φyt, Myt) を使っていた。2 本の線の点を混ぜたので、B を過ぎると勾配がひび割れ前並みに
+                // 戻っていた (SC-400-標準-80-4.5・N = 1,500 kN で 28,500 → 50,700 kN·m²)。
+                // 利用者が「基礎部材の強度と変形性能」の骨格曲線 (O・A・B・D) を示して直した。
                 double denom = MYC - MCr;
                 if (Math.Abs(denom) < 1e-6) denom = Math.Sign(denom) * 1e-6;
                 phiD = phiCr + (phiYC - phiCr) * (beta1 * Mu0 - MCr) / denom;
-                double beta2 = MPhiBeta2;
-                if (beta1 * beta2 * Mu0 < MYT)
-                {
-                    double denom2 = MYT - MCr;
-                    if (Math.Abs(denom2) < 1e-6) denom2 = Math.Sign(denom2) * 1e-6;
-                    double phi2 = phiCr + (phiYT - phiCr) / denom2 * (beta1 * beta2 * Mu0 - MCr);
-
-                    // MCr <= 0 の場合は (phiCr, MCr) をスキップ
-                    if (MCr <= 0 || phiCr <= 0)
-                    {
-                        phis = [0.0, phi2];
-                        Ms = [0.0, beta1 * beta2 * Mu0];
-                    }
-                    else
-                    {
-                        phis = [0.0, phiCr, phi2];
-                        Ms = [0.0, MCr, beta1 * beta2 * Mu0];
-                    }
-                }
-                else
-                {
-                    double denom3 = beta1 * Mu0 - MYT;
-                    if (Math.Abs(denom3) < 1e-6) denom3 = Math.Sign(denom3) * 1e-6;
-                    double phi3 = phiYT + (phiD - phiYT) / denom3 * (beta1 * beta2 * Mu0 - MYT);
-
-                    // MCr <= 0 の場合は (phiCr, MCr) をスキップ
-                    if (MCr <= 0 || phiCr <= 0)
-                    {
-                        phis = [0.0, phiYT, phi3];
-                        Ms = [0.0, MYT, beta1 * beta2 * Mu0];
-                    }
-                    else
-                    {
-                        phis = [0.0, phiCr, phiYT, phi3];
-                        Ms = [0.0, MCr, MYT, beta1 * beta2 * Mu0];
-                    }
-                }
+                bool hasCrack = MCr > 0 && phiCr > 0;
+                // β1·Mu0 が My2 以下なら D は A-B の途中にあるので B を置かない
+                bool hasB = beta1 * Mu0 > MYC;
+                phis = [0.0];
+                Ms = [0.0];
+                if (hasCrack) { phis.Add(phiCr); Ms.Add(MCr); }
+                if (hasB) { phis.Add(phiYC); Ms.Add(MYC); }
+                phis.Add(phiD);
+                Ms.Add(beta1 * Mu0);
             }
             else if (phiYC < phiCr && phiYC < phiYT) // c 鋼管が圧縮降伏する場合
             {
