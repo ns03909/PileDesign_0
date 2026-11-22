@@ -815,6 +815,41 @@ namespace TestProject1
             Assert.IsFalse(CurveMomentAt(s, true, SectionLimitState.Ultimate, 2, hi / 1000 + 100) > 0, "範囲の外で曲げ耐力が残っている");
         }
 
+        /// <summary>
+        /// 場所打ち鋼管コンクリート杭の M-φ の表: 杭頭部は (φu, Mu0)、杭中間部はひび割れ点と降伏点の線の延長 φC で終わること、
+        /// 計算例の値が実装 (InsituSteelPipeReinforcedConcreteSection・MphiCurveResolver) と一致すること。
+        /// </summary>
+        [TestMethod]
+        public void TheInsituSteelPipeMPhiExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-insitu-steel-pipe-mphi"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.SteelPipeConcreteSection]();
+            if (s.CreateSectionCalculator() is not InsituSteelPipeReinforcedConcreteSection c) { Assert.Fail("(前提) 断面計算オブジェクトを作れない"); return; }
+            string P(double perMm) => (perMm * 1e6).ToString("0.000", CultureInfo.InvariantCulture);
+            string Kp(double nmm) => (nmm / 1e6).ToString("#,0.0", CultureInfo.InvariantCulture);
+            string K(double nmm) => Kp(nmm).Replace(",", "{,}");
+
+            var (mcr, pcr) = c.GetCrackMoment(3000e3);
+            Assert.AreEqual(c.Ze * (c.Ft + 3000e3 / c.Ae), mcr, 1e-6 * mcr, "Mcr = Ze(ft + σ0e)");
+            var (my, py) = c.GetYieldMoment(3000e3);
+            var (mu0, pu) = c.GetUltimateMomentForSpecificN(3000e3);
+
+            var (top, topM) = s.GetMPhiRelationship(3000); // 杭頭部 (1/m・kN·m)
+            Assert.AreEqual(4, top.Count);
+            Assert.AreEqual(pu * 1e3, top[3], 1e-9 * top[3], "杭頭部の終点は φu");
+            Assert.AreEqual(mu0 / 1e6, topM[3], 1e-9 * topM[3], "β1 = 1.0");
+            var mid = PileDesign.Services.MphiCurveResolver.Resolve(s, 3000, isPileTop: false)!.Value;
+            double phiC = pcr + (py - pcr) * (mu0 - mcr) / (my - mcr);
+            Assert.AreEqual(phiC * 1e3, mid.Phis[3], 1e-9 * mid.Phis[3], "杭中間部の終点はひび割れ点と降伏点の線の延長");
+
+            StringAssert.Contains(table, $"ひび割れ ({P(pcr)}, {Kp(mcr)})・降伏 ({P(py)}, {Kp(my)})・$M_{{u0}} = {K(mu0)}$");
+            StringAssert.Contains(table, $"杭頭部の終局点は ({P(pu)}, {Kp(mu0)})、杭中間部は ({P(phiC)}, {Kp(mu0)})");
+
+            // 杭頭部の範囲は 0.5D
+            string modelling = TestSource.Read("Graphics_r1", "FEM", "AnalysisModelling.cs");
+            StringAssert.Contains(modelling, "pileTopZoneBottom = z0 - 0.5 * pileDia_m;");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>

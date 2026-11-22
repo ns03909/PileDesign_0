@@ -12085,6 +12085,35 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                         <li><span class="symbol-label">$E_c$</span>コンクリートのヤング率</li>
                     </ul>
 
+                    <h4 id="h-場所打ち鋼管コンクリート杭の-M-φ-関係">場所打ち鋼管コンクリート杭の M-φ 関係</h4>
+                    <p>
+                        原点・ひび割れ点・降伏点・終局点の折れ線で表します。杭頭から $0.5D$ までの要素 (杭頭部) と、それより下 (杭中間部) で終局点の曲率が違います。
+                    </p>
+                    <div class="formula-block">
+                        <div class="formula-left">
+                            <p>$$M_{cr} = Z_e\,(f_t + \sigma_{0e}),\quad \phi_{cr} = \frac{M_{cr}}{E_c I_e}$$</p>
+                            <p>$$\text{杭頭部: } (\phi_u,\ \beta_1 M_{u0}),\qquad \text{杭中間部: } \phi_C = \phi_{cr} + (\phi_y - \phi_{cr})\,\frac{\beta_1 M_{u0} - M_{cr}}{M_y - M_{cr}}$$</p>
+                        </div>
+                        <div class="formula-right">強度と変形性能 4 章</div>
+                    </div>
+                    <ul class="symbol-list">
+                        <li class="symbol-intro">記号</li>
+                        <li><span class="symbol-label">$Z_e, I_e, A_e$</span>コンクリート・主筋・鋼管の換算断面 ($n_r = E_r/E_c$、$n_s = E_s/E_c$。鋼管は腐食代を差し引く)。$Z_e = I_e / r_c$ ($r_c$ はコンクリートの半径)</li>
+                        <li><span class="symbol-label">$f_t$</span>$0.56\sqrt{\xi F_c}$ (基本設定でコンクリートの引張を無視すると 0)</li>
+                        <li><span class="symbol-label">$M_y, \phi_y$</span>引張側の最外縁の主筋か鋼管の、先に引張降伏する方が降伏するとき</li>
+                        <li><span class="symbol-label">$M_{u0}, \phi_u$</span>コンクリートの圧縮縁が $\varepsilon_{cu}$ に達するとき (<a href="#cond-insitu-steel-pipe-bending">曲げの表</a>の $M_{u0}$)</li>
+                        <li><span class="symbol-label">$\beta_1$</span>1.0</li>
+                    </ul>
+
+                    <table class="formula-conditions" id="cond-insitu-steel-pipe-mphi">
+                        <tr><th>適用対象</th><td>場所打ち鋼管コンクリート杭の鋼管コンクリート部の M-φ 関係。水平解析の杭要素の曲げ剛性と、杭断面ウィンドウの M-φ 図 (杭頭部の曲線) に使う</td></tr>
+                        <tr><th>入力</th><td>杭断面ウィンドウの鋼管・コンクリート・主筋 (<a href="#cond-insitu-steel-pipe-bending">曲げの表</a>と同じ)、解析の各段階の杭の軸力 $N$ (1 kN 単位に丸める)。基本設定の「解析用 M-φ 関係」で<a href="#fund-opt-fiber-mphi">ファイバーモデル</a>を選ぶと、杭頭部・杭中間部ともファイバー解析の曲線を使う</td></tr>
+                        <tr><th>採用値</th><td>材料は<a href="#cond-insitu-steel-pipe-bending">曲げの表</a>の安全限界と同じバイリニア (基本設定で安全限界を e 関数法にしても、解析用の M-φ はバイリニア)。$\beta_1 = 1.0$。杭頭部は杭体のいちばん上の区間が鋼管コンクリート部のとき、要素の下端が杭頭から $0.5D$ 以内の要素。ひび割れ点は $M_{cr} &gt; 0$ のときだけ置く。降伏点は $\phi_{cr} &lt; \phi_y &lt; \phi_u$・$M_{cr} &lt; M_y &lt; \beta_1 M_{u0}$ のときだけ置く (高い軸力では降伏点を求められず省く)。$M_{cr} \ge \beta_1 M_{u0}$ なら、ひび割れ点の割線の勾配で $\beta_1 M_{u0}$ まで。杭中間部の $\phi_C$ は、ひび割れ点・降伏点・終局点の 4 点がそろうときだけ使う。解析では終点より先を最後の区間の勾配のまま延ばす</td></tr>
+                        <tr><th>適用外</th><td>終点より先の頭打ち (そこまで達した要素は安全限界の曲げの検定で判定する)。繰り返し載荷の履歴。杭頭部が鉄筋コンクリート部の杭頭は<a href="#cond-insitu-rc-mphi">場所打ち RC 杭の M-φ</a></td></tr>
+                        <tr><th>参照箇所</th><td>「基礎部材の強度と変形性能」4 章、<a href="#cond-insitu-steel-pipe-bending">場所打ち鋼管コンクリート杭の曲げ</a>、<a href="#h-杭体の非線形性（M-φ関係）">杭体の非線形性</a></td></tr>
+                        <tr><th>計算例</th><td><a href="#cond-insitu-steel-pipe-bending">曲げの表</a>と同じ断面、$N = 3{,}000$ kN ($\phi$ は $\times 10^{-3}$ 1/m、$M$ は kN·m): ひび割れ (0.485, 977.3)・降伏 (4.436, 4,642.5)・$M_{u0} = 5{,}152.2$。杭頭部の終局点は (7.914, 5,152.2)、杭中間部は (4.986, 5,152.2)</td></tr>
+                    </table>
+
 
                     <figure>
                         <img src="images/解説図1.1.png" alt="基礎地盤の強度と変形性能 解説図1.1" width="600">
