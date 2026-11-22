@@ -57,6 +57,16 @@ namespace PileDesign.Models.InputData
             ? CatalogMassPerM * UnitConversion.TON_TO_KN   // t/m -> kN/m
             : ((RebarAgInSection + TendonAp + PipeAs) * UnitConversion.STEEL_UNIT_WEIGHT + Ac * ConcreteGamma) * Math.Pow(10, -6);
 
+        /// <summary>
+        /// 杭の材料が押しのける水の体積 (m³/m)。引抜き抵抗の自重 <see cref="W"/> から、地下水位より下の部分の浮力を
+        /// 差し引くのに使う (基礎指針'19 式 6.5.1: W は杭の自重で、地下水位以下の部分は浮力を考慮する)。
+        /// 自重と同じ断面積 (コンクリート + 鉄筋・PC 鋼材・鋼管、公称) で数え、中空部は含めない (中は水か土)。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public double DisplacedVolumePerM
+            => (RebarAgInSection + TendonAp + PipeAs + Ac) * Math.Pow(10, -6);
+
         // 軸剛性 (kN)
         // 合成断面: コンクリート + 主筋 + PC鋼材 + 鋼管（Es·As）。鋼管を持たない断面では PipeAs=0 のため影響なし。
         [System.Text.Json.Serialization.JsonIgnore]

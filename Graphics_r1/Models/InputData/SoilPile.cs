@@ -1186,6 +1186,29 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        /// <summary>
+        /// 引抜き抵抗に足す杭の自重 W (kN)。基礎指針'19 式 6.5.1 の W は「杭の自重で、地下水位以下の部分については
+        /// 浮力を考慮する」。地下水位 (<see cref="GroundInput.GroundWaterTableAltitude"/>) より下の部分は、
+        /// 材料が押しのける水の重さ (γw × <see cref="PileSection.DisplacedVolumePerM"/>) を差し引く。
+        ///
+        /// <para>2026-11-22 まで浮力を差し引かず空中の重量を足していた (引抜き抵抗を大きく見る危険側)。
+        /// 利用者が指針の定義を確認して直した。周面のチェックによらず全区間を数える。</para>
+        /// </summary>
+        internal double UpliftSelfWeight()
+        {
+            if (PileCircumVerticals == null) return 0.0;
+            double waterLevel = GroundInput?.GroundWaterTableAltitude ?? double.NegativeInfinity;
+            double w = 0.0;
+            foreach (var pcv in PileCircumVerticals)
+            {
+                var section = pcv.PileBodySegment.PileSection;
+                double upper = Math.Max(pcv.Top, pcv.Bottom), lower = Math.Min(pcv.Top, pcv.Bottom);
+                double submerged = Math.Max(Math.Min(upper, waterLevel) - lower, 0.0);
+                w += section.W * pcv.L - UnitConversion.WATER_UNIT_WEIGHT * section.DisplacedVolumePerM * submerged;
+            }
+            return w;
+        }
+
         // 抵抗力の計算メソッド
         public void CalculateResistances()
         {
@@ -1207,7 +1230,7 @@ namespace PileDesign.Models.InputData
                 Rtr -= (1.0 / 1.2) * toe;
             }
 
-            double w = PileCircumVerticals.Sum(pcv => pcv.PileBodySegment.PileSection.W * pcv.L);
+            double w = UpliftSelfWeight();
 
             Rtu -= w;
             Rty -= w;
@@ -1452,7 +1475,7 @@ namespace PileDesign.Models.InputData
             // 負になると畑中式の内部摩擦角が sqrt(負) で NaN になり、受働土圧が静かに NaN に
             // なる (地表 0・応力計算面 -3・地下水位 -1・γ=18 で z=-3.5 のとき σ' = -16)。
             double waterTop = Math.Min(waterLevel, stressLevel);
-            effectiveStress -= Math.Max(waterTop - z, 0) * 10;
+            effectiveStress -= Math.Max(waterTop - z, 0) * UnitConversion.WATER_UNIT_WEIGHT;
 
             return effectiveStress;
         }

@@ -90,6 +90,12 @@ public static class UnitConversion
     /// 鋼材の単位体積重量 [kN/m³]。鉄筋・PC鋼材・鋼管の自重に使う。
     /// </summary>
     public const double STEEL_UNIT_WEIGHT = 78.5;
+
+    /// <summary>
+    /// 水の単位体積重量 [kN/m³]。有効応力の水圧と、引抜き抵抗の杭の自重の浮力に使う。
+    /// 2026-11-22 まで有効応力の式に 10 を直に書いていた (値は同じ)。
+    /// </summary>
+    public const double WATER_UNIT_WEIGHT = 10.0;
 }
 
 /// <summary>

@@ -234,6 +234,15 @@ namespace TestProject1
             Assert.AreEqual(pile.Rtu / 3, pile.Rt_SLS, 1e-9);
             Assert.AreEqual((pile.Rty, pile.Rtr), (pile.Rt_DLS, pile.Rt_ULS));
 
+            // 地下水位 −5 m: その下の 15 m は浮力 (γw = 10 × 材料の体積) を差し引く (基礎指針'19 式 6.5.1 の W の定義。
+            // 2026-11-22 まで空中の重量のまま足していた)
+            Assert.IsTrue(section.DisplacedVolumePerM > 0, "(前提) 材料の体積が 0");
+            pile.GroundInput = new GroundInput { GroundWaterTableAltitude = -5 };
+            pile.CalculateResistances();
+            double wBuoyant = section.W * 20 - 10.0 * section.DisplacedVolumePerM * 15;
+            Assert.AreEqual(-(friction + wBuoyant), pile.Rtu, 1e-6, "地下水位より下の浮力を差し引いていない");
+            Assert.AreEqual(-(friction / 1.2 + wBuoyant), pile.Rtr, 1e-6);
+
             // 計算例 (W = 500 kN と置く)
             string table = Tables()["cond-uplift"];
             StringAssert.Contains(table, $"$\\psi = {psi:0.000}$ m");

@@ -97,7 +97,7 @@ namespace PileDesign.Output
                 ConcreteModelOptions.MapLimitStateText(": 抵抗係数（使用限界 1/3、損傷限界 1/1.5、終局限界 1/1）")]);
             AddSymbolDescriptionWithTab(body, tab, [Tex(@"\R_{TU}, \R_{TR}, \R_{TY}"), ": 最大・残留・降伏引抜き抵抗力 [kN]"]);
             AddSymbolDescriptionWithTab(body, tab, [Tex(@"\tau_{sti}, \tau_{cti}"), ": 砂質土・粘性土の引抜き時最大周面抵抗力度 [kN/m<^2>]（押込み時の 2/3・4/5）"]);
-            AddSymbolDescriptionWithTab(body, tab, [Tex(@"\L_{si}, \L_{ci}"), ": 各土層（砂質土・粘性土）の杭長 [m]、", Tex(@"W"), ": 杭の自重 [kN]"]);
+            AddSymbolDescriptionWithTab(body, tab, [Tex(@"\L_{si}, \L_{ci}"), ": 各土層（砂質土・粘性土）の杭長 [m]、", Tex(@"W"), ": 杭の自重 [kN]（地下水位以下の部分は浮力を差し引く）"]);
         }
 
         // 沈下量の節
