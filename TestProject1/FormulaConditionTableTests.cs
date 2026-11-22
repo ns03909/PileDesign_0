@@ -652,6 +652,47 @@ namespace TestProject1
             }
         }
 
+        /// <summary>
+        /// 場所打ち RC 杭の曲げの表: 計算例が検定と同じ N-M 曲線の値と一致し、低減係数 (使用 1.0、損傷 L1 1.0・L2 1.0/0.65、
+        /// 安全 0.95/0.52) と軸力の範囲 (−0.05〜0.4 ξFc·πD²/4) が表のとおりであること。
+        /// </summary>
+        [TestMethod]
+        public void TheInsituRcBendingExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-insitu-rc-bending"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.RcSection]();
+            if (s.CreateSectionCalculator() is not InsituReinforcedConcreteSection c) { Assert.Fail("(前提) RC の断面計算オブジェクトを作れない"); return; }
+            Assert.AreEqual((1000.0, 27.0, 0.75, 23.0, "SD390", 20, "D25", 600.0), (s.PileDiameter, s.ConcreteFc, s.ConcreteGsi, s.ConcreteGamma, c.MainBars.Grade, s.MainBarNum, s.MainBarSize, c.MainBarPCD), "(前提) 代表断面が変わった");
+            string K(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
+            StringAssert.Contains(table, $"$E_c = {c.InsituConcrete.Ec.ToString("#,0", CultureInfo.InvariantCulture).Replace(",", "{,}")}$ N/mm²");
+            Assert.AreEqual(0.003, c.InsituConcrete.EpsilonCu);
+
+            double M(bool f, SectionLimitState l, int lv, double n) => CurveMomentAt(s, f, l, lv, n);
+            // N = 3,000 kN: σ0 ≦ ξFc/3 (β は使用 1.0・損傷 1.0・安全 0.95)
+            double ms = M(true, SectionLimitState.Service, 1, 3000), md1 = M(true, SectionLimitState.Damage, 1, 3000);
+            double mu0 = M(false, SectionLimitState.Ultimate, 2, 3000), mu = M(true, SectionLimitState.Ultimate, 2, 3000);
+            Assert.AreEqual(M(false, SectionLimitState.Service, 1, 3000), ms, 1e-9 * ms, "使用限界の β1 は 1.0");
+            Assert.AreEqual(md1, M(true, SectionLimitState.Damage, 2, 3000), 1e-9 * md1, "σ0 ≦ ξFc/3 の損傷限界 L2 は β2 = 1.0");
+            Assert.AreEqual(0.95 * mu0, mu, 1e-3 * mu, "安全限界は 0.95");
+            StringAssert.Contains(table, $"$M_s = {K(ms)}$ kN·m、$M_d = {K(md1)}$ kN·m (レベル1・2 とも)、$M_{{u0}} = {K(mu0)}$ で $M_u = 0.95 \\times M_{{u0}} = {K(mu)}$ kN·m");
+
+            // N = 6,000 kN: σ0 > ξFc/3 (損傷 L2 は 0.65、安全は 0.52)
+            double d1 = M(true, SectionLimitState.Damage, 1, 6000), d2 = M(true, SectionLimitState.Damage, 2, 6000);
+            double u0 = M(false, SectionLimitState.Ultimate, 2, 6000), u = M(true, SectionLimitState.Ultimate, 2, 6000);
+            Assert.AreEqual(0.65 * d1, d2, 1e-3 * d2, "損傷限界 L2 は 0.65");
+            Assert.AreEqual(0.52 * u0, u, 1e-3 * u, "安全限界は 0.80 × 0.65");
+            Assert.IsTrue(double.IsNaN(M(true, SectionLimitState.Service, 1, 6000)), "N = 6,000 kN は使用限界の曲線の外のはず");
+            StringAssert.Contains(table, $"$M_d = {K(d1)}$ (レベル1)・$0.65 \\times {K(d1)} = {K(d2)}$ kN·m (レベル2)、$M_{{u0}} = {K(u0)}$ で $M_u = {K(u)}$ kN·m");
+
+            // 低減後の曲線の範囲: −0.05〜0.4 ξFc·πD²/4
+            double ag = Math.PI * 1000 * 1000 / 4, xfc = 0.75 * 27;
+            Assert.AreEqual(-0.05 * xfc * ag, c.UltimateLimitAxialForceThresholds[0], 1e-6);
+            Assert.AreEqual(0.4 * xfc * ag, c.UltimateLimitAxialForceThresholds[^1], 1e-6);
+            Assert.AreEqual(-0.05 * xfc * ag, c.DamageLimitAxialForceThresholds[0], 1e-6);
+            Assert.AreEqual(0.4 * xfc * ag, c.DamageLimitAxialForceThresholds[^1], 1e-6);
+            Assert.IsFalse(M(true, SectionLimitState.Ultimate, 2, 0.4 * xfc * ag / 1000 + 50) > 0, "範囲の外で曲げ耐力が残っている");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
