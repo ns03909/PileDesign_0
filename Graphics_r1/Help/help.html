@@ -12517,19 +12517,24 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
 
                     <h3 id="h-SC-杭の換算断面性能">SC 杭の換算断面性能</h3>
                     <p>
-                        鋼管をコンクリートに対し $n=5$ で換算する。
+                        鋼管をコンクリートに対し $n=5$ で換算する。鋼管はコンクリートの外側にあって重ならないので、$n-1$ ではなく $n$ を掛ける。
                     </p>
                     <p>
                         $$
                         I = \frac{\pi (r_o^4 - r_i^4)}{4}, \quad
-                        I_e = I + \tfrac{1}{2}(n-1)\,A_p r_p^2, \quad
+                        I_e = I + n\,I_s, \quad
                         Z_e = \frac{I_e}{r_o}
+                        $$
+                        $$
+                        A_c = \pi (r_o^2 - r_i^2), \quad
+                        A_e = A_c + n\,A_s
                         $$
                     </p>
                     <ul class="symbol-list">
                         <li class="symbol-intro">ここに、</li>
-                        <li><span class="symbol-label">$A_p, r_p$</span>鋼管の換算断面積・配置半径 ($A_p = A_{s,\text{pipe}}$、$r_p = D/2 - t/2$)</li>
-                        <li><span class="symbol-label">$D, t$</span>鋼管外径・肉厚</li>
+                        <li><span class="symbol-label">$r_o, r_i$</span>コンクリートの外半径 (鋼管の内面)・内半径</li>
+                        <li><span class="symbol-label">$A_s, I_s$</span>鋼管の断面積 $\pi t (D - t)$・断面二次モーメント</li>
+                        <li><span class="symbol-label">$D, t$</span>鋼管外径・肉厚 (腐食代を除いた値)</li>
                     </ul>
 
                     <h3 id="h-SC-杭の使用限界曲げモーメント">SC 杭の使用限界曲げモーメント $M_s$</h3>
@@ -12545,9 +12550,9 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     </div>
                     <ul class="symbol-list">
                         <li class="symbol-intro">記号</li>
-                        <li><span class="symbol-label">$M_{s1}$</span>コンクリートの圧縮縁が使用限界引張応力度 $f_{t,sp}$ に達するときの曲げモーメント</li>
-                        <li><span class="symbol-label">$M_{s2}$</span>鋼管の引張縁が使用限界引張応力度 $f_{t,sp}$ に達するときの曲げモーメント</li>
-                        <li><span class="symbol-label">$M_{s3}$</span>鋼管の圧縮縁が使用限界圧縮応力度 $f_{c,sp}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{s1}$</span>コンクリートの圧縮縁が使用限界圧縮応力度 $F_c/3.5$ に達するときの曲げモーメント (コンクリートの引張は見込まない)</li>
+                        <li><span class="symbol-label">$M_{s2}$</span>鋼管の引張縁が使用限界引張応力度 $F/1.5$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{s3}$</span>鋼管の圧縮縁が使用限界圧縮応力度 $F/1.5$ に達するときの曲げモーメント</li>
                         <li><span class="symbol-label">$\beta_1$</span>$= 1.0$ (SC 杭、設計式の信頼性に基づく低減係数)</li>
                     </ul>
 
@@ -12564,9 +12569,9 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     </div>
                     <ul class="symbol-list">
                         <li class="symbol-intro">記号</li>
-                        <li><span class="symbol-label">$M_{d1}$</span>コンクリートの圧縮縁が損傷限界引張応力度 $f_{t,sp}$ に達するときの曲げモーメント</li>
-                        <li><span class="symbol-label">$M_{d2}$</span>鋼管の引張縁が損傷限界引張応力度 $f_{t,sp}$ に達するときの曲げモーメント</li>
-                        <li><span class="symbol-label">$M_{d3}$</span>鋼管の圧縮縁が損傷限界圧縮応力度 $f_{c,sp}$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{d1}$</span>コンクリートの圧縮縁が損傷限界圧縮応力度 $2F_c/3.5$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{d2}$</span>鋼管の引張縁が損傷限界引張応力度 $F$ に達するときの曲げモーメント</li>
+                        <li><span class="symbol-label">$M_{d3}$</span>鋼管の圧縮縁が損傷限界圧縮応力度 $F$ に達するときの曲げモーメント</li>
                         <li><span class="symbol-label">$\beta$</span>$\beta_1 \cdot \beta_2 = 1.0 \times 1.0 = 1.0$</li>
                     </ul>
 
@@ -12583,8 +12588,9 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                             <span class="symbol-label">$M_{u0}$</span>断面の曲げ解析によって得られる安全限界時の曲げモーメントで、低減係数 $\beta$ を乗じる前の値。
                             鋼管とコンクリートの応力-ひずみ関係（コンクリートは線形弾性＝引張無視・圧縮応力度に上限を設ける）から断面合力を積分し、
                             圧縮縁ひずみ度 $\varepsilon_{cu}$ と曲率を反復することで指定軸力 $N$ に対応する曲げモーメントを求める。
-                            $\varepsilon_{cu}$ は $(D - 2t_s)/t_c \leq 6$ (高靱性、コンクリート肉厚に対し中空内径が小さい)
-                            を満たす場合 $\varepsilon_{cu} = 0.004$、それ以外は $\varepsilon_{cu} = 0.003$ に設定する。
+                            $\varepsilon_{cu}$ はコンクリートの外縁 (鋼管の内面) のひずみで、$(D - 2t_s)/t_c \leq 6$ (コンクリート肉厚に対し中空内径が小さい)
+                            なら軸力比 $N/N_0$ で変わる (0.2 未満で 0.004、0.2〜0.3 は $0.006 - 0.010\,N/N_0$、0.3 以上で 0.003)。
+                            それ以外は $\varepsilon_{cu} = 0.003$。$N_0$ は<a href="#h-SC-杭の軸力の適用範囲">軸力の適用範囲</a>と同じ量。
                         </li>
                         <li><span class="symbol-label">$\beta$</span>$\beta_1 \cdot \beta_2 = 1.0$ (SC 杭、N-M 曲線そのものは <code>UltimateLimitBeta = [0, 1, 0]</code> の構成で軸力制限値外を 0 にクリップ)</li>
                     </ul>
@@ -12601,6 +12607,15 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                         曲げ軸力制限値 $[-0.4\,F\cdot 1.1\,A_s,\;0.5\,(F\cdot 1.1\,A_s + A_c F_c)]$ の外で $M = 0$ にクリップする。
                         M-φ 関係を構築する際は別途 $\beta_1 = 0.9$ を乗じてモーメント値を低減する。
                     </p>
+
+                    <table class="formula-conditions" id="cond-sc-bending">
+                        <tr><th>適用対象</th><td>SC 杭の曲げの限界値 $M_s$・$M_d$・$M_u$ (検定の曲げと N-M 曲線)</td></tr>
+                        <tr><th>入力</th><td>杭断面ウィンドウの製品 (鋼管の外径・板厚・規格、コンクリートの肉厚・$F_c$)・腐食代、検定する杭の軸力 $N$</td></tr>
+                        <tr><th>採用値</th><td>鋼管は腐食代を除いた外径・板厚。限界は縁のひずみで決める (断面の曲げ解析)。使用限界はコンクリート $F_c/3.5$・鋼管 $F/1.5$、損傷限界はコンクリート $2F_c/3.5$・鋼管 $F$ (コンクリートの引張は見込まない)。安全限界は $\varepsilon_{cu}$ (上の説明) と鋼管の降伏 $1.1F$。低減係数はすべて 1.0 (損傷限界はレベル1・2 で同じ値)</td></tr>
+                        <tr><th>適用外</th><td>低減後の曲線は軸力比 $N/N_0$ が $-0.40$〜$0.50$ の範囲だけ (<a href="#h-SC-杭の軸力の適用範囲">7.2 節</a>)。外の軸力では曲線が無いか $M = 0$ で、検定は OK / NG を出さず「範囲外」とする。低減前の曲線はこの範囲によらない</td></tr>
+                        <tr><th>参照箇所</th><td>「基礎部材の強度と変形性能」7.1〜7.6・7.2 節、<a href="#h-SC-杭の換算断面性能">換算断面性能</a>、<a href="#h-検定ウィンドウ">検定</a></td></tr>
+                        <tr><th>計算例</th><td>SC-400-標準-80-4.5 (SKK400、腐食代 1 mm → 鋼管 $D = 398$・$t = 3.5$ mm、$A_s = 4{,}338$ mm²、$F_c = 80$、コンクリート肉厚 60.5 mm)、$N = 1{,}000$ kN ($N/N_0 = 0.163$、$(D - 2t)/t_c = 6.46 &gt; 6$ なので $\varepsilon_{cu} = 0.003$): $M_s = 74.88$ kN·m、$M_d = 197.09$ kN·m、$M_u = 316.83$ kN·m。適用範囲は $N = -448.5$〜$3{,}073.3$ kN</td></tr>
+                    </table>
 
                     <h3 id="sc-shear-monqd">SC 杭のせん断と $M/(Q\!\cdot\! d)$</h3>
                     <p>

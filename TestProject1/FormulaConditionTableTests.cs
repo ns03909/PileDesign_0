@@ -380,6 +380,34 @@ namespace TestProject1
             Assert.AreEqual(0.0, CurveMomentAt(s, true, SectionLimitState.Damage, 2, (2.0 - c.SigmaE) * c.Ae / 1000), 1e-9);
         }
 
+        /// <summary>
+        /// SC 杭の曲げの計算例が、検定と同じ N-M 曲線の値と一致する。低減係数は 1.0 (範囲内では低減の前後で同じ)、
+        /// 低減後の曲線は軸力比 −0.40〜0.50 の範囲だけ。ヘルプの換算断面 (Ae = Ac + n·As) も実装と合わせる
+        /// (2026-11-22 まで (n − 1)·Ap·rp² の形で書かれていた)。
+        /// </summary>
+        [TestMethod]
+        public void TheScBendingExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-sc-bending"];
+            var s = SectionInvariantTests.Recipes[PileDesign.Constants.PileTypeNames.Sc]();
+            if (s.CreateSectionCalculator() is not SCSection c) { Assert.Fail("(前提) SC の断面計算オブジェクトを作れない"); return; }
+            Assert.AreEqual(("SC-400-標準-80-4.5", "SKK400", 1.0), (s.SelectedPrecastPile?.Name, s.PipeGrade, s.CorrosionDepth), "(前提) 代表断面が変わった");
+            static string F2(double v) => v.ToString("0.00", CultureInfo.InvariantCulture);
+
+            foreach (var (limit, name) in new[] { (SectionLimitState.Service, "M_s"), (SectionLimitState.Damage, "M_d"), (SectionLimitState.Ultimate, "M_u") })
+            {
+                double factored = CurveMomentAt(s, true, limit, 2, 1000), unfactored = CurveMomentAt(s, false, limit, 2, 1000);
+                StringAssert.Contains(table, $"${name} = {F2(factored)}$ kN·m", $"{name} が表と違います");
+                Assert.AreEqual(unfactored, factored, 1e-6, $"{name}: SC 杭の低減係数は 1.0");
+            }
+            Assert.AreEqual(CurveMomentAt(s, true, SectionLimitState.Damage, 1, 1000), CurveMomentAt(s, true, SectionLimitState.Damage, 2, 1000), 1e-9, "損傷限界はレベル1・2 で同じ");
+            StringAssert.Contains(table, $"$N = {N1(c.BendNMin / 1000)}$〜${N1(c.BendNMax / 1000)}$ kN");
+            StringAssert.Contains(table, $"$N/N_0 = {1000e3 / (c.BendNMax / 0.5):0.000}$");
+            Assert.AreEqual(c.Ae, c.Ac + 5 * c.Asp, 1e-6, "換算断面積は Ac + n·As (n = 5)");
+            // 範囲の外は曲線が無い (NaN) か 0。検定はどちらも M > 0 でないので「範囲外」にする
+            Assert.IsFalse(CurveMomentAt(s, true, SectionLimitState.Ultimate, 2, c.BendNMin / 1000 - 10) > 0, "範囲の外で曲げ耐力が残っている");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
