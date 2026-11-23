@@ -13,7 +13,8 @@ namespace TestProject1
     /// 断面形状係数 kc = 0.72 を<b>それぞれ書き写して</b>いた。1 か所にまとめたが、
     /// まとめ方を間違えても例外にはならず、曲線の高さが変わるだけで気づけない。
     ///
-    /// 期待値はまとめる前のコードから取った実測値。
+    /// 期待値はまとめる前のコードから取った実測値。軸力の端と安全限界は、鉄筋の断面積を JIS の公称値
+    /// (D25 = 506.7 mm²) にしたとき (2026-11-23) に取り直した (換算断面積と pt が変わる)。
     /// </summary>
     [TestClass]
     public class InsituRcShearQNTests
@@ -50,8 +51,8 @@ namespace TestProject1
         public void TheShearCurves_KeepTheirValues()
         {
             var s = Calc();
-            const double n0 = -883203.0457934595;
-            const double nLast = 6986136.092226266;
+            const double n0 = -883150.9822399961;
+            const double nLast = 6985724.26951837;
 
             Curve(s.GetServiceLimitQNInteraction(3.0, false), 100,
                 264742.55452046875, 352869.1856827618, n0, nLast, "使用限界");
@@ -66,9 +67,9 @@ namespace TestProject1
                 268051.8364519746, 359064.61478483275, n0, nLast, "損傷限界 L2(低減後)");
 
             Curve(s.GetUltimateQNInteraction(3.0, 0.004, 295.0, false), 100,
-                818301.2213933341, 1100105.7639742296, n0, nLast, "安全限界");
+                818259.0442162164, 1100063.586797112, n0, nLast, "安全限界");
             Curve(s.GetUltimateQNInteraction(3.0, 0.004, 295.0, true), 102,
-                490980.7328360006, 663445.1128955086, n0, nLast, "安全限界(低減後)");
+                490955.42652973, 663419.806589238, n0, nLast, "安全限界(低減後)");
         }
 
         /// <summary>

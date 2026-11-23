@@ -447,27 +447,13 @@ namespace PileDesign.Models.InputData
             bool apply11F = YieldAt11F && Grade != "SD490";
             RSigmaY = apply11F ? 1.1 * BaseSigmaY : BaseSigmaY;
         }
-        private static readonly Dictionary<string, double> BarAreas = new()
-        {
-            ["D10"] = 71.3,
-            ["D13"] = 127.0,
-            ["D16"] = 199.0,
-            ["D19"] = 287.0,
-            ["D22"] = 387.0,
-            ["D25"] = 507.0,
-            ["D29"] = 642.0,
-            ["D32"] = 794.0,
-            ["D35"] = 957.0,
-            ["D38"] = 1140.0,
-            ["D41"] = 1340.0,
-            ["D51"] = 2027.0
-        };
-
         internal void SetAg()
         {
             try
             {
-                if (!BarAreas.TryGetValue(BarSize, out double area))
+                // 表は PileDesign.Constants.RebarAreas の 1 か所 (JIS の公称値)
+                double area = PileDesign.Constants.RebarAreas.Of(BarSize);
+                if (!PileDesign.Constants.RebarAreas.Contains(BarSize))
                 {
                     area = 0.0;
                     Serilog.Log.Debug($"Warning: Invalid BarSize '{BarSize}' detected.");

@@ -88,11 +88,17 @@ namespace TestProject1
                 var on = CreateExample10Section().GetMPhiRelationship(nkN);
 
                 Assert.AreEqual(off.Moments.Count, on.Moments.Count, $"点数不一致 N={nkN:F0}kN");
+                // 許容は相対 1e-7。解析の M-φ はどちらもバイリニアで積分するが、Mu0 を求める反復
+                // (GetUltimateMomentForSpecificN) は初期値を安全限界の N-M 曲線から取り、その曲線は
+                // オプション ON では e 関数で作られる。出発点が違うので、反復の許容差 (軸力の残差 0.1 N)
+                // の範囲で答えが揺れる。以前の 1e-9 は反復の精度より厳しく、鉄筋の断面積を JIS の
+                // 公称値にした (2026-11-23) ときに 2.4e-9 で落ちた。e 関数の曲線が紛れ込めば数 % 違うので、
+                // 1e-7 でも取り違えは確実に捕まる。
                 for (int i = 0; i < off.Moments.Count; i++)
                 {
-                    Assert.AreEqual(off.Moments[i], on.Moments[i], System.Math.Max(1e-6, System.Math.Abs(off.Moments[i]) * 1e-9),
+                    Assert.AreEqual(off.Moments[i], on.Moments[i], System.Math.Max(1e-6, System.Math.Abs(off.Moments[i]) * 1e-7),
                         $"解析M-φ Mが不一致（N={nkN:F0}kN, i={i}）: off={off.Moments[i]:F3}, on={on.Moments[i]:F3}");
-                    Assert.AreEqual(off.Phis[i], on.Phis[i], System.Math.Max(1e-15, System.Math.Abs(off.Phis[i]) * 1e-9),
+                    Assert.AreEqual(off.Phis[i], on.Phis[i], System.Math.Max(1e-15, System.Math.Abs(off.Phis[i]) * 1e-7),
                         $"解析M-φ φが不一致（N={nkN:F0}kN, i={i}）");
                 }
             }

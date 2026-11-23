@@ -427,25 +427,8 @@ namespace PileDesign.Models.InputData
             "SD295", "SD345", "SD390", "SD490"
         ];
 
-        internal static double GetBarArea(string barSize)
-        {
-            return barSize switch
-            {
-                "D10" => 71.3,
-                "D13" => 127.0,
-                "D16" => 199.0,
-                "D19" => 287.0,
-                "D22" => 387.0,
-                "D25" => 507.0,
-                "D29" => 642.0,
-                "D32" => 794.0,
-                "D35" => 957.0,
-                "D38" => 1140.0,
-                "D41" => 1340.0,
-                "D51" => 2027.0,
-                _ => 0.0
-            };
-        }
+        /// <summary>鉄筋の公称断面積 (mm²)。表は <see cref="PileDesign.Constants.RebarAreas"/> の 1 か所 (JIS の公称値)。</summary>
+        internal static double GetBarArea(string barSize) => PileDesign.Constants.RebarAreas.Of(barSize);
 
         // 鉄筋径
         private string _mainBarSize1 = "D41";

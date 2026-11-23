@@ -1048,8 +1048,8 @@ namespace TestProject1
                 double Q(SectionLimitState limit, bool factored) => s.DescribeShearLimit(limit, 2, factored, 2.0, 2000.0)!.ValueN / 1000;
 
                 double b = 600 * Math.Sqrt(Math.PI), d = b - 150, j = 7.0 / 8.0 * d, ac = Math.PI * 1200 * 1200 / 4;
-                // 主筋の D25 は 507 mm² (PileSection の表。JIS の公称値 506.7 ではない)。MD16 は工法の表の 198.6 mm²
-                double pw = 2 * 198.6 / (b * 100), pt = 7 * 507.0 * 100 / (b * d);
+                // 主筋の D25 は JIS の公称値 506.7 mm² (RebarAreas)。MD16 は工法の表の 198.6 mm²
+                double pw = 2 * 198.6 / (b * 100), pt = 7 * 506.7 * 100 / (b * d);
                 Assert.AreEqual(pw, s.HoopPw, 1e-12, "pw = 2aw/(b·x)");
                 StringAssert.Contains(table, $"$b = {N1(b)}$・$d = {N1(d)}$・$j = {N1(j)}$ mm、$p_w = {pw * 100:0.000}\\%$・$p_t = {pt:0.000}\\%$");
 
@@ -1095,7 +1095,7 @@ namespace TestProject1
                 double Q(SectionLimitState limit, bool factored, double monQd = 2.0) => s.DescribeShearLimit(limit, 2, factored, monQd, 2000.0)!.ValueN / 1000;
 
                 double b = 600 * Math.Sqrt(Math.PI), d = b - 150, j = 7.0 / 8.0 * d, jt = b - 300, ac = Math.PI * 1200 * 1200 / 4;
-                double pw = 2 * 124.7 / (b * 100), pt = 7 * 507.0 * 100 / (b * d);
+                double pw = 2 * 124.7 / (b * 100), pt = 7 * 506.7 * 100 / (b * d);
                 double lfs = Math.Min(30.0 / 40, 0.75 * (0.49 + 0.30));
                 Assert.AreEqual(pw, s.HoopPw, 1e-12, "pw = 2aw/(b·x)");
                 StringAssert.Contains(table, $"U12.6@100: $p_w = {pw * 100:0.000}\\%$");

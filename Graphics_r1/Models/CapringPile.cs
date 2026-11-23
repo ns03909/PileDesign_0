@@ -264,22 +264,8 @@ namespace PileDesign.Models
             _ => 345.0,
         };
 
-        /// <summary>1 本あたりの呼び径から断面積 (mm²) を計算</summary>
-        public static double GetBarArea(string? barSize) => barSize?.Trim().ToUpperInvariant() switch
-        {
-            "D10" => 71.33,
-            "D13" => 126.7,
-            "D16" => 198.6,
-            "D19" => 286.5,
-            "D22" => 387.1,
-            "D25" => 506.7,
-            "D29" => 642.4,
-            "D32" => 794.2,
-            "D35" => 956.6,
-            "D38" => 1140.0,
-            "D41" => 1340.0,
-            _ => 0.0,
-        };
+        /// <summary>1 本あたりの呼び径から断面積 (mm²)。表は <see cref="PileDesign.Constants.RebarAreas"/> の 1 か所 (JIS の公称値)。</summary>
+        public static double GetBarArea(string? barSize) => PileDesign.Constants.RebarAreas.Of(barSize?.Trim().ToUpperInvariant());
 
         // ───────── 計算結果 ─────────
         private double _ke;
