@@ -1121,6 +1121,42 @@ namespace TestProject1
             finally { ConcreteModelOptions.Notification1113CompressionCase = savedCase; }
         }
 
+        /// <summary>
+        /// 鋼管杭の曲げ・せん断の計算例を SteelPipeSection で解いて一致すること。
+        /// 杭中間部の Ms・Md・Mu・Qu は手計算 (式 8.4・8.7・8.23・8.26) とも突き合わせる。
+        /// </summary>
+        [TestMethod]
+        public void TheSteelPipeBendingAndShearExamplesMatchTheImplementation()
+        {
+            string bend = Tables()["cond-steel-pipe-bending"], shear = Tables()["cond-steel-pipe-shear"];
+            var s = new SteelPipeSection(800, 12, 235, 1.0, fc: 24, sigmaB: 400, e: 205000, bucklingLength: 0);
+            static string F2(double v) => v.ToString("0.00", CultureInfo.InvariantCulture);
+            static string F3(double v) => v.ToString("0.000", CultureInfo.InvariantCulture);
+            static double KNm(double nmm) => nmm / 1e6;
+
+            double sfc1 = 235 / 1.5 * (0.8 + 5 * 12.0 / 800), sft = 235 / 1.5, sAp = s.sAp, sZe = s.sZe, sZp = s.sZp;
+            Assert.AreEqual(sfc1, s.Sfc1, 1e-9, "sfc1 (D/t > 25)");
+            StringAssert.Contains(bend, $"${{}}_sf_{{c1}} = {F2(sfc1)}$、${{}}_sA_p = {N0(sAp)}$ mm²・${{}}_sZ_e = {F3(sZe / 1e6)} \\times 10^6$・${{}}_sZ_p = {F3(sZp / 1e6)} \\times 10^6$ mm³");
+
+            double n = 1000e3, sigN = n / sAp;
+            Assert.AreEqual((sfc1 - sigN) * sZe, s.GetServiceLimitMoment(n), 1e-3, "Ms (圧縮)");
+            Assert.AreEqual((sft - sigN) * sZe, s.GetServiceLimitMoment(-n), 1e-3, "Ms (引張)");
+            Assert.AreEqual((1.5 * sfc1 - sigN) * sZe, s.GetDamageLimitMomentMiddle(n), 1e-3, "Md 杭中間部 (圧縮)");
+            Assert.AreEqual(Math.Min(1.5 * sft - sigN, 1.5 * sfc1 + sigN) * sZe, s.GetDamageLimitMomentMiddle(-n), 1e-3, "Md 杭中間部 (引張、両縁の小さい方)");
+            double ratio = n / s.sNuc1;
+            Assert.IsTrue(ratio <= 0.2, "(前提) n ≦ 0.2");
+            Assert.AreEqual(1.1 * 1.5 * sfc1 * sZp, s.GetUltimateLimitMomentMiddle(n), 1e-3, "Mu 杭中間部 (n ≦ 0.2)");
+
+            StringAssert.Contains(bend, $"$N = 1{{,}}000$ kN (圧縮) で $M_s = {N1(KNm(s.GetServiceLimitMoment(n)))}$、杭中間部 $M_d = {N1(KNm(s.GetDamageLimitMomentMiddle(n)))}$・$M_u = {N1(KNm(s.GetUltimateLimitMomentMiddle(n)))}$ ($n = {F3(ratio)}$)、杭頭部 $M_d = {N1(KNm(s.GetDamageLimitMomentHead(n)))}$・$M_u = {N1(KNm(s.GetUltimateLimitMomentHead(n)))}$ kN·m");
+            StringAssert.Contains(bend, $"$N = -1{{,}}000$ kN (引張) で $M_s = {N1(KNm(s.GetServiceLimitMoment(-n)))}$、杭中間部 $M_d = {N1(KNm(s.GetDamageLimitMomentMiddle(-n)))}$・$M_u = {N1(KNm(s.GetUltimateLimitMomentMiddle(-n)))}$ kN·m");
+
+            double qs = 235 / (1.5 * Math.Sqrt(3)) * sAp / 2, q0 = 2 * 12 * 788 * 1.1 * 235 / Math.Sqrt(3), eta = n / (1.1 * 235 * sAp);
+            Assert.AreEqual(qs, s.GetServiceLimitShear(), 1e-6, "Qs");
+            Assert.AreEqual(1.5 * qs, s.GetDamageLimitShear(), 1e-6, "Qd");
+            Assert.AreEqual(q0 * Math.Sqrt(1 - eta * eta), s.GetUltimateLimitShearMiddle(n), 1e-6, "Qu 杭中間部");
+            StringAssert.Contains(shear, $"$Q_s = {N1(qs / 1e3)}$ kN・$Q_d = {N1(1.5 * qs / 1e3)}$ kN。${{}}_sQ_0 = {N1(q0 / 1e3)}$ kN、$N = 1{{,}}000$ kN で杭中間部 $\\eta = {F3(eta)}$・$Q_u = {N1(s.GetUltimateLimitShearMiddle(n) / 1e3)}$ kN、杭頭部 $Q_u = {N1(s.GetUltimateLimitShearHead(n) / 1e3)}$ kN");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
