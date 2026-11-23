@@ -319,5 +319,39 @@ namespace TestProject1
             Assert.IsTrue(with.Ndc < without.Ndc, "座屈を考慮しても損傷限界圧縮軸力が下がっていません");
             Assert.IsTrue(with.sNuc < without.sNuc, "座屈を考慮しても安全限界圧縮軸力が下がっていません");
         }
+
+        /// <summary>
+        /// 検定に使う損傷限界の軸力の範囲 (杭断面の DamageLimitAxialForceThresholds) も柱座屈を含む
+        /// Ndc = β1·min(sNdc1, sNdc2) (式 8.8) になること。
+        ///
+        /// 以前は範囲を作る側が sNdc1 だけを計算し直していて、SteelPipeSection.Ndc は正しいのに
+        /// 検定には届いていなかった (2026-11-23 に利用者の判断で式どおりにした)。
+        /// φ800×12 は液状化区間 25 m で sfc2 &lt; sfc1 になる (10 m では局部座屈が支配して変わらない)。
+        /// </summary>
+        [TestMethod]
+        public void TheDamageAxialRangeOfTheSectionIncludesColumnBuckling()
+        {
+            bool original = ConcreteModelOptions.ConsiderSteelPipeColumnBuckling;
+            try
+            {
+                ConcreteModelOptions.ConsiderSteelPipeColumnBuckling = true;
+                foreach (double lk in new[] { 0.0, 10.0, 25.0 })
+                {
+                    var p = new PileSection
+                    {
+                        PileBodyType = PileDesign.Constants.PileTypeNames.SteelPipe,
+                        PileSectionType = PileDesign.Constants.PileTypeNames.SteelPipeSection,
+                        PipeGrade = "SKK400", PipeDia = 800, PipeTs = 12, CorrosionDepth = 0,
+                        BucklingLength = lk,
+                    };
+                    _ = p.FactoredDamageNM;   // 範囲を作り直す
+                    var expected = Section(800, 12, 235, lk);
+                    Assert.AreEqual(expected.Ndc, p.DamageLimitAxialForceThresholds[1], 1e-6, $"lk = {lk} m: 損傷限界の圧縮側");
+                    if (lk == 25.0)
+                        Assert.IsTrue(expected.Ndc < expected.sNdc1 - 1.0, "(前提) 25 m では柱座屈が支配する");
+                }
+            }
+            finally { ConcreteModelOptions.ConsiderSteelPipeColumnBuckling = original; }
+        }
     }
 }

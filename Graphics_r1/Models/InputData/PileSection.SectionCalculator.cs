@@ -304,9 +304,13 @@ namespace PileDesign.Models.InputData
             double sNdc1 = 1.5 * sps.Sfc1 * sps.sAp;
             double sNdtPos = 1.5 * sps.sft  * sps.sAp;
             double Ndt = -beta1 * sNdtPos;
+            // 杭中間部は柱座屈を含む Ndc = β1·min(sNdc1, sNdc2) (式 8.8、SteelPipeSection.Ndc)。
+            // 以前はここで sNdc1 だけを計算し直しており、液状化区間が長く柱座屈 (sfc2 < sfc1) が効く杭で
+            // 損傷限界の圧縮側の範囲を広く見ていた (2026-11-23 利用者の判断で式 8.8 どおりにした)。
+            // 杭頭部 (コンクリート充填鋼管部) は従来どおり局部座屈側に充填コンクリートを足す。
             double Ndc = PileSectionType == PileTypeNames.CftSection
                 ? beta1 * (sNdc1 + sps.cNdc)
-                : beta1 * sNdc1;
+                : sps.Ndc;
             DamageLimitAxialForceThresholds = [Ndt, Ndc];
 
             // 安全限界 (N)
