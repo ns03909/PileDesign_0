@@ -69,7 +69,7 @@ namespace TestProject1
         /// 計算例9 の地盤 (地表面 0、地下水位 −1.5、0〜−0.8 γ14.7 / −0.8〜−1.5 γ14.7 / −1.5〜−2.5 γ15.7 / −2.5〜−8.5 γ17.7) に
         /// 根入部の区間を置いて組み立てる。
         /// </summary>
-        private static (ElementDivisionViewModel vm, GroundInput ground)? Build(double[] zs, Action<GroundInput>? customize = null)
+        internal static (ElementDivisionViewModel vm, GroundInput ground)? Build(double[] zs, Action<GroundInput>? customize = null)
         {
             var (input, _) = IntegrationTests.BuildExampleInputModel("Example9", "PileExample9");
             if (input?.ElementDivision?.SoilEmbedment == null) return null;
@@ -89,7 +89,7 @@ namespace TestProject1
             return (vm, ground);
         }
 
-        private static readonly double[] Zs = [0.0, -0.8, -1.5, -2.5, -3.5, -4.5, -5.5, -6.5];
+        internal static readonly double[] Zs = [0.0, -0.8, -1.5, -2.5, -3.5, -4.5, -5.5, -6.5];
 
         [TestMethod]
         public void BuiltSprings_UseEffectiveOverburdenFromTheGroundSurface()

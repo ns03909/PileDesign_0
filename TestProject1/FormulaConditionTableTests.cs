@@ -952,6 +952,40 @@ namespace TestProject1
             StringAssert.Contains(modelling, "pileTopZoneBottom = z0 - 0.5 * pileDia_m;");
         }
 
+        /// <summary>
+        /// 土圧合力ばねの計算例を、根入部を組む画面の計算 (ElementDivisionViewModel.SetDoatsuGoryokuBane) で
+        /// 計算例9 の地盤から組み立てて一致すること。y = ysp で pE = (pp − p0)/3 (基礎指針'19 図4.3.10 の定義) も確かめる。
+        /// </summary>
+        [TestMethod]
+        public void TheEarthPressureSpringExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-earth-pressure-spring"];
+            var built = EarthPressureSpringDepth20261009Tests.Build(EarthPressureSpringDepth20261009Tests.Zs);
+            if (built == null) { Assert.Inconclusive("例題ファイルなし"); return; }
+            var (vm, ground) = built.Value;
+            Assert.AreEqual("大崎式", ground.SelectedInternalFrictionAngleCalcumationMethod, "(前提) 内部摩擦角の算定法");
+            var bane = vm.DoatsuGoryokuBane;
+            var it = bane.Items.Single(i => Math.Abs(i.ZTop - -2.5) < 1e-9);
+            static string F2(double v) => v.ToString("0.00", CultureInfo.InvariantCulture);
+            static string F3(double v) => v.ToString("0.000", CultureInfo.InvariantCulture);
+
+            StringAssert.Contains(table, $"$\\sigma_z' = {F2(it.StressTop)}$〜${F2(it.StressBtm)}$ で平均 ${F2(it.StressMid)}$ kN/m²");
+            StringAssert.Contains(table, $"$\\phi = {F2(it.Phi)}°$・$K_p = {F3(it.Kp)}$");
+            StringAssert.Contains(table, $"$p_0 = {F2(it.P0)}$・$p_p = {F2(it.Pp)}$・$p_p - p_0 = {F2(it.Pp - it.P0)}$ kN/m²");
+            Assert.AreEqual(0.0, it.C, 0.0, "(前提) 細砂の c = 0");
+
+            Assert.AreEqual(0.325, bane.DeltaP, 1e-12, "Δp = 0.05 × 根入れ深さ 6.5 m");
+            Assert.AreEqual(0.0325, it.Ysp, 1e-12, "ysp = 0.1 Δp");
+            StringAssert.Contains(table, $"初期の傾き ${N0(it.GetTangentStiffness(0))}$ kN/m³");
+            StringAssert.Contains(table, $"$y = y_{{sp}}$ で $p_E = {F2(it.GetPressure(it.Ysp))}$、$y = 0.1$ m で $p_E = {F2(it.GetPressure(0.1))}$ kN/m²");
+            Assert.AreEqual((it.Pp - it.P0) / 3, it.GetPressure(it.Ysp), 1e-9, "ysp は受働土圧と静止土圧の差の 1/3 の相対変位");
+            Assert.AreEqual(it.Pp - it.P0, it.GetPressure(0.4), 1e-9, "Δp を超えると pp − p0 で一定");
+            Assert.AreEqual(-it.GetPressure(0.1), it.GetPressure(-0.1), 1e-12, "正負で同じ形");
+
+            Assert.AreEqual(36.8, it.DX, 1e-9, "(前提) Y 方向の受圧幅");
+            StringAssert.Contains(table, $"区間の合力は ${N0(it.GetPressure(0.1) * it.DX * it.DZ)}$ kN");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
