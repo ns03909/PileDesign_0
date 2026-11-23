@@ -94,6 +94,64 @@ namespace TestProject1
             Assert.AreEqual(section.ConcreteE, pb.PileTop.CaptainPile.Ep, 0.0, "杭体の Ec が届いていない");
         }
 
+        /// <summary>
+        /// Mu を「最大曲げモーメント」(全塑性) にしたとき。定着筋なし・中立軸が中心 (u = 0) なら、
+        /// 半円に一様に σmax で N = σmax·πr²/2、M = σmax·(2/3)r³ (閉じた式)。その N で Mu が一致する。
+        /// </summary>
+        [TestMethod]
+        public void TheMaximumMomentIsThePlasticLimit_WithoutBars()
+        {
+            var cp = Ring1200(0.85);
+            double atStrain = cp.GetMu(3000e3);
+            cp.UseMaximumUltimateMoment = true;
+            double r = 0.85 * 1200.0 / 2.0, smax = cp.CTPConcrete.SigmaMax;
+            double n = smax * Math.PI * r * r / 2.0;
+            Assert.AreEqual(smax * 2.0 / 3.0 * r * r * r, cp.GetMu(n), smax * r * r * r * 1e-9, "半円の全塑性");
+
+            double plastic = cp.GetMu(3000e3);
+            Assert.IsTrue(plastic > atStrain, $"全塑性 {plastic / 1e6:F1} は圧縮縁 0.003 の {atStrain / 1e6:F1} kN·m より大きいはず");
+            Assert.AreEqual(0.0, cp.GetMu(-1e3), 0.0, "定着筋なしの引張は 0");
+        }
+
+        /// <summary>
+        /// 定着筋あり (円形 8 本) の全塑性。中立軸が圧縮縁の外 (u = −r) なら全筋が引張降伏で N = −Ag·σy・M = 0、
+        /// 引張縁の外 (u = r) なら全断面圧縮で N = σmax·πr² + (σy − σmax)·Ag・M = 0。
+        /// 軸力の釣り合いを解いた Mu は、曲率を大きくするほど (εcu を上げるほど) 近づく上限で、0.003 の値より大きい。
+        /// </summary>
+        [TestMethod]
+        public void TheMaximumMomentIsThePlasticLimit_WithBars()
+        {
+            var cp = Ring1200(1.0);
+            cp.CTPTensionRebars.HasTensionRebars = true;
+            cp.CTPTensionRebars.IsCircleArrangement = true;
+            cp.CTPTensionRebars.IsSquareArrangement = false;
+            cp.CTPTensionRebars.SelectedBarNumberCircle = 8;
+            cp.CTPTensionRebars.TDorTB = 600.0;
+            cp.Update();
+            double atStrain = cp.GetMu(3000e3);
+
+            cp.UseMaximumUltimateMoment = true;
+            double r = 600.0, smax = cp.CTPConcrete.SigmaMax, fy = cp.CTPTensionRebars.SigmaY, ag = cp.CTPTensionRebars.Ag;
+            var allTension = cp.GetPlasticForceAndMoment(-r * 1.000001);
+            Assert.AreEqual(-ag * fy, allTension.N, 1e-6);
+            Assert.AreEqual(0.0, allTension.M, 1e-3);
+            var allCompression = cp.GetPlasticForceAndMoment(r * 1.000001);
+            Assert.AreEqual(smax * Math.PI * r * r + (fy - smax) * ag, allCompression.N, 1e-3);
+
+            double plastic = cp.GetMu(3000e3);
+            Assert.IsTrue(plastic > atStrain, $"全塑性 {plastic / 1e6:F1} は圧縮縁 0.003 の {atStrain / 1e6:F1} kN·m より大きいはず");
+            Assert.IsTrue(cp.GetMu(-1000e3) > 0, "定着筋ありの引張でも曲げを負担する");
+            Assert.AreEqual(0.0, cp.GetMu(-ag * fy * 1.01), 0.0, "全筋の降伏を超える引張は 0");
+        }
+
+        [TestMethod]
+        public void TheUltimateMomentChoiceSurvivesDeepCopy()
+        {
+            var cp = Ring1200();
+            cp.UseMaximumUltimateMoment = true;
+            Assert.IsTrue(cp.DeepCopy().UseMaximumUltimateMoment, "Undo の写しで残る");
+        }
+
         [TestMethod]
         public void ThePileConcreteSurvivesDeepCopy()
         {

@@ -159,6 +159,27 @@ namespace PileDesign.Models
             set => SetProperty(ref _nu, value);
         }
 
+        /// <summary>
+        /// 終局時曲げモーメント Mu の取り方 (2026-11-24 利用者の要望で選べるようにした)。
+        /// <list type="bullet">
+        /// <item>false (既定・以前から): 圧縮縁のひずみが εB = 0.003 に達したときの M</item>
+        /// <item>true: マニュアル 3.4(1)c ⑥「終局時の曲げモーメント Mu は最大曲げモーメントとする」を文字どおりに。
+        /// 式 3.4.9 は εB を超えても σmax のまま下がらず、定着筋も完全弾塑性なので、M は曲率とともに増え続け、
+        /// 最大は曲率を限りなく大きくした極限 (全塑性: 圧縮側のコンクリートは一様に σmax、定着筋は ±σy) になる。
+        /// マニュアルには圧縮縁の限界ひずみの規定が無い。</item>
+        /// </list>
+        /// </summary>
+        private bool _useMaximumUltimateMoment;
+        public bool UseMaximumUltimateMoment
+        {
+            get => _useMaximumUltimateMoment;
+            set
+            {
+                if (SetProperty(ref _useMaximumUltimateMoment, value) && D != 0 && PCRing != null && CTPConcrete != null)
+                    Update();
+            }
+        }
+
         [System.Text.Json.Serialization.JsonIgnore] // 選択肢 (get のみ)。保存しない
         public double[] ContractionRatioOption { get; } = [1.00, 0.85, 0.70];        // 絞り率
         private readonly CaptainPileTensionBarPCDLoader _captainPileTensionBarPCDLoader = new();
@@ -473,6 +494,8 @@ namespace PileDesign.Models
             combined.Add(new PileLibrary.Spec("絞り率", "ν", $"{Nu:F2}", ""));
             combined.Add(new PileLibrary.Spec("コンクリートの設計基準強度 (杭体・パイルキャップの小さい方)", "Fc", $"{DesignFc:0.#}", "N/mm²"));
             combined.Add(new PileLibrary.Spec("杭体のヤング係数", "Ep", $"{(PileBodyEc > 0 ? PileBodyEc : FallbackPileEp):N0}", "N/mm²"));
+            combined.Add(new PileLibrary.Spec("終局時曲げモーメントの取り方", "Mu",
+                UseMaximumUltimateMoment ? "最大曲げモーメント (全塑性)" : "圧縮縁ひずみ 0.003 のとき", ""));
             if (CTPTensionRebars != null && CTPTensionRebars.HasTensionRebars)
             {
                 string arrangement = CTPTensionRebars.IsCircleArrangement ? "円形配置"
@@ -868,6 +891,9 @@ namespace PileDesign.Models
         // 終局時曲げモーメントMuを返すメソッド
         internal double GetMu(double NTarget)
         {
+            // 「最大曲げモーメント」とするときは全塑性で厳密に (UseMaximumUltimateMoment)
+            if (UseMaximumUltimateMoment) return CTPConcrete == null ? 0.0 : GetPlasticMoment(NTarget);
+
             if (UltimateNs != null && UltimateNs.Count > 1)
             {
                 double N = 0.0, M = 0.0;
@@ -958,8 +984,102 @@ namespace PileDesign.Models
                 var result02 = GetUltimateMNInteraction(CTPConcrete.GetEpsilon(0.85 * CTPConcrete.SigmaMax));
                 (YieldNs, YieldMs, YieldEpsilon0s, YieldCurvatures) = (result02.Item1, result02.Item2, result02.Item3, result02.Item4);
             }
-            var result03 = GetUltimateMNInteraction(0.003);
-            (UltimateNs, UltimateMs, UltimateEpsilon0s, UltimateCurvatures) = (result03.Item1, result03.Item2, result03.Item3, result03.Item4);
+            if (UseMaximumUltimateMoment)
+            {
+                // 全塑性の N-M 曲線 (グラフ用)。Mu は GetMu が GetPlasticMoment で厳密に求める
+                (UltimateNs, UltimateMs) = GetPlasticMNInteraction();
+                UltimateEpsilon0s = null;
+                UltimateCurvatures = null;
+            }
+            else
+            {
+                var result03 = GetUltimateMNInteraction(0.003);
+                (UltimateNs, UltimateMs, UltimateEpsilon0s, UltimateCurvatures) = (result03.Item1, result03.Item2, result03.Item3, result03.Item4);
+            }
+        }
+
+        /// <summary>
+        /// 全塑性 (曲率を限りなく大きくした極限) で、中立軸の位置 u (断面の中心から、圧縮側を負とする z 座標。
+        /// z &lt; u が圧縮) のときの (N, M)。N・mm 系、圧縮が正。
+        /// コンクリートは z &lt; u の弓形に一様に σmax (引張は負担しない)。弓形の面積と中心まわりのモーメントは閉じた式で求める
+        /// (帯に分けた数値積分は中立軸が帯の中にあると N が階段状になり、軸力を合わせられない)。
+        /// 定着筋は圧縮側 +σy (押しのけたコンクリートの σmax を引く)・引張側 −σy、ちょうど中立軸上の筋は 0。
+        /// </summary>
+        internal (double N, double M) GetPlasticForceAndMoment(double u)
+        {
+            double r = CTPConcrete.D * Nu * 0.5;
+            double smax = CTPConcrete.SigmaMax;
+            double uc = Math.Clamp(u, -r, r);
+            double s = Math.Sqrt(Math.Max(r * r - uc * uc, 0.0));
+            double area = uc * s + r * r * Math.Asin(uc / r) + r * r * Math.PI * 0.5;   // z ∈ [−r, u] の弓形
+            double moment = 2.0 / 3.0 * s * s * s;                                    // ∫ 2√(r²−z²)·(−z) dz
+            double n = smax * area, m = smax * moment;
+
+            if (CTPTensionRebars.HasTensionRebars)
+            {
+                // 定着筋の点断面の並べ方は弾塑性の計算と同じクラスに任せる。ε = u − z (曲率 1) の符号で σ = ±σy
+                var bar = new CTPPlasticMaterial(CTPTensionRebars.SigmaY, CTPTensionRebars.SigmaY);
+                var displaced = new CTPPlasticMaterial(smax, 0.0);
+                Func<CTPMaterial, (double, double)> bars;
+                if (CTPTensionRebars.IsCircleArrangement)
+                {
+                    var circle = new CTPCircularDotSection(CTPTensionRebars.TDorTB, CTPTensionRebars.SelectedBarNumberCircle, CTPTensionRebars.BarArea);
+                    bars = mat => circle.GetForceAndMoment(mat, u, 1.0);
+                }
+                else
+                {
+                    var square = new CTPSquareDotSection(CTPTensionRebars.TDorTB, CTPTensionRebars.SelectedBarNumberSquare, CTPTensionRebars.BarArea);
+                    bars = mat => square.GetForceAndMoment(mat, u, 1.0);
+                }
+                (double nb, double mb) = bars(bar);
+                (double nc, double mc) = bars(displaced);
+                n += nb - nc;
+                m += mb - mc;
+            }
+            return (n, m);
+        }
+
+        /// <summary>
+        /// 全塑性の曲げモーメント (Mu を「最大曲げモーメント」とするとき)。軸力 N (N、圧縮正) の釣り合う中立軸を二分法で探す。
+        /// N は中立軸 u について単調に増え、定着筋を跨ぐところだけ跳ぶ。跳びの中に N があるときは、その筋が ±σy の間の
+        /// 応力を持つ (N と M はその筋の応力について線形) ので、跳びの両端の M を N の比で内分する。
+        /// 全断面引張〜全断面圧縮の範囲の外は 0 (弾塑性の Mu と同じ扱い)。
+        /// </summary>
+        internal double GetPlasticMoment(double nTarget)
+        {
+            double r = CTPConcrete.D * Nu * 0.5;
+            if (!(r > 0)) return 0.0;
+            double lo = -r * (1.0 + 1e-9), hi = r * (1.0 + 1e-9);
+            var fLo = GetPlasticForceAndMoment(lo);
+            var fHi = GetPlasticForceAndMoment(hi);
+            if (nTarget < fLo.N || nTarget > fHi.N) return 0.0;
+            for (int i = 0; i < 200 && hi - lo > r * 1e-12; i++)
+            {
+                double mid = 0.5 * (lo + hi);
+                var f = GetPlasticForceAndMoment(mid);
+                if (f.N < nTarget) { lo = mid; fLo = f; } else { hi = mid; fHi = f; }
+            }
+            double dn = fHi.N - fLo.N;
+            if (!(dn > 1e-6)) return 0.5 * (fLo.M + fHi.M);
+            double t = (nTarget - fLo.N) / dn;
+            return fLo.M + (fHi.M - fLo.M) * t;
+        }
+
+        /// <summary>全塑性の N-M 曲線 (グラフ用)。中立軸を全断面引張から全断面圧縮まで動かす。</summary>
+        private (ObservableCollection<double>, ObservableCollection<double>) GetPlasticMNInteraction()
+        {
+            double r = CTPConcrete.D * Nu * 0.5;
+            int n = DivisionNum * 4;
+            var ns = new ObservableCollection<double>();
+            var ms = new ObservableCollection<double>();
+            for (int i = 0; i <= n; i++)
+            {
+                double u = -r * (1.0 + 1e-9) + 2.0 * r * (1.0 + 1e-9) * i / n;
+                var f = GetPlasticForceAndMoment(u);
+                ns.Add(f.N);
+                ms.Add(f.M);
+            }
+            return (ns, ms);
         }
 
         // 杭体、PCリング内コンクリート、パイルキャップ部分の回転剛性
@@ -1402,6 +1522,16 @@ namespace PileDesign.Models
     }
 
     // キャプテンパイル断面抽象クラス
+    /// <summary>
+    /// 全塑性 (曲率無限大の極限) の材料: ひずみが正なら +compression、負なら −tension、0 なら 0。
+    /// キャプテンパイル工法で Mu を「最大曲げモーメント」とするときに使う。
+    /// </summary>
+    internal sealed class CTPPlasticMaterial(double compression, double tension) : CTPMaterial
+    {
+        public override double GetStress(double epsilon)
+            => epsilon > 0 ? compression : (epsilon < 0 ? -tension : 0.0);
+    }
+
     internal abstract class CTPSection { }
 
     // 円形断面クラス

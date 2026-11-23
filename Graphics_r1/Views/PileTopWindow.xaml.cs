@@ -247,6 +247,13 @@ namespace PileDesign.Views
             Recalculate();
         }
 
+        // キャプテンパイル工法の Mu の取り方を変えたら、M-θ・N-M 曲線と諸元を組み直す
+        private void RadioButtonCaptainMu_Checked(object sender, RoutedEventArgs e)
+        {
+            if (!IsLoaded) return;
+            Recalculate();
+        }
+
         private void Recalculate()
         {
             PileTopViewModel viewModel = (PileTopViewModel)DataContext;

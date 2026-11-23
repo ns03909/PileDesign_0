@@ -29,6 +29,8 @@
     <Window.Resources>
         <conv:VisibilityConverter x:Key="VisibilityConverter"/>
         <conv:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
+        <!-- ラジオの組は「チェック時のみ書く」BoolEquals で (InverseBool の TwoWay ペアは再表示で StackOverflow の危険) -->
+        <conv:BoolEqualsConverter x:Key="BoolEqualsConverter"/>
 
         <!-- DataGridCellのスタイルを定義 -->
         <!--<Style x:Key="CustomDataGridCellStyle" TargetType="DataGridCell">
@@ -422,6 +424,26 @@
                                                         </DataTemplate>
                                                     </ComboBox.ItemTemplate>
                                                 </ComboBox>
+                                            </StackPanel>
+
+                                            <!-- 終局時曲げモーメント Mu の取り方 (CaptainPile.UseMaximumUltimateMoment) -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                                <TextBlock Text="終局時曲げモーメント Mu" Width="150" VerticalAlignment="Center"/>
+                                                <RadioButton x:Name="RadioButtonCaptainMuAtStrain" GroupName="CaptainMu" Content="圧縮縁ひずみ 0.003 のとき" Margin="0,0,10,0"
+                                                             IsChecked="{Binding PileTop.CaptainPile.UseMaximumUltimateMoment, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=False}"
+                                                             Checked="RadioButtonCaptainMu_Checked"/>
+                                                <RadioButton x:Name="RadioButtonCaptainMuMaximum" GroupName="CaptainMu" Content="最大曲げモーメント (全塑性)"
+                                                             IsChecked="{Binding PileTop.CaptainPile.UseMaximumUltimateMoment, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=True}"
+                                                             Checked="RadioButtonCaptainMu_Checked"/>
+                                                <StackPanel.ToolTip>
+                                                    <ToolTip>
+                                                        <TextBlock MaxWidth="460" TextWrapping="Wrap">
+                                                            <Run Text="マニュアル 3.4 節 ⑥ は「終局時の曲げモーメント Mu は最大曲げモーメントとする」としています。"/><LineBreak/>
+                                                            <Run Text="コンクリートの応力度は εB = 0.003 を超えても σmax のまま下がらない (式 3.4.9) ので、M は曲率とともに増え続け、最大は全塑性 (圧縮側のコンクリートは一様に σmax、定着筋は ±σy) になります。限界ひずみの規定はありません。"/><LineBreak/>
+                                                            <Run Text="既定は圧縮縁のひずみが εB = 0.003 に達したときの M (以前からの値) で、全塑性より小さくなります。"/>
+                                                        </TextBlock>
+                                                    </ToolTip>
+                                                </StackPanel.ToolTip>
                                             </StackPanel>
 
                                             <!-- PC リング径 ≠ 杭径 の警告 -->
