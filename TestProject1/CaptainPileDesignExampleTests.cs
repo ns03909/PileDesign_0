@@ -73,6 +73,38 @@ namespace TestProject1
             AssertMatches(Example(8, "D38"), n, mu, "P3");
         }
 
+        /// <summary>
+        /// 既定の設定は「設計例と整合」と示し (画面の注記・杭頭の諸元の表)、どれかを変えれば「異なる」と示す。
+        /// </summary>
+        [TestMethod]
+        public void TheDefaultIsShownAsConsistentWithTheDesignExample()
+        {
+            var cp = Example(16, "D41");
+            Assert.IsTrue(cp.IsUltimateSettingConsistentWithDesignExample);
+            StringAssert.Contains(cp.UltimateSettingNote, "設計例");
+            StringAssert.Contains(cp.UltimateSettingNote, "整合する設定です");
+            Assert.IsTrue(cp.GetCombinedSpecs().Any(s => (s.Value ?? "").Contains("設計例と整合")), "諸元の表 (計算書) にも出す");
+
+            var raised = new System.Collections.Generic.List<string?>();
+            cp.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+            foreach (Action<CaptainPile> change in new Action<CaptainPile>[]
+                     {
+                         c => c.UltimateConcreteStrain = 0.003,
+                         c => c.UltimateRebarStrengthFactor = 1.0,
+                         c => c.UseMaximumUltimateMoment = true,
+                     })
+            {
+                var other = Example(16, "D41");
+                change(other);
+                Assert.IsFalse(other.IsUltimateSettingConsistentWithDesignExample);
+                StringAssert.Contains(other.UltimateSettingNote, "異なります");
+                Assert.IsTrue(other.GetCombinedSpecs().Any(s => (s.Value ?? "").Contains("設計例の設定と異なる")));
+            }
+
+            cp.UltimateConcreteStrain = 0.004;
+            CollectionAssert.Contains(raised, nameof(CaptainPile.UltimateSettingNote), "画面の注記が追従するよう通知する");
+        }
+
         /// <summary>以前の取り方 (0.003・1.0 倍) に戻せば、以前の値になる (図より小さい)。</summary>
         [TestMethod]
         public void TheFormerDefinitionIsStillAvailable()

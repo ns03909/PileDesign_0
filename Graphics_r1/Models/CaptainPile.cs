@@ -176,8 +176,9 @@ namespace PileDesign.Models
             get => _useMaximumUltimateMoment;
             set
             {
-                if (SetProperty(ref _useMaximumUltimateMoment, value) && D != 0 && PCRing != null && CTPConcrete != null)
-                    Update();
+                if (!SetProperty(ref _useMaximumUltimateMoment, value)) return;
+                RaiseDesignExampleConsistencyChanged();
+                if (D != 0 && PCRing != null && CTPConcrete != null) Update();
             }
         }
 
@@ -194,8 +195,9 @@ namespace PileDesign.Models
             set
             {
                 if (!double.IsFinite(value) || value < 0.003 || value > 0.05) return;   // εB 以上、常識の範囲で
-                if (SetProperty(ref _ultimateConcreteStrain, value) && D != 0 && PCRing != null && CTPConcrete != null)
-                    Update();
+                if (!SetProperty(ref _ultimateConcreteStrain, value)) return;
+                RaiseDesignExampleConsistencyChanged();
+                if (D != 0 && PCRing != null && CTPConcrete != null) Update();
             }
         }
         public const double DefaultUltimateConcreteStrain = 0.005;
@@ -212,11 +214,38 @@ namespace PileDesign.Models
             set
             {
                 if (!double.IsFinite(value) || value < 1.0 || value > 1.5) return;
-                if (SetProperty(ref _ultimateRebarStrengthFactor, value) && D != 0 && PCRing != null && CTPConcrete != null)
-                    Update();
+                if (!SetProperty(ref _ultimateRebarStrengthFactor, value)) return;
+                RaiseDesignExampleConsistencyChanged();
+                if (D != 0 && PCRing != null && CTPConcrete != null) Update();
             }
         }
         public const double DefaultUltimateRebarStrengthFactor = 1.1;
+
+        /// <summary>
+        /// Mu の取り方が、マニュアル 3.5 節の設計例と整合する設定 (圧縮縁ひずみ εcu = 0.005・定着筋の強度倍率 1.1) か。
+        /// 設計例の Q-α 図から逆算した Mu と 1% 以内で一致する組み合わせ (CaptainPileDesignExampleTests)。
+        /// 画面の注記と杭頭の諸元の表 (計算書) で示す (2026-11-24 利用者の要望)。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public bool IsUltimateSettingConsistentWithDesignExample =>
+            !UseMaximumUltimateMoment
+            && Math.Abs(UltimateConcreteStrain - DefaultUltimateConcreteStrain) < 1e-9
+            && Math.Abs(UltimateRebarStrengthFactor - DefaultUltimateRebarStrengthFactor) < 1e-9;
+
+        /// <summary>杭頭ウィンドウに出す注記 (設計例と整合するか)。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public string UltimateSettingNote => IsUltimateSettingConsistentWithDesignExample
+            ? "✓ マニュアル 3.5 節の設計例 (Q-α 図) と整合する設定です (εcu 0.005・強度倍率 1.1)。"
+            : "設計例と整合する設定 (圧縮縁ひずみ εcu 0.005・強度倍率 1.1) と異なります。"
+              + (UseMaximumUltimateMoment ? "全塑性は設計例より Mu が大きく出ます。" : "");
+
+        private void RaiseDesignExampleConsistencyChanged()
+        {
+            OnPropertyChanged(nameof(IsUltimateSettingConsistentWithDesignExample));
+            OnPropertyChanged(nameof(UltimateSettingNote));
+        }
 
         [System.Text.Json.Serialization.JsonIgnore] // 選択肢 (get のみ)。保存しない
         public double[] ContractionRatioOption { get; } = [1.00, 0.85, 0.70];        // 絞り率
@@ -533,7 +562,8 @@ namespace PileDesign.Models
             combined.Add(new PileLibrary.Spec("コンクリートの設計基準強度 (杭体・パイルキャップの小さい方)", "Fc", $"{DesignFc:0.#}", "N/mm²"));
             combined.Add(new PileLibrary.Spec("杭体のヤング係数", "Ep", $"{(PileBodyEc > 0 ? PileBodyEc : FallbackPileEp):N0}", "N/mm²"));
             combined.Add(new PileLibrary.Spec("終局時曲げモーメントの取り方", "Mu",
-                UseMaximumUltimateMoment ? "最大曲げモーメント (全塑性)" : $"圧縮縁ひずみ {UltimateConcreteStrain:0.####} のとき", ""));
+                (UseMaximumUltimateMoment ? "最大曲げモーメント (全塑性)" : $"圧縮縁ひずみ {UltimateConcreteStrain:0.####} のとき")
+                + (IsUltimateSettingConsistentWithDesignExample ? " (マニュアル 3.5 設計例と整合)" : " (設計例の設定と異なる)"), ""));
             combined.Add(new PileLibrary.Spec("Mu に使う定着筋の強度倍率", "", $"{UltimateRebarStrengthFactor:0.##}", ""));
             if (CTPTensionRebars != null && CTPTensionRebars.HasTensionRebars)
             {

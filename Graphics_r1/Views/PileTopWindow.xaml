@@ -457,6 +457,21 @@
                                                          Text="{Binding PileTop.CaptainPile.UltimateRebarStrengthFactor, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.##}}"
                                                          LostFocus="TextBoxCaptainMu_LostFocus"/>
                                             </StackPanel>
+                                            <!-- Mu の設定がマニュアル 3.5 設計例と整合するか (CaptainPile.UltimateSettingNote) -->
+                                            <TextBlock x:Name="TextBlockCaptainMuDesignExampleNote" Text="{Binding PileTop.CaptainPile.UltimateSettingNote}"
+                                                       TextWrapping="Wrap" Margin="0,0,0,4" FontSize="11"
+                                                       ToolTip="設計例 (3.5 節) の Q-α 図の頭打ちから逆算した Mu は、圧縮縁ひずみ εcu 0.005・定着筋の強度倍率 1.1 で求めた値と 1% 以内で一致します (P1・P3 の 38 本)。本文には限界ひずみも強度の割増しも書かれていません。">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Foreground" Value="#A15C00"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding PileTop.CaptainPile.IsUltimateSettingConsistentWithDesignExample}" Value="True">
+                                                                <Setter Property="Foreground" Value="#2E7D32"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
 
                                             <!-- PC リング径 ≠ 杭径 の警告 -->
                                             <TextBlock Text="{Binding RingDiameterWarning}"
