@@ -1073,6 +1073,54 @@ namespace TestProject1
             finally { ConcreteModelOptions.Notification1113CompressionCase = savedCase; }
         }
 
+        /// <summary>
+        /// ウルボンスパイラルの計算例を、杭断面の検定の根拠 (DescribeShearLimit) で解いて一致すること。
+        /// エムケーパイルリング785 との違い (η・0.846・頭打ちの違い・M/(Q·d) を頭打ちしない・β なし・割増なし) も見る。
+        /// </summary>
+        [TestMethod]
+        public void TheUlbonShearExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-ulbon-shear"];
+            int savedCase = ConcreteModelOptions.Notification1113CompressionCase;
+            ConcreteModelOptions.Notification1113CompressionCase = 1;
+            try
+            {
+                var s = new PileSection
+                {
+                    PileBodyType = PileDesign.Constants.PileTypeNames.InsituRc, PileSectionType = PileDesign.Constants.PileTypeNames.RcSection,
+                    ConcreteOutDia = 1200, PileDiameter = 1200, ConcreteFc = 30, ConcreteGsi = 0.75,
+                    MainBarNum = 24, MainBarSize = "D25", MainBarSpec = "SD390", MainBarCenterCover = 150,
+                    HoopMethod = ShearReinforcementMethods.UlbonSpiral, HoopSize = "U12.6", HoopSpacing = 100, HoopCenterCover = 150,
+                };
+                double Q(SectionLimitState limit, bool factored, double monQd = 2.0) => s.DescribeShearLimit(limit, 2, factored, monQd, 2000.0)!.ValueN / 1000;
+
+                double b = 600 * Math.Sqrt(Math.PI), d = b - 150, j = 7.0 / 8.0 * d, jt = b - 300, ac = Math.PI * 1200 * 1200 / 4;
+                double pw = 2 * 124.7 / (b * 100), pt = 7 * 507.0 * 100 / (b * d);
+                double lfs = Math.Min(30.0 / 40, 0.75 * (0.49 + 0.30));
+                Assert.AreEqual(pw, s.HoopPw, 1e-12, "pw = 2aw/(b·x)");
+                StringAssert.Contains(table, $"U12.6@100: $p_w = {pw * 100:0.000}\\%$");
+
+                Assert.AreEqual(lfs * ac / (4.0 / 3) / 1000, Q(SectionLimitState.Service, true), 1e-6, "QAL");
+                double qa = b * j * (1.5 * lfs + 0.5 * 590 * (pw - 0.001)) / 1000;
+                Assert.AreEqual(qa, Q(SectionLimitState.Damage, true), 1e-6, "② 式");
+                Assert.AreEqual(1.0, s.ShearDesignMagnification, 0.0, "ウルボンは割り増さない");
+                StringAssert.Contains(table, $"$Q_{{AL}} = {N1(Q(SectionLimitState.Service, true))}$ kN、② $Q_{{AS}} = {N1(qa)}$ kN");
+
+                double eta = Math.Pow(1.2, -0.25);
+                double q3 = (eta * 0.053 * Math.Pow(pt, 0.23) * 48 / 2.12 + 0.846 * Math.Sqrt(pw * 1275) + 0.1 * 2000e3 / ac) * b * j / 1000;
+                Assert.AreEqual(q3, Q(SectionLimitState.Ultimate, false), 1e-6, "③ 式 (低減前)");
+                Assert.AreEqual(q3, Q(SectionLimitState.Ultimate, true), 1e-9, "③ 式は別建ての低減係数が無い");
+                Assert.IsTrue(Q(SectionLimitState.Ultimate, true, 0.5) > Q(SectionLimitState.Ultimate, true, 1.0), "M/(Q·d) は 1.0 で頭打ちしない");
+                StringAssert.Contains(table, $"③ は $\\eta = {eta:0.000}$ で $Q_{{SU1}} = {N1(q3)}$ kN");
+
+                s.HoopUltimateFormula = ShearReinforcementMethods.UltimateFormulaTrussArch;
+                double truss = b * jt * pw * 1275 / 1000, cap = (0.7 - 30.0 / 200) * 30 / 3 * b * jt / 1000;
+                Assert.AreEqual(truss, Q(SectionLimitState.Ultimate, true), 1e-6, "④ 式 (アーチ項 0)");
+                StringAssert.Contains(table, $"④ は $j_t = {N1(jt)}$ mm で $Q_{{SU2}} = {N1(truss)}$ kN (頭打ちの ${N1(cap)}$ kN に届かない)");
+            }
+            finally { ConcreteModelOptions.Notification1113CompressionCase = savedCase; }
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
