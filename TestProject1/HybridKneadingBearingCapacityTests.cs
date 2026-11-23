@@ -131,9 +131,33 @@ namespace TestProject1
             var pile = BuildPile(e: 1.2, es: 1.8);
             Assert.AreEqual(1.2, pile.HybridEs, 1e-12, "es は e を超えられない");
 
-            // e ≧ 1.7 のとき es の上限は 1.6
+            // e = 2.0 なら es も 2.0 まで (β の枠 1.0〜2.0)。以前は「e ≧ 1.7 なら 1.6」で縛っていたが、
+            // カタログに該当する記述が無く外した (2026-11-23 利用者の判断。es ≦ e は p.4 ③ にある)
             var large = BuildPile(e: 2.0, es: 2.0);
-            Assert.AreEqual(1.6, large.HybridEs, 1e-12, "e ≧ 1.7 のとき es の上限は 1.6");
+            Assert.AreEqual(2.0, large.HybridEs, 1e-12, "e = 2.0 なら es = 2.0 を使える");
+            Assert.IsFalse(large.ValidateHybridKneadingRange().Any(w => w.Contains("設計掘削径比")), "砂質・礫質だけなら es = 2.0 は範囲内");
+        }
+
+        /// <summary>
+        /// 粘土質地盤の周面摩擦力係数 γ の es は 1.0〜1.6 (カタログの γ の枠)。es は杭に 1 つなので、
+        /// 粘土質の層の式にだけ 1.6 を上限として掛け、知らせる。砂質・礫質の層は es のまま。
+        /// </summary>
+        [TestMethod]
+        public void ClayLayersUseEsCappedAtOnePointSix()
+        {
+            var pile = BuildPile(e: 2.0, es: 2.0);
+            pile.PileBodyInput.HybridIsFrictionEnhanced = true;
+            pile.GroundInput.GroundLayers[1].GranularityClass = Clay;
+            pile.GroundInput.GroundLayers[1].Cohesive = 50;   // qu = 100 (平均 q̄u も 100 で範囲内)
+            pile.UpdateProperties();
+
+            var bottom = pile.PileCircumVerticals.OrderBy(p => p.Bottom).First();   // −20〜−25 m、節付き (BF.S)、粘土質
+            Assert.IsTrue(bottom.PileBodySegment!.PileSection.IsNodularPile, "(前提) 最下段は節付き");
+            Assert.AreEqual((0.7 * 100 + 20) * 1.6, bottom.Tau2, 1e-9, "粘土質の層の γ の式は es = 1.6");
+            var middle = pile.PileCircumVerticals.OrderBy(p => p.Bottom).Skip(1).First();   // −10〜−20 m、節付き、砂質
+            Assert.AreEqual((5.0 * 15 + 30) * 2.0, middle.Tau2, 1e-9, "砂質の層の β の式は es = 2.0 のまま");
+            Assert.IsTrue(pile.ValidateHybridKneadingRange().Any(w => w.Contains("周面摩擦力係数 γ")),
+                string.Join(" / ", pile.ValidateHybridKneadingRange()));
         }
 
         // ── 5. 先端支持力 ────────────────────────────────────────

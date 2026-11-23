@@ -33,9 +33,14 @@ namespace PileDesign.Models.InputData
         public const double HybridRatioMin = 1.0;
         public const double HybridRatioMax = 2.0;
 
-        /// <summary>設計拡径比 e が 1.7 以上のとき、設計掘削径比 es の上限は 1.6 になる。</summary>
+        /// <summary>設計拡径比 e が 1.7 以上のとき、根固め部上端が先端支持力算定位置の 3 m 上になる (1.6 以下は 2 m)。</summary>
         public const double HybridLargeExpansionThreshold = 1.7;
-        public const double HybridExcavationRatioMaxForLargeExpansion = 1.6;
+
+        /// <summary>
+        /// 粘土質地盤の周面摩擦力係数 γ に使う設計掘削径比 es の上限 (カタログの γ の枠「1.0〜1.6 の範囲で」)。
+        /// 砂質地盤の β の枠は 1.0〜2.0。
+        /// </summary>
+        public const double HybridExcavationRatioMaxForClay = 1.6;
 
         /// <summary>杭先端平均 N 値の適用範囲。N が 5 未満のときは α = 0 とする。</summary>
         public const double HybridToeNMin = 5.0;
@@ -70,22 +75,18 @@ namespace PileDesign.Models.InputData
             Math.Clamp(PileBodyInput?.HybridExpansionRatio ?? HybridRatioMin, HybridRatioMin, HybridRatioMax);
 
         /// <summary>
-        /// 設計掘削径比 es = 掘削径 / 節部径 D1。
-        /// 適用範囲は 1.0〜2.0（e が 1.7 以上のときは 1.0〜1.6）で、さらに es ≦ e という制約がある。
+        /// 設計掘削径比 es = 掘削径 / 節部径 D1。適用範囲 1.0〜2.0 (β の枠)、かつ es ≦ e
+        /// (カタログ p.4「杭周固定部の仕様」③「設計掘削径比 es は設計拡径比 e 以下の設定とします」) にクランプする。
+        /// 粘土質の層の γ の式には、さらに 1.6 を上限として掛ける (<see cref="HybridExcavationRatioMaxForClay"/>)。
         /// es が 1.0 を超えることは<b>軸部を拡大掘削している</b>ことを意味する。
+        ///
+        /// <para>以前は「e ≧ 1.7 なら es ≦ 1.6」でも縛っていたが、カタログに該当する記述は無く、出どころの引用も無かった。
+        /// es ≦ e と併せると es はいつも 1.6 以下になり、β の枠の 1.0〜2.0 が使えなかった。p.4 の e 1.0〜1.6 / 1.7〜2.0 は
+        /// 根固め部の長さ (2 m / 3 m) の区別で、γ の枠の es 1.0〜1.6 と結び付けた読み違いとみて外した (2026-11-23 利用者の判断)。</para>
         /// </summary>
         [JsonIgnore]
-        public double HybridEs
-        {
-            get
-            {
-                double max = HybridE >= HybridLargeExpansionThreshold
-                    ? HybridExcavationRatioMaxForLargeExpansion
-                    : HybridRatioMax;
-                max = Math.Min(max, HybridE);
-                return Math.Clamp(PileBodyInput?.HybridExcavationRatio ?? HybridRatioMin, HybridRatioMin, max);
-            }
-        }
+        public double HybridEs =>
+            Math.Clamp(PileBodyInput?.HybridExcavationRatio ?? HybridRatioMin, HybridRatioMin, Math.Min(HybridRatioMax, HybridE));
 
         /// <summary>根固め部径 D3 = e·D1 (m)。</summary>
         [JsonIgnore]
@@ -298,7 +299,9 @@ namespace PileDesign.Models.InputData
                 double ns = scaleNs(HybridIndividualNs(pcv.GroundLayer.NValue));
                 double qu = scaleQu(HybridQu(pcv.GroundLayer.Cohesive));
 
-                pcv.Tau2 = HybridTau2(isCohesive, isNodular, enhanced, ns, qu, es);
+                // 粘土質の層の γ の es は 1.0〜1.6 (カタログの γ の枠)。es は杭に 1 つなので、粘土質の層の式にだけ 1.6 を上限として掛ける
+                double esForLayer = isCohesive ? Math.Min(es, HybridExcavationRatioMaxForClay) : es;
+                pcv.Tau2 = HybridTau2(isCohesive, isNodular, enhanced, ns, qu, esForLayer);
                 pcv.TauT = HybridTauT(isCohesive, isNodular, ns, qu);
 
                 // ψ = π·D（ストレート形状の範囲は軸部径 D0、節付き形状の範囲は節部径 D1）
@@ -368,11 +371,17 @@ namespace PileDesign.Models.InputData
                 yield return $"{label}: 設計拡径比 e = {rawE:N2} は 0.1 刻みで指定してください。";
 
             double rawEs = PileBodyInput?.HybridExcavationRatio ?? 0;
-            double esMax = Math.Min(
-                HybridE >= HybridLargeExpansionThreshold ? HybridExcavationRatioMaxForLargeExpansion : HybridRatioMax,
-                HybridE);
+            double esMax = Math.Min(HybridRatioMax, HybridE);
             if (rawEs < HybridRatioMin || rawEs > esMax)
-                yield return $"{label}: 設計掘削径比 es = {rawEs:N2} は適用範囲 1.0〜{esMax:N1}（es ≦ e）の外です（{HybridEs:N2} にクランプして計算します）。";
+                yield return $"{label}: 設計掘削径比 es = {rawEs:N2} は適用範囲 1.0〜{esMax:N1}（1.0〜2.0 かつ es ≦ e）の外です（{HybridEs:N2} にクランプして計算します）。";
+            else if (Math.Abs(rawEs * 10 - Math.Round(rawEs * 10)) > 1e-6)
+                yield return $"{label}: 設計掘削径比 es = {rawEs:N2} は 0.1 刻みで指定してください。";
+            // 粘土質地盤の γ の es は 1.0〜1.6。周面抵抗を見込む粘土質の層があれば、その層の式は 1.6 で計算する
+            if (HybridEs > HybridExcavationRatioMaxForClay
+                && (PileCircumVerticals ?? []).Any(p => (p.IsPositiveCircumResistance || p.IsNegativeCircumResistance)
+                                                        && IsCohesive(p.GroundLayer.GranularityClass)))
+                yield return $"{label}: 設計掘削径比 es = {HybridEs:N2} は粘土質地盤の周面摩擦力係数 γ の適用範囲 1.0〜1.6 の外です"
+                    + $"（粘土質の層の周面摩擦は es = {HybridExcavationRatioMaxForClay:N1} として計算します）。";
 
             double n = HybridToeNValue;
             if (n < HybridToeNMin)
