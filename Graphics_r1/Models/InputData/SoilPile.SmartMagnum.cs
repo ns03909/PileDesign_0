@@ -199,9 +199,53 @@ namespace PileDesign.Models.InputData
             return Math.Min(qu, 535.0);
         }
 
-        /// <summary>平均 N 値 Ns を適用範囲 [1, 30] にクランプする。</summary>
-        internal static double SmartMagnumClampNs(double ns) =>
-            Math.Clamp(ns, SmartMagnumNsMin, SmartMagnumNsMax);
+        /// <summary>周面の砂質地盤の個々の N 値。カタログ ※2「個々の値は 0≦N≦100、N&gt;100 の場合は N=100」。</summary>
+        internal static double SmartMagnumIndividualNs(double n) => Math.Clamp(double.IsFinite(n) ? n : 0.0, 0.0, 100.0);
+
+        /// <summary>周面の一軸圧縮強さの平均 q̄u の適用範囲 (kN/m²)。カタログ「10≦q̄u≦200」。</summary>
+        public const double SmartMagnumQuMin = 10.0;
+        public const double SmartMagnumQuMax = 200.0;
+
+        /// <summary>
+        /// 周面の平均値 N̄s (砂質・礫質の層) と q̄u (粘土質の層)。周面抵抗を見込む層を、0.4 m の除外を
+        /// 差し引いた有効長で重み付けた平均で、個々の値はカタログ ※2・※3 の丸めのあと。該当する層が無ければ null。
+        ///
+        /// <para>カタログの適用範囲 1≦N̄s≦30・10≦q̄u≦200 は<b>平均値</b>に対するもの (2026-11-23 利用者がカタログで確認)。
+        /// 以前は土層ごとの N 値を 1〜30 に丸めて使い (N=50 の層は 30 になった)、q̄u の範囲は杭先端の土層の qu で
+        /// 確かめていた (qu は先端支持力の式に入らない)。</para>
+        /// </summary>
+        internal (double? Ns, double? Qu) SmartMagnumShaftAverages()
+        {
+            double nsSum = 0, nsLen = 0, quSum = 0, quLen = 0;
+            foreach (var pcv in PileCircumVerticals ?? [])
+            {
+                if (!(pcv.IsPositiveCircumResistance || pcv.IsNegativeCircumResistance)) continue;
+                double l = pcv.EffectiveL;
+                if (!(l > 0)) continue;
+                if (IsCohesive(pcv.GroundLayer.GranularityClass))
+                {
+                    quSum += SmartMagnumQu(pcv.GroundLayer.Cohesive) * l; quLen += l;
+                }
+                else
+                {
+                    nsSum += SmartMagnumIndividualNs(pcv.GroundLayer.NValue) * l; nsLen += l;
+                }
+            }
+            return (nsLen > 0 ? nsSum / nsLen : null, quLen > 0 ? quSum / quLen : null);
+        }
+
+        /// <summary>
+        /// 平均が適用範囲の外なら、各層の値を同じ比率で縮め (伸ばし) て平均を上下限にそろえる係数を返す関数。
+        /// 平均が 0 で下限へ上げるときは比率で伸ばせないので、各層を下限の値にする。範囲内・該当なしは値をそのまま返す。
+        /// (計算は範囲の上下限に丸めた値で続行する本工法の方針。2026-11-23 利用者の判断)
+        /// </summary>
+        private static Func<double, double> ScaleToRange(double? average, double min, double max)
+        {
+            if (average is not double avg || (avg >= min && avg <= max)) return v => v;
+            double target = Math.Clamp(avg, min, max);
+            if (avg > 0) { double k = target / avg; return v => v * k; }
+            return _ => target;
+        }
 
         /// <summary>
         /// 周面摩擦力度 τ2 (kN/m²)。砂質・礫質は β·Ns、粘土質は γ·qu。
@@ -283,14 +327,20 @@ namespace PileDesign.Models.InputData
 
             bool isReinforced = PileBodyInput?.SmartMagnumIsReinforcedCircum ?? false;
 
+            // 適用範囲は周面の平均で見る。範囲の外なら各層を同じ比率で直して平均を上下限にそろえる
+            // (有効長を使うので、呼び出し元は 0.4 m の除外を先に済ませておく)
+            var (avgNs, avgQu) = SmartMagnumShaftAverages();
+            var scaleNs = ScaleToRange(avgNs, SmartMagnumNsMin, SmartMagnumNsMax);
+            var scaleQu = ScaleToRange(avgQu, SmartMagnumQuMin, SmartMagnumQuMax);
+
             foreach (var pcv in PileCircumVerticals)
             {
                 var section = pcv.PileBodySegment?.PileSection;
                 bool isNodular = section?.IsNodularPile ?? false;
                 bool isCohesive = IsCohesive(pcv.GroundLayer.GranularityClass);
 
-                double ns = SmartMagnumClampNs(pcv.GroundLayer.NValue);
-                double qu = SmartMagnumQu(pcv.GroundLayer.Cohesive);
+                double ns = scaleNs(SmartMagnumIndividualNs(pcv.GroundLayer.NValue));
+                double qu = scaleQu(SmartMagnumQu(pcv.GroundLayer.Cohesive));
                 double omegaS = SmartMagnumOmegaSFor(pcv);
 
                 pcv.Tau2 = SmartMagnumTau2(isCohesive, isNodular, isReinforced, ns, qu, omegaS);
@@ -403,27 +453,15 @@ namespace PileDesign.Models.InputData
             if (n < nMin)
                 yield return $"{label}: 杭先端平均N値 N = {n:N1} は適用範囲 {nMin:N0}〜60 の下限を下回っています。";
 
-            // 一軸圧縮強度の適用範囲（10〜200）
-            if (cohesive)
-            {
-                double qu = SmartMagnumQu(PileToeCohesive);
-                if (qu > 0 && (qu < 10 || qu > 200))
-                    yield return $"{label}: 杭先端の一軸圧縮強度 qu = {qu:N0} kN/m² が適用範囲 10〜200 の外です（qu = 2×粘着力 として算定）。";
-            }
-
-            if (PileCircumVerticals != null)
-            {
-                // 範囲外の土層を 1 つずつ、入力値と計算に使う値を並べて挙げる (外部レビュー 2026-11-20。以前は最初の 1 層だけ、層名なし)
-                foreach (var layer in PileCircumVerticals
-                    .Where(p => p.IsPositiveCircumResistance || p.IsNegativeCircumResistance)
-                    .Select(p => p.GroundLayer).Distinct())
-                {
-                    double ns = layer.NValue;
-                    if (!IsCohesive(layer.GranularityClass) && (ns < SmartMagnumNsMin || ns > SmartMagnumNsMax))
-                        yield return $"{label}: 土層「{layer.Name}」の周面の平均N値 Ns = {ns:N1} は適用範囲 1〜30 の外です"
-                            + $"（{SmartMagnumClampNs(ns):N1} として計算します）。";
-                }
-            }
+            // 周面の平均 N̄s (1〜30)・q̄u (10〜200)。カタログの範囲は周面の地盤の平均値に対するもの。
+            // 以前は N̄s を土層ごとに、q̄u を杭先端の土層 (先端支持力の式に qu は入らない) で見ていた (2026-11-23)
+            var (avgNs, avgQu) = SmartMagnumShaftAverages();
+            if (avgNs is double ns && (ns < SmartMagnumNsMin || ns > SmartMagnumNsMax))
+                yield return $"{label}: 周面の砂質・礫質地盤の平均N値 N̄s = {ns:N1} は適用範囲 1〜30 の外です"
+                    + $"（各層を同じ比率で直し、平均を {Math.Clamp(ns, SmartMagnumNsMin, SmartMagnumNsMax):N1} として計算します）。";
+            if (avgQu is double qu && (qu < SmartMagnumQuMin || qu > SmartMagnumQuMax))
+                yield return $"{label}: 周面の粘土質地盤の一軸圧縮強さの平均 q̄u = {qu:N1} kN/m² は適用範囲 10〜200 の外です"
+                    + $"（qu = 2×粘着力。各層を同じ比率で直し、平均を {Math.Clamp(qu, SmartMagnumQuMin, SmartMagnumQuMax):N1} として計算します）。";
         }
     }
 }

@@ -1050,8 +1050,9 @@ namespace PileDesign.Models.InputData
                 // 土質別の既存値をそのまま使う（下のループで設定される）。
                 if (IsSmartMagnum)
                 {
-                    ApplySmartMagnumCircumProperties();
+                    // 除外を先に。周面の平均 N̄s・q̄u (適用範囲の判定と丸め) は除外後の有効長で重み付ける
                     ApplySmartMagnumCircumExclusion();
+                    ApplySmartMagnumCircumProperties();
                 }
                 else
                 {

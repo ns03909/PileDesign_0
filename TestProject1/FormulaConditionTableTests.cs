@@ -1214,6 +1214,22 @@ namespace TestProject1
             Assert.AreEqual(prc.ConcreteE * Ie(prc) * 1e-9, prc.EI, 1e-6, "PRC: 異形棒鋼の項も配置円 Dr で入る");
         }
 
+        /// <summary>
+        /// Smart-MAGNUM の周面の計算例 (平均 N̄s が範囲外のとき各層を同じ比率で直す) を、SoilPile で解いて一致すること。
+        /// 式・係数の照合は SmartMagnumBearingCapacityTests がカタログの表と計算例で済ませている。
+        /// </summary>
+        [TestMethod]
+        public void TheSmartMagnumExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-smart-magnum"];
+            var soilPile = SmartMagnumBearingCapacityTests.BuildTwoLayerPile(SmartMagnumBearingCapacityTests.Sand, 60, 40, cohesiveUpper: 0, cohesiveLower: 0);
+            double avg = soilPile.SmartMagnumShaftAverages().Ns!.Value, k = 30.0 / avg;
+            Assert.AreEqual(984.0 / 19.6, avg, 1e-9, "(前提) 有効長で重み付けた平均");
+            var layers = soilPile.PileCircumVerticals.OrderByDescending(p => p.Top).ToList();
+            StringAssert.Contains(table, $"$\\bar{{N}}_s = (600 + 384)/19.6 = {F1(avg)}$ で範囲の外なので、各層を $30/{F1(avg)}$ 倍して "
+                + $"$\\tau_2 = 5.0 \\times {F1(60 * k)} = {F1(layers.First().Tau2)}$・$5.0 \\times {F1(40 * k)} = {F1(layers.Last().Tau2)}$ kN/m²");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>

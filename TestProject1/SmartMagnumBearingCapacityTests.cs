@@ -19,7 +19,7 @@ namespace TestProject1
     [TestClass]
     public class SmartMagnumBearingCapacityTests
     {
-        private const string Sand = "砂質土";
+        internal const string Sand = "砂質土";
         private const string Gravel = "礫質土";
         private const string Clay = "粘性土";
 
@@ -163,12 +163,75 @@ namespace TestProject1
             Assert.AreEqual(535.0, SoilPile.SmartMagnumQu(400.0), 1e-12, "qu = 800 > 535 → 535");
         }
 
+        /// <summary>個々の N 値はカタログ ※2 で 0〜100 (100 で頭打ち)。1〜30 は平均 N̄s の範囲で、個々の値には掛けない。</summary>
         [TestMethod]
-        public void Ns_IsClampedToOneThirty()
+        public void IndividualNs_IsCappedAtOneHundred()
         {
-            Assert.AreEqual(1.0, SoilPile.SmartMagnumClampNs(0.0), 1e-12);
-            Assert.AreEqual(30.0, SoilPile.SmartMagnumClampNs(45.0), 1e-12);
-            Assert.AreEqual(18.0, SoilPile.SmartMagnumClampNs(18.0), 1e-12);
+            Assert.AreEqual(0.0, SoilPile.SmartMagnumIndividualNs(0.0), 1e-12);
+            Assert.AreEqual(45.0, SoilPile.SmartMagnumIndividualNs(45.0), 1e-12, "45 は 30 に丸めない (以前は土層ごとに 1〜30 に丸めていた)");
+            Assert.AreEqual(100.0, SoilPile.SmartMagnumIndividualNs(150.0), 1e-12);
+        }
+
+        /// <summary>
+        /// 周面の N̄s・q̄u はカタログの適用範囲 (1〜30・10〜200) を<b>周面の平均</b>で見る (2026-11-23)。
+        /// 平均が範囲内なら各層の値をそのまま、外なら各層を同じ比率で直して平均を上下限にそろえる。
+        /// 杭 0〜−20 m (ストレート PHC、標準型 β = 5.0・γ = 0.7)、上の層 0〜−10 m・下の層 −10〜−20 m
+        /// (下の層は杭先端の 0.4 m 上より下を除いて有効長 9.6 m)。
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(49.0, 10.0, false)]   // 平均 (490 + 96)/19.6 = 29.9 → 範囲内、各層そのまま
+        [DataRow(60.0, 40.0, true)]    // 平均 (600 + 384)/19.6 = 50.2 → 30 にそろえる
+        public void ShaftNs_RangeIsCheckedOnTheAverage(double nUpper, double nLower, bool outOfRange)
+        {
+            var soilPile = BuildTwoLayerPile(Sand, nUpper, nLower, cohesiveUpper: 0, cohesiveLower: 0);
+            var (avg, _) = soilPile.SmartMagnumShaftAverages();
+            double expectedAvg = (nUpper * 10 + nLower * 9.6) / 19.6;
+            Assert.AreEqual(expectedAvg, avg!.Value, 1e-9, "N̄s は有効長で重み付けた平均");
+
+            double k = outOfRange ? 30.0 / expectedAvg : 1.0;
+            var layers = soilPile.PileCircumVerticals.OrderByDescending(p => p.Top).ToList();
+            Assert.AreEqual(5.0 * nUpper * k, layers.First().Tau2, 1e-9, "上の層の τ2 = β·Ns");
+            Assert.AreEqual(5.0 * nLower * k, layers.Last().Tau2, 1e-9, "下の層の τ2 = β·Ns");
+
+            var warnings = soilPile.ValidateSmartMagnumRange().ToList();
+            Assert.AreEqual(outOfRange, warnings.Any(w => w.Contains("N̄s")), string.Join(" / ", warnings));
+        }
+
+        /// <summary>q̄u の範囲 10〜200 も周面の粘土質の層の平均で見る。以前は杭先端の土層の qu で見ていた。</summary>
+        [TestMethod]
+        public void ShaftQu_RangeIsCheckedOnTheAverage()
+        {
+            // qu = 2·Cu: 上の層 400、下の層 200 → 平均 (4000 + 1920)/19.6 = 302.0 → 200 にそろえる
+            var soilPile = BuildTwoLayerPile(Clay, 10, 10, cohesiveUpper: 200, cohesiveLower: 100);
+            var (_, avg) = soilPile.SmartMagnumShaftAverages();
+            double expectedAvg = (400 * 10 + 200 * 9.6) / 19.6;
+            Assert.AreEqual(expectedAvg, avg!.Value, 1e-9);
+            double k = 200.0 / expectedAvg;
+            var layers = soilPile.PileCircumVerticals.OrderByDescending(p => p.Top).ToList();
+            Assert.AreEqual(0.7 * 400 * k, layers.First().Tau2, 1e-9, "上の層の τ2 = γ·qu");
+            Assert.AreEqual(0.7 * 200 * k, layers.Last().Tau2, 1e-9, "下の層の τ2 = γ·qu");
+            var warnings = soilPile.ValidateSmartMagnumRange().ToList();
+            Assert.IsTrue(warnings.Any(w => w.Contains("q̄u")), string.Join(" / ", warnings));
+        }
+
+        internal static SoilPile BuildTwoLayerPile(string soilClass, double nUpper, double nLower, double cohesiveUpper, double cohesiveLower)
+        {
+            var body = new PileBodyInput
+            {
+                PileBodyType = PileTypeNames.PrecastConcrete,
+                PileConstructionType = PileConstructionTypeNames.SmartMagnum,
+                PileToeDia = 1200,
+                SettlePileToeDia = 1200,
+            };
+            body.PileBodySegments =
+            [
+                new PileBodySegment { No = 1, SegmentLength = 20, SegmentDepth = 20, PileSection = MakeStraightSection(1000) },
+            ];
+            ConfigureStraightSection(body.PileBodySegments[0].PileSection, 1000, "PHC-1000-標準-80-A");
+            var ground = MakeGround(
+                layers: [(-10.0, soilClass, nUpper, cohesiveUpper), (-25.0, soilClass, nLower, cohesiveLower)],
+                masses: [(-19.0, 30), (-20.0, 30), (-21.0, 30)]);
+            return MakeSoilPile(body, ground, pileTopAltitude: 0.0, zLevels: [0.0, -10.0, -20.0]);
         }
 
         // ── 6. カタログ計算例の再現（end-to-end） ──────────────────────
@@ -397,25 +460,19 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// 周面の Ns が範囲外の土層は、層ごとに入力値と計算に使う値を並べて挙げる (外部レビュー 2026-11-20)。
-        /// 以前は最初の 1 層だけを層名なしで「クランプして計算します」と書いていた。
+        /// 周面の N̄s が範囲外なら、平均値と計算に使う平均を並べて知らせる (外部レビュー 2026-11-20 の
+        /// 「入力値と計算に使う値を並べる」を、平均で判定する形 (2026-11-23) に合わせたもの)。
+        /// 1 層だけが 30 を超えても、平均が範囲内なら知らせない (カタログの範囲は平均値に対するもの)。
         /// </summary>
         [TestMethod]
-        public void RangeCheck_NamesEachOutOfRangeNsLayerWithTheValueUsed()
+        public void RangeCheck_ShowsTheShaftAverageAndTheValueUsed()
         {
-            var soilPile = BuildCatalogExamplePile();
-            var layers = soilPile.PileCircumVerticals
-                .Where(p => (p.IsPositiveCircumResistance || p.IsNegativeCircumResistance)
-                            && p.GroundLayer.GranularityClass != "粘性土")
-                .Select(p => p.GroundLayer).Distinct().Take(2).ToList();
-            if (layers.Count < 2) { Assert.Inconclusive("周面抵抗を見込む砂質の層が 2 つありません"); return; }
-            layers[0].NValue = 45;
-            layers[1].NValue = 0.5;
+            var soilPile = BuildTwoLayerPile(Sand, 45, 5, cohesiveUpper: 0, cohesiveLower: 0);
+            Assert.IsFalse(soilPile.ValidateSmartMagnumRange().Any(w => w.Contains("N̄s")), "平均 (450 + 48)/19.6 = 25.4 は範囲内");
 
+            soilPile = BuildTwoLayerPile(Sand, 45, 45, cohesiveUpper: 0, cohesiveLower: 0);
             var warnings = soilPile.ValidateSmartMagnumRange().ToList();
-
-            StringAssert.Contains(string.Join("\n", warnings), $"土層「{layers[0].Name}」の周面の平均N値 Ns = 45.0 は適用範囲 1〜30 の外です（30.0 として計算します）");
-            StringAssert.Contains(string.Join("\n", warnings), $"土層「{layers[1].Name}」の周面の平均N値 Ns = 0.5 は適用範囲 1〜30 の外です（1.0 として計算します）");
+            StringAssert.Contains(string.Join("\n", warnings), "周面の砂質・礫質地盤の平均N値 N̄s = 45.0 は適用範囲 1〜30 の外です（各層を同じ比率で直し、平均を 30.0 として計算します）");
         }
 
         [TestMethod]
