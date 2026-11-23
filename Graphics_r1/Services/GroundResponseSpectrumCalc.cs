@@ -31,7 +31,7 @@ namespace PileDesign.Services
 
         internal readonly record struct LevelResult(
             double T1, double T2,  // 1次・2次卓越周期 (固有値解析の最小・第2小)
-            double XiE, double Beta,  // 参加係数 β = {U}ᵀ[M]{1} / {U}ᵀ[M]{U} (論文式 3)
+            double XiE, double Beta,  // 参加係数 β = {U}ᵀ[M]{1} / {U}ᵀ[M]{U} (論文式 3)。U は PhiU0_1 と同じ地表 1 の正規化
             double Impedance,  // αE = ρ_E·Vs_E / (ρ_N·Vs_N) — 表層/基盤インピーダンス比
             double Gs1,        // 1次モード(T1)での地盤増幅率 1 / (αE + 1.57·ξe)
             double Gs2,        // 2次モード(T2)での地盤増幅率 1 / (αE + 4.71·ξe)
@@ -150,7 +150,8 @@ namespace PileDesign.Services
                 double[] u = new double[n];        // 変位 [m]
                 double T1 = double.NaN;
                 double T2Period = double.NaN;
-                double Beta = 0;
+                double Beta = 0;          // 生の固有ベクトル φ での参加係数 (変位の計算用)
+                double betaU = 0;         // 地表 1 に正規化した U での参加係数 (表示用。β·U = β_raw·φ)
                 // 収束の記録 (上限に達しても収束しなかったら結果に残す)
                 bool converged = false;
                 double finalChange = double.NaN;
@@ -243,6 +244,10 @@ namespace PileDesign.Services
                     if (den < 1e-300)
                         return Fail("1 次モードの参加係数を求められませんでした。", isInputProblem: false);
                     Beta = num / den;
+                    // 表示する β は、表示するモード形 U (地表 1) と組にして式 (1) で u_i = … β U_i になる値にする。
+                    // β は U の大きさに反比例するので β_U = β_raw · φ0。以前は生の φ での値をそのまま表示していて、
+                    // 画面・計算書の β と U から手で u を求めると φ0 倍ずれた (変位そのものは β·φ の積なので正しかった)
+                    betaU = Beta * phi0;
 
                     // 変位 u_i = |β · φ_i| · (T₁/2π)² · Sa0(T₁) · Fh(ξe) · L · Z — 論文式 (1)
                     double sa = Sa0(T1);
@@ -334,7 +339,7 @@ namespace PileDesign.Services
                 if (!converged)
                     Serilog.Log.Warning("[応答スペクトル法] 等価線形化が {Iter} 回で収束せず (最後の変化率 {Change:P2}, L={L})",
                         iterations, finalChange, L);
-                return new LevelResult(T1, T2Period, xiE, Beta, alphaE, Gs1, Gs2, G, phiU0, dispMm)
+                return new LevelResult(T1, T2Period, xiE, betaU, alphaE, Gs1, Gs2, G, phiU0, dispMm)
                 {
                     Converged = converged,
                     FinalChange = finalChange,

@@ -986,6 +986,46 @@ namespace TestProject1
             StringAssert.Contains(table, $"区間の合力は ${N0(it.GetPressure(0.1) * it.DX * it.DZ)}$ kN");
         }
 
+        /// <summary>
+        /// 応答スペクトル法の計算例を GroundResponseSpectrumCalc.Compute で解いて一致すること。
+        /// 表示の β と U (地表 1) から論文式 (1) で手計算した u0 が、実装の変位と合うこと (2026-11-23 まで β は
+        /// 正規化前の φ での値を表示していて、手計算が φ0 倍ずれた)。
+        /// </summary>
+        [TestMethod]
+        public void TheResponseSpectrumExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-response-spectrum"];
+            const double g = 9.80665;
+            var masses = new System.Collections.ObjectModel.ObservableCollection<GroundMassDataInput>
+            {
+                // 未入力の γ0.5・hmax は 0 (表層の土質の既定値に切り替わる)
+                new() { H = 4.0, Density = 17.0, VS0 = 150.0, Mass = 17.0 * 2.0 / g, Gamma05 = 0, HMax = 0 },
+                new() { H = 6.0, Density = 18.0, VS0 = 250.0, Mass = (17.0 * 2.0 + 18.0 * 3.0) / g, Gamma05 = 0, HMax = 0 },
+                new() { H = 1.0, Density = 19.0, VS0 = 400.0, IsEngineeringBedrock = true },
+            };
+            static string F3(double v) => v.ToString("0.000", CultureInfo.InvariantCulture);
+            static string F2(double v) => v.ToString("0.00", CultureInfo.InvariantCulture);
+
+            var r1 = PileDesign.Services.GroundResponseSpectrumCalc.Compute(masses, 19.0, 400.0, "砂質土", L: 0.2);
+            var r2 = PileDesign.Services.GroundResponseSpectrumCalc.Compute(masses, 19.0, 400.0, "砂質土", L: 1.0);
+            Assert.IsTrue(r1.Converged && r2.Converged, "(前提) 収束する");
+            double sa = PileDesign.Services.GroundResponseSpectrumCalc.Sa0(r1.T1), fh = PileDesign.Services.GroundResponseSpectrumCalc.Fh(r1.XiE);
+            StringAssert.Contains(table, $"レベル1 は {r1.Iterations} 回で収束し、$T_1 = {F3(r1.T1)}$ s・$\\xi_e = {F3(r1.XiE)}$・$\\beta = {F3(r1.Beta)}$・$U = (1,\\ {F3(r1.PhiU0_1[1])})$");
+            StringAssert.Contains(table, $"$u_0 = ({F3(r1.T1)}/2\\pi)^2 \\times {sa:0.0} \\times {F3(fh)} \\times {F3(r1.Beta)} \\times 0.2 = {F2(r1.DispMm[0])}$ mm");
+            StringAssert.Contains(table, $"$u_1 = {F2(r1.DispMm[1])}$ mm");
+            StringAssert.Contains(table, $"レベル2 は {r2.Iterations} 回で収束し、$T_1 = {F3(r2.T1)}$ s・$\\xi_e = {F3(r2.XiE)}$・$\\beta = {F3(r2.Beta)}$・$u_0 = {F2(r2.DispMm[0])}$ mm");
+
+            // 表示する β・U (地表 1)・ξe・T1 から論文式 (1) で u を手計算すると実装の変位に合う
+            // (u は反復の最後の 1 つ前の ξe・G で出すので、収束の許容差の分だけずれる)
+            foreach (var (r, L) in new[] { (r1, 0.2), (r2, 1.0) })
+                for (int i = 0; i < 2; i++)
+                {
+                    double hand = Math.Pow(r.T1 / (2 * Math.PI), 2) * PileDesign.Services.GroundResponseSpectrumCalc.Sa0(r.T1)
+                        * PileDesign.Services.GroundResponseSpectrumCalc.Fh(r.XiE) * r.Beta * r.PhiU0_1[i] * L * 1000;
+                    Assert.AreEqual(r.DispMm[i], hand, r.DispMm[i] * 2e-3, $"L={L} u{i}: 表示の β・U から式 (1) で求めた値と合いません");
+                }
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
