@@ -1056,8 +1056,9 @@ namespace PileDesign.Models.InputData
                 }
                 else
                 {
-                    ApplyHybridCircumProperties();
+                    // 除外を先に。周面の平均 N̄s・q̄u は除外後の有効長で重み付ける (Smart-MAGNUM と同じ)
                     ApplyHybridCircumExclusion();
+                    ApplyHybridCircumProperties();
                 }
 
                 foreach (var pcv in PileCircumVerticals)

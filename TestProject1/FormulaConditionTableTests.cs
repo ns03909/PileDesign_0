@@ -1230,6 +1230,25 @@ namespace TestProject1
                 + $"$\\tau_2 = 5.0 \\times {F1(60 * k)} = {F1(layers.First().Tau2)}$・$5.0 \\times {F1(40 * k)} = {F1(layers.Last().Tau2)}$ kN/m²");
         }
 
+        /// <summary>
+        /// Hybrid ニーディングの計算例 (α、平均 N̄s が範囲外のとき各層を同じ比率で直す) を SoilPile で解いて一致すること。
+        /// </summary>
+        [TestMethod]
+        public void TheHybridKneadingExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-hybrid-kneading"];
+            Assert.AreEqual(510.0, 200 * 1.5 * (1.5 + 0.2), 1e-9);
+            StringAssert.Contains(table, "$\\alpha$ は砂質・礫質 $200 \\times 1.5 \\times 1.7 = 510$・粘土質 $200 \\times 1.5^2 = 450$");
+
+            var pile = HybridKneadingBearingCapacityTests.BuildPileForTables(e: 1.5, es: 1.0);
+            pile.GroundInput.GroundLayers[0].NValue = 45;
+            pile.GroundInput.GroundLayers[1].NValue = 25;
+            pile.UpdateProperties();
+            double avg = pile.HybridShaftAverages().Ns!.Value, k = 30.0 / avg;
+            var top = pile.PileCircumVerticals.OrderByDescending(p => p.Top).First();
+            StringAssert.Contains(table, $"$\\bar{{N}}_s = (900 + 125)/25 = {F1(avg)}$ で範囲の外なので、各層を $30/{F1(avg)}$ 倍して上の層 $\\tau_2 = 4.4 \\times {F1(45 * k)} = {F1(top.Tau2)}$ kN/m²");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>

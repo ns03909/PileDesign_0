@@ -203,8 +203,36 @@ namespace PileDesign.Models.InputData
         /// </summary>
         internal static double HybridQu(double cohesive) => Math.Min(2.0 * cohesive, HybridQuMax);
 
-        /// <summary>平均 N 値 Ns を適用範囲 0 〜 30 にクランプする。</summary>
-        internal static double HybridClampNs(double ns) => Math.Clamp(ns, 0, HybridNsMax);
+        /// <summary>周面の砂質地盤の個々の N 値。カタログ「個々の N 値: N≦100」。</summary>
+        internal static double HybridIndividualNs(double n) => Math.Clamp(double.IsFinite(n) ? n : 0.0, 0.0, 100.0);
+
+        /// <summary>
+        /// 周面の平均値 N̄s (砂質・礫質の層) と q̄u (粘土質の層)。周面抵抗を見込む層を、先端支持力算定位置より下の
+        /// 除外を差し引いた有効長で重み付けた平均で、個々の値はカタログの上限 (N≦100、qu≦200) のあと。該当する層が無ければ null。
+        ///
+        /// <para>カタログの適用範囲 0&lt;N̄s≦30・40≦q̄u≦200 は「杭周囲の砂質地盤の平均N値」「粘土質地盤の一軸圧縮強度の平均値」
+        /// に対するもの (2026-11-23 利用者がカタログで確認)。以前は土層ごとの N 値を 30 以下に丸め、q̄u の下限は
+        /// 杭先端の土層の qu で確かめていた (qu は先端支持力の式に入らない)。Smart-MAGNUM と同じ扱い。</para>
+        /// </summary>
+        internal (double? Ns, double? Qu) HybridShaftAverages()
+        {
+            double nsSum = 0, nsLen = 0, quSum = 0, quLen = 0;
+            foreach (var pcv in PileCircumVerticals ?? [])
+            {
+                if (!(pcv.IsPositiveCircumResistance || pcv.IsNegativeCircumResistance)) continue;
+                double l = pcv.EffectiveL;
+                if (!(l > 0)) continue;
+                if (IsCohesive(pcv.GroundLayer.GranularityClass))
+                {
+                    quSum += HybridQu(pcv.GroundLayer.Cohesive) * l; quLen += l;
+                }
+                else
+                {
+                    nsSum += HybridIndividualNs(pcv.GroundLayer.NValue) * l; nsLen += l;
+                }
+            }
+            return (nsLen > 0 ? nsSum / nsLen : null, quLen > 0 ? quSum / quLen : null);
+        }
 
         /// <summary>
         /// 押込みの周面摩擦力度 τ2 (kN/m²)。
@@ -254,14 +282,21 @@ namespace PileDesign.Models.InputData
             bool enhanced = PileBodyInput?.HybridIsFrictionEnhanced ?? false;
             double es = HybridEs;
 
+            // 適用範囲は周面の平均で見る。範囲の外なら各層を同じ比率で直して平均を上下限にそろえる
+            // (有効長を使うので、呼び出し元は先端支持力算定位置より下の除外を先に済ませておく)。
+            // N̄s の下限は「0 &lt; N̄s」なので、0 は範囲の内として扱う (周面摩擦も 0 になる)
+            var (avgNs, avgQu) = HybridShaftAverages();
+            var scaleNs = ScaleToRange(avgNs, 0.0, HybridNsMax);
+            var scaleQu = ScaleToRange(avgQu, HybridQuMin, HybridQuMax);
+
             foreach (var pcv in PileCircumVerticals)
             {
                 var section = pcv.PileBodySegment?.PileSection;
                 bool isNodular = section?.IsNodularPile ?? false;
                 bool isCohesive = IsCohesive(pcv.GroundLayer.GranularityClass);
 
-                double ns = HybridClampNs(pcv.GroundLayer.NValue);
-                double qu = HybridQu(pcv.GroundLayer.Cohesive);
+                double ns = scaleNs(HybridIndividualNs(pcv.GroundLayer.NValue));
+                double qu = scaleQu(HybridQu(pcv.GroundLayer.Cohesive));
 
                 pcv.Tau2 = HybridTau2(isCohesive, isNodular, enhanced, ns, qu, es);
                 pcv.TauT = HybridTauT(isCohesive, isNodular, ns, qu);
@@ -343,13 +378,6 @@ namespace PileDesign.Models.InputData
             if (n < HybridToeNMin)
                 yield return $"{label}: 杭先端平均N値 N = {n:N1} が 5 未満のため、先端支持力係数 α = 0（先端支持力なし）として計算します。";
 
-            if (cohesive)
-            {
-                double qu = HybridQu(PileToeCohesive);
-                if (qu > 0 && qu < HybridQuMin)
-                    yield return $"{label}: 杭先端の一軸圧縮強度 qu = {qu:N0} kN/m² が適用範囲 40〜200 の下限を下回っています（qu = 2×粘着力 として算定）。";
-            }
-
             // 最大施工深さ（杭施工地盤面からの深さ）
             double depth = (GroundInput?.GroundTopAltitude ?? 0) - PileBottomAltitude;
             double maxDepth = PileToeGranularityClass switch
@@ -366,19 +394,15 @@ namespace PileDesign.Models.InputData
             if (depth < minDepth)
                 yield return $"{label}: 杭先端深度 {depth:N1} m は引抜き検討の最小施工深さ {minDepth:N1} m（6m かつ 10·D1）を下回っています。";
 
-            // 範囲外の土層を 1 つずつ、入力値と計算に使う値を並べて挙げる (外部レビュー 2026-11-20。以前は「ある」とだけ)
-            if (PileCircumVerticals != null)
-            {
-                foreach (var layer in PileCircumVerticals
-                    .Where(p => (p.IsPositiveCircumResistance || p.IsNegativeCircumResistance)
-                                && !IsCohesive(p.GroundLayer.GranularityClass)
-                                && p.GroundLayer.NValue > HybridNsMax)
-                    .Select(p => p.GroundLayer).Distinct())
-                {
-                    yield return $"{label}: 土層「{layer.Name}」の周面の平均N値 Ns = {layer.NValue:N1} は適用範囲 30 以下の外です"
-                        + $"（{HybridClampNs(layer.NValue):N1} として計算します）。";
-                }
-            }
+            // 周面の平均 N̄s (30 以下)・q̄u (40〜200)。カタログの範囲は杭周囲の地盤の平均値に対するもの。
+            // 平均値と計算に使う平均を並べて出す (外部レビュー 2026-11-20 の「入力値と計算に使う値を並べる」)
+            var (avgNs, avgQu) = HybridShaftAverages();
+            if (avgNs is double ns && ns > HybridNsMax)
+                yield return $"{label}: 周面の砂質・礫質地盤の平均N値 N̄s = {ns:N1} は適用範囲 30 以下の外です"
+                    + $"（各層を同じ比率で直し、平均を {HybridNsMax:N1} として計算します）。";
+            if (avgQu is double qu && (qu < HybridQuMin || qu > HybridQuMax))
+                yield return $"{label}: 周面の粘土質地盤の一軸圧縮強度の平均 q̄u = {qu:N1} kN/m² は適用範囲 40〜200 の外です"
+                    + $"（qu = 2×粘着力。各層を同じ比率で直し、平均を {Math.Clamp(qu, HybridQuMin, HybridQuMax):N1} として計算します）。";
         }
     }
 }

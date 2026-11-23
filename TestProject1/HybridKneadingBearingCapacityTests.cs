@@ -94,11 +94,34 @@ namespace TestProject1
             Assert.AreEqual(200.0, SoilPile.HybridQu(300.0), 1e-12, "個々の qu は 200 が上限");
         }
 
+        /// <summary>個々の N 値はカタログの上限 100。範囲 0&lt;N̄s≦30 は平均に対するもので、個々の値には掛けない。</summary>
         [TestMethod]
-        public void Ns_IsCappedAt30()
+        public void IndividualNs_IsCappedAtOneHundred()
         {
-            Assert.AreEqual(30.0, SoilPile.HybridClampNs(45.0), 1e-12);
-            Assert.AreEqual(18.0, SoilPile.HybridClampNs(18.0), 1e-12);
+            Assert.AreEqual(45.0, SoilPile.HybridIndividualNs(45.0), 1e-12, "45 は 30 に丸めない (以前は土層ごとに 30 以下へ丸めていた)");
+            Assert.AreEqual(100.0, SoilPile.HybridIndividualNs(120.0), 1e-12);
+        }
+
+        /// <summary>
+        /// 周面の N̄s の範囲 (30 以下) は周面の平均で見る (2026-11-23、カタログで利用者が確認)。
+        /// 杭 0〜−25 m: 上の砂質層 0〜−20 m (20 m、うち上 10 m はストレートの PHC で τ2 = 4.4·Ns)・下の礫質層 −20〜−25 m (5 m)。
+        /// </summary>
+        [DataTestMethod]
+        [DataRow(35.0, 10.0, false)]   // 平均 (700 + 50)/25 = 30.0 → 範囲内、各層そのまま (以前は 35 → 30)
+        [DataRow(45.0, 25.0, true)]    // 平均 (900 + 125)/25 = 41.0 → 30 にそろえる
+        public void ShaftNs_RangeIsCheckedOnTheAverage(double nUpper, double nLower, bool outOfRange)
+        {
+            var pile = BuildPile(e: 1.5, es: 1.0);
+            pile.GroundInput.GroundLayers[0].NValue = nUpper;
+            pile.GroundInput.GroundLayers[1].NValue = nLower;
+            pile.UpdateProperties();
+
+            double avg = (nUpper * 20 + nLower * 5) / 25;
+            Assert.AreEqual(avg, pile.HybridShaftAverages().Ns!.Value, 1e-9, "N̄s は有効長で重み付けた平均");
+            double k = outOfRange ? 30.0 / avg : 1.0;
+            var top = pile.PileCircumVerticals.OrderByDescending(p => p.Top).First();
+            Assert.AreEqual(4.4 * nUpper * k, top.Tau2, 1e-9, "上の区間 (ストレート) の τ2 = 4.4·Ns");
+            Assert.AreEqual(outOfRange, pile.ValidateHybridKneadingRange().Any(w => w.Contains("N̄s")), string.Join(" / ", pile.ValidateHybridKneadingRange()));
         }
 
         [TestMethod]
@@ -326,6 +349,9 @@ namespace TestProject1
         /// 三谷セキサンの BF.S 節杭 (節部径 1200 / 軸部径 1100) を下杭に持つ杭を組み立てる。
         /// 杭頭 GL-0m、杭長 25m → 杭先端は標高 -25m。
         /// </summary>
+        /// <summary>適用条件の表のテスト (FormulaConditionTableTests) から使う。中身は <see cref="BuildPile"/>。</summary>
+        internal static SoilPile BuildPileForTables(double e, double es) => BuildPile(e, es);
+
         private static SoilPile BuildPile(
             double e, double es, double lu = 0.0, double toeNValue = 45,
             string? constructionType = null)
