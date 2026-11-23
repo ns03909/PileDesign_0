@@ -867,13 +867,16 @@ namespace PileDesign.ViewModels
                     var topHs = model.GetDoatsuTopHorizontalSoilSpring(item);
                     var btmHs = model.GetDoatsuBtmHorizontalSoilSpring(item);
 
+                    // 液状化のケースは区間の土圧合力に βLq を掛ける (基礎指針'19 4.3 節。区間の上半分・下半分とも同じ値)
+                    double betaL = InputModel.EarthPressureLiquefactionReduction(item, model.CaseIsLiquefaction, model.CaseLevel);
+
                     var relDispTop = topEmb.CumulativeDisp - topSoil.CumulativeDisp;
                     var kVecTop = isTan ? item.GetTangentStiffnessVector(relDispTop) : item.GetSecantStiffnessVector(relDispTop);
-                    AddContribution(topHs, SafeK(kVecTop.Kx), SafeK(kVecTop.Ky));
+                    AddContribution(topHs, betaL * SafeK(kVecTop.Kx), betaL * SafeK(kVecTop.Ky));
 
                     var relDisplacementBtm = btmEmb.CumulativeDisp - btmSoil.CumulativeDisp;
                     var kVecBtm = isTan ? item.GetTangentStiffnessVector(relDisplacementBtm) : item.GetSecantStiffnessVector(relDisplacementBtm);
-                    AddContribution(btmHs, SafeK(kVecBtm.Kx), SafeK(kVecBtm.Ky));
+                    AddContribution(btmHs, betaL * SafeK(kVecBtm.Kx), betaL * SafeK(kVecBtm.Ky));
                 }
 
                 foreach (var kvp in accum)

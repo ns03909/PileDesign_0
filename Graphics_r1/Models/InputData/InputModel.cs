@@ -862,6 +862,27 @@ namespace PileDesign.Models.InputData
             => GroundAt(soilPile.GroundNo) ?? throw MissingReference(Common.DiagnosticTarget.Ground(soilPile.GroundNo),
                    $"地盤番号 {soilPile.GroundNo} の地盤がありません (地盤は {GroundsInput?.Count ?? 0} 個)。要素分割をやり直してください。");
 
+        /// <summary>
+        /// 土圧合力ばねの区間に掛ける、液状化による低減率。1 = 低減なし。
+        ///
+        /// <para>基礎指針'19 4.3 節は「液状化地盤中では、杭の水平地盤反力係数の低減を準用し、
+        /// 基礎根入れ部の土圧合力 PEt に塑性地盤反力の低減値 αL (図3.2.13 の βL と等しい) を乗じる」とする。
+        /// 以前は液状化のケースでも地盤変位を液状化時の値に替えるだけで、土圧は低減していなかった
+        /// (2026-11-23 利用者の判断で掛けるようにした)。</para>
+        ///
+        /// <para>βLq は根入部の地盤の、区間の中央が入る土質点の値で、杭の p-y と同じ
+        /// <see cref="GroundInput.LiquefactionReductionAt"/> を通す (判定していない地盤・対象外の土質点は 1)。
+        /// 液状化を考慮しないケースと VL (<paramref name="level"/> ≦ 0) は 1。</para>
+        /// </summary>
+        /// <param name="level">荷重ケースのレベル (1 = レベル1、2 = レベル2)。</param>
+        internal double EarthPressureLiquefactionReduction(DoatsuGoryokuBaneItem item, bool isLiquefaction, int level)
+        {
+            if (!isLiquefaction) return 1.0;
+            var embedment = ElementDivision?.SoilEmbedment;
+            var ground = embedment == null ? null : GroundAt(embedment.GroundNo);
+            return ground?.LiquefactionReductionAt(item.ZTop, item.ZBtm, level - 1) ?? 1.0;
+        }
+
         /// <summary>土層-杭セットの杭体。無ければ杭体番号を持った例外 (その杭体を使う杭すべてに効く)。</summary>
         internal PileBodyInput RequirePileBody(SoilPile soilPile)
             => PileBodyAt(soilPile.PileBodyNo) ?? throw MissingReference(Common.DiagnosticTarget.PileBody(soilPile.PileBodyNo),

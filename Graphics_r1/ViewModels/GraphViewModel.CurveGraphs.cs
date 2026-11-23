@@ -162,8 +162,10 @@ namespace PileDesign.ViewModels
                                 foreach (var item in dgb.Items)
                                 {
                                     double dz = item.ZTop - item.ZBtm;
-                                    dgbFx += item.GetPressure(dx) * dz * Math.Abs(item.Y1 - item.Y2);
-                                    dgbFy += item.GetPressure(dy) * dz * Math.Abs(item.X1 - item.X2);
+                                    // 解析 (PrepareKmat) と同じく、液状化のケースは βLq を掛ける
+                                    double betaL = InputModel.EarthPressureLiquefactionReduction(item, isLiquefaction, loadCase.Level);
+                                    dgbFx += betaL * item.GetPressure(dx) * dz * Math.Abs(item.Y1 - item.Y2);
+                                    dgbFy += betaL * item.GetPressure(dy) * dz * Math.Abs(item.X1 - item.X2);
                                 }
                                 theorDisps.Add(d * 1000.0); // mm
                                 theorForces.Add(dgbFx * cosT + dgbFy * sinT);

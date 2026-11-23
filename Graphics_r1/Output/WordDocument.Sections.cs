@@ -355,6 +355,8 @@ namespace PileDesign.Output
             AddInlineMathParagraph(body, [Tex(@"\K_{p} = \tan^{2}\left(45^{\circ} + \frac{\phi}{2}\right)"), "、", Tex(@"\K_{0} = 0.5")]);
             AddInlineMathParagraph(body, [Tex(@"\Delta_{p} = 0.05\,D_{f}"), "、", Tex(@"\y_{sp} = 0.1\,\Delta_{p}")]);
             AddInlineMathParagraph(body, [Tex(@"\P_{Et} = p_{E}\,B\,h"), "（区間の上端・下端の節点に 1/2 ずつ作用させる）"]);
+            // 液状化のケースは βLq を掛ける (InputModel.EarthPressureLiquefactionReduction。2026-11-23 から)
+            AddInlineMathParagraph(body, ["液状化を考慮するケースでは、区間の土圧合力に液状化による低減率 ", Tex(@"\beta_{Lq}"), "（区間の中央の深さの値、杭の水平地盤反力と同じ）を乗じる。"]);
 
             const double tabDg = 15; // mm (symbolDescTabPosition と同値)
             AddText(body, "記号");
