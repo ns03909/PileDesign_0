@@ -35,7 +35,7 @@ namespace PileDesign.Models
         // 注: 以前は long(BitConverter.DoubleToInt64Bits(a) ^ (b<<1)) で XOR ハッシュキーを使っていたが、
         //     異なる (ε₀, φ) ペアが同一キーに衝突し MN 曲線がノコギリ状に乱れる原因となっていた。
         //     タプル (a, b) をキーにすることで衝突を完全に排除する。
-        private readonly ConcurrentDictionary<(long, long), (double N, double M)> _forceMomentCache = new();
+        private readonly ConcurrentDictionary<(long, long, double), (double N, double M)> _forceMomentCache = new();
 
         private static (long, long) MakeKey(double epsilon0, double curvature, int roundDigits = 9)
         {
@@ -44,13 +44,14 @@ namespace PileDesign.Models
             return (a, b);
         }
 
-        // Cached wrapper: 既存の GetForceAndMoment(epsilon0, curvature) を内部で呼ぶ
-        private (double N, double M) GetForceAndMomentCached(double epsilon0, double curvature)
+        // Cached wrapper: 既存の GetForceAndMoment(epsilon0, curvature) を内部で呼ぶ。
+        // 定着筋の強度倍率 (終局は UltimateRebarStrengthFactor、降伏は 1.0) も鍵に入れる (同じ (ε₀, φ) でも値が違う)
+        private (double N, double M) GetForceAndMomentCached(double epsilon0, double curvature, double rebarFactor = 1.0)
         {
-            var key = MakeKey(epsilon0, curvature);
-            return _forceMomentCache.GetOrAdd(key, _ =>
+            var (a, b) = MakeKey(epsilon0, curvature);
+            return _forceMomentCache.GetOrAdd((a, b, rebarFactor), _ =>
             {
-                var res = GetForceAndMoment(epsilon0, curvature);
+                var res = GetForceAndMoment(epsilon0, curvature, rebarFactor);
                 return (res.Item1, res.Item2);
             });
         }
@@ -162,7 +163,7 @@ namespace PileDesign.Models
         /// <summary>
         /// 終局時曲げモーメント Mu の取り方 (2026-11-24 利用者の要望で選べるようにした)。
         /// <list type="bullet">
-        /// <item>false (既定・以前から): 圧縮縁のひずみが εB = 0.003 に達したときの M</item>
+        /// <item>false (既定): 圧縮縁のひずみが εcu (UltimateConcreteStrain、既定 0.005) に達したときの M</item>
         /// <item>true: マニュアル 3.4(1)c ⑥「終局時の曲げモーメント Mu は最大曲げモーメントとする」を文字どおりに。
         /// 式 3.4.9 は εB を超えても σmax のまま下がらず、定着筋も完全弾塑性なので、M は曲率とともに増え続け、
         /// 最大は曲率を限りなく大きくした極限 (全塑性: 圧縮側のコンクリートは一様に σmax、定着筋は ±σy) になる。
@@ -179,6 +180,43 @@ namespace PileDesign.Models
                     Update();
             }
         }
+
+        /// <summary>
+        /// Mu を求める圧縮縁のひずみ εcu (UseMaximumUltimateMoment が false のとき)。既定 0.005。
+        /// マニュアル本文に限界ひずみの規定は無いが、設計例 (3.5 節) の Q-α 図の頭打ちから逆算した Mu は
+        /// 「εcu = 0.005・定着筋 1.1σy」で求めた値と 0.3% 以内で一致した (2026-11-24、P1・P3 の 40 本で確認。
+        /// 利用者の判断で既定を設計例に合わせた)。以前は 0.003 (= εB) 固定。
+        /// </summary>
+        private double _ultimateConcreteStrain = DefaultUltimateConcreteStrain;
+        public double UltimateConcreteStrain
+        {
+            get => _ultimateConcreteStrain;
+            set
+            {
+                if (!double.IsFinite(value) || value < 0.003 || value > 0.05) return;   // εB 以上、常識の範囲で
+                if (SetProperty(ref _ultimateConcreteStrain, value) && D != 0 && PCRing != null && CTPConcrete != null)
+                    Update();
+            }
+        }
+        public const double DefaultUltimateConcreteStrain = 0.005;
+
+        /// <summary>
+        /// Mu を求めるときの引張定着筋の強度倍率 (降伏強度 σy に掛ける)。既定 1.1 (設計例に合わせた。上の説明を参照)。
+        /// 降伏曲げモーメント My (最外縁の定着筋の降伏) には掛けない。以前は 1.0。
+        /// 設計例の図の凡例には「鉄筋強度倍率 1.0」とあり、本文にも 1.1 の記載は無い。
+        /// </summary>
+        private double _ultimateRebarStrengthFactor = DefaultUltimateRebarStrengthFactor;
+        public double UltimateRebarStrengthFactor
+        {
+            get => _ultimateRebarStrengthFactor;
+            set
+            {
+                if (!double.IsFinite(value) || value < 1.0 || value > 1.5) return;
+                if (SetProperty(ref _ultimateRebarStrengthFactor, value) && D != 0 && PCRing != null && CTPConcrete != null)
+                    Update();
+            }
+        }
+        public const double DefaultUltimateRebarStrengthFactor = 1.1;
 
         [System.Text.Json.Serialization.JsonIgnore] // 選択肢 (get のみ)。保存しない
         public double[] ContractionRatioOption { get; } = [1.00, 0.85, 0.70];        // 絞り率
@@ -495,7 +533,8 @@ namespace PileDesign.Models
             combined.Add(new PileLibrary.Spec("コンクリートの設計基準強度 (杭体・パイルキャップの小さい方)", "Fc", $"{DesignFc:0.#}", "N/mm²"));
             combined.Add(new PileLibrary.Spec("杭体のヤング係数", "Ep", $"{(PileBodyEc > 0 ? PileBodyEc : FallbackPileEp):N0}", "N/mm²"));
             combined.Add(new PileLibrary.Spec("終局時曲げモーメントの取り方", "Mu",
-                UseMaximumUltimateMoment ? "最大曲げモーメント (全塑性)" : "圧縮縁ひずみ 0.003 のとき", ""));
+                UseMaximumUltimateMoment ? "最大曲げモーメント (全塑性)" : $"圧縮縁ひずみ {UltimateConcreteStrain:0.####} のとき", ""));
+            combined.Add(new PileLibrary.Spec("Mu に使う定着筋の強度倍率", "", $"{UltimateRebarStrengthFactor:0.##}", ""));
             if (CTPTensionRebars != null && CTPTensionRebars.HasTensionRebars)
             {
                 string arrangement = CTPTensionRebars.IsCircleArrangement ? "円形配置"
@@ -923,16 +962,16 @@ namespace PileDesign.Models
                 int maxIter = 200;
                 for (int iter = 0; iter < maxIter && Math.Abs(N - NTarget) > 0.1; iter++)
                 {
-                    double epsilon0 = GetEpsilon0(curvature, -CTPConcrete.D * Nu * 0.5, CTPConcrete.EpsilonB);
-                    double N1 = GetForceAndMoment(epsilon0, curvature + deltaCurvature).Item1;
+                    double epsilon0 = GetEpsilon0(curvature, -CTPConcrete.D * Nu * 0.5, UltimateConcreteStrain);
+                    double N1 = GetForceAndMoment(epsilon0, curvature + deltaCurvature, UltimateRebarStrengthFactor).Item1;
 
                     double dNdPhi = (N1 - N) / deltaCurvature;
                     if (Math.Abs(dNdPhi) < 1e-12) break;
 
                     curvature += (NTarget - N) / dNdPhi;
 
-                    epsilon0 = GetEpsilon0(curvature, -CTPConcrete.D * Nu * 0.5, CTPConcrete.EpsilonB);
-                    var result = GetForceAndMoment(epsilon0, curvature);
+                    epsilon0 = GetEpsilon0(curvature, -CTPConcrete.D * Nu * 0.5, UltimateConcreteStrain);
+                    var result = GetForceAndMoment(epsilon0, curvature, UltimateRebarStrengthFactor);
                     N = result.Item1; M = result.Item2;
                 }
                 return M;
@@ -993,7 +1032,7 @@ namespace PileDesign.Models
             }
             else
             {
-                var result03 = GetUltimateMNInteraction(0.003);
+                var result03 = GetUltimateMNInteraction(UltimateConcreteStrain, UltimateRebarStrengthFactor);
                 (UltimateNs, UltimateMs, UltimateEpsilon0s, UltimateCurvatures) = (result03.Item1, result03.Item2, result03.Item3, result03.Item4);
             }
         }
@@ -1004,6 +1043,7 @@ namespace PileDesign.Models
         /// コンクリートは z &lt; u の弓形に一様に σmax (引張は負担しない)。弓形の面積と中心まわりのモーメントは閉じた式で求める
         /// (帯に分けた数値積分は中立軸が帯の中にあると N が階段状になり、軸力を合わせられない)。
         /// 定着筋は圧縮側 +σy (押しのけたコンクリートの σmax を引く)・引張側 −σy、ちょうど中立軸上の筋は 0。
+        /// σy には強度倍率 UltimateRebarStrengthFactor を掛ける。
         /// </summary>
         internal (double N, double M) GetPlasticForceAndMoment(double u)
         {
@@ -1018,7 +1058,8 @@ namespace PileDesign.Models
             if (CTPTensionRebars.HasTensionRebars)
             {
                 // 定着筋の点断面の並べ方は弾塑性の計算と同じクラスに任せる。ε = u − z (曲率 1) の符号で σ = ±σy
-                var bar = new CTPPlasticMaterial(CTPTensionRebars.SigmaY, CTPTensionRebars.SigmaY);
+                double fu = CTPTensionRebars.SigmaY * UltimateRebarStrengthFactor;   // Mu に使う定着筋の強度
+                var bar = new CTPPlasticMaterial(fu, fu);
                 var displaced = new CTPPlasticMaterial(smax, 0.0);
                 Func<CTPMaterial, (double, double)> bars;
                 if (CTPTensionRebars.IsCircleArrangement)
@@ -1118,8 +1159,10 @@ namespace PileDesign.Models
         }
 
         // 軸力、曲げモーメント取得メソッド
-        internal (double, double, double, double) GetForceAndMoment(double epsilon0, double curvature)
+        internal (double, double, double, double) GetForceAndMoment(double epsilon0, double curvature, double rebarFactor = 1.0)
         {
+            // 終局 (Mu) では定着筋の降伏強度を rebarFactor 倍にする (UltimateRebarStrengthFactor)
+            CTPMaterial rebar = rebarFactor == 1.0 ? CTPTensionRebars : new CTPScaledRebar(CTPTensionRebars, rebarFactor);
             double N;
             double M;
             CTPCircularSolidSection circularSolidSection = new(CTPConcrete.D * Nu);
@@ -1131,7 +1174,7 @@ namespace PileDesign.Models
                 {
                     CTPCircularDotSection circularDotSection = new(CTPTensionRebars.TDorTB, CTPTensionRebars.SelectedBarNumberCircle, CTPTensionRebars.BarArea);
 
-                    var result1 = circularDotSection.GetForceAndMoment(CTPTensionRebars, epsilon0, curvature);
+                    var result1 = circularDotSection.GetForceAndMoment(rebar, epsilon0, curvature);
                     var result2 = circularDotSection.GetForceAndMoment(CTPConcrete, epsilon0, curvature);
                     N += result1.Item1 - result2.Item1;
                     M += result1.Item2 - result2.Item2;
@@ -1141,7 +1184,7 @@ namespace PileDesign.Models
                 {
                     CTPSquareDotSection squareDotSection = new(CTPTensionRebars.TDorTB, CTPTensionRebars.SelectedBarNumberSquare, CTPTensionRebars.BarArea);
 
-                    var result1 = squareDotSection.GetForceAndMoment(CTPTensionRebars, epsilon0, curvature);
+                    var result1 = squareDotSection.GetForceAndMoment(rebar, epsilon0, curvature);
                     var result2 = squareDotSection.GetForceAndMoment(CTPConcrete, epsilon0, curvature);
                     N += result1.Item1 - result2.Item1;
                     M += result1.Item2 - result2.Item2;
@@ -1226,7 +1269,7 @@ namespace PileDesign.Models
         }
 
         // 安全限界MN インタラクション取得メソッド
-        internal (ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>) GetUltimateMNInteraction(double maxEpsilonC)
+        internal (ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>, ObservableCollection<double>) GetUltimateMNInteraction(double maxEpsilonC, double rebarFactor = 1.0)
         {
             int n = DivisionNum * 2 + 1;
             var axial = new double[n];
@@ -1237,7 +1280,7 @@ namespace PileDesign.Models
             double maxCurvature;
             if (PCRing.D != 0) // 0除算回避
             {
-                maxCurvature = (0.003 + 0.0025) * 20.0 / (PCRing.D * Nu);
+                maxCurvature = (Math.Max(maxEpsilonC, 0.003) + 0.0025) * 20.0 / (PCRing.D * Nu);   // 圧縮縁ひずみが 0.003 を超えるときは掃引の範囲を広げる (以前は 0.003 固定)
             }
             else
             {
@@ -1272,7 +1315,7 @@ namespace PileDesign.Models
                 }
 
                 // キャッシュ済み計算を利用
-                var res = GetForceAndMomentCached(epsilon0, curvature);
+                var res = GetForceAndMomentCached(epsilon0, curvature, rebarFactor);
                 axial[i] = res.N;
                 bending[i] = res.M;
                 epsilonCs[i] = epsilonC;
@@ -1530,6 +1573,19 @@ namespace PileDesign.Models
     {
         public override double GetStress(double epsilon)
             => epsilon > 0 ? compression : (epsilon < 0 ? -tension : 0.0);
+    }
+
+    /// <summary>
+    /// 引張定着筋の降伏強度を factor 倍にした完全弾塑性 (Es は同じ)。キャプテンパイル工法の Mu で使う
+    /// (UltimateRebarStrengthFactor)。
+    /// </summary>
+    internal sealed class CTPScaledRebar(CTPTensionRebars source, double factor) : CTPMaterial
+    {
+        public override double GetStress(double epsilon)
+        {
+            double fy = source.SigmaY * factor;
+            return Math.Clamp(source.Es * epsilon, -fy, fy);
+        }
     }
 
     internal abstract class CTPSection { }

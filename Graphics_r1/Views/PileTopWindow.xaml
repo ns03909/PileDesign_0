@@ -429,21 +429,33 @@
                                             <!-- 終局時曲げモーメント Mu の取り方 (CaptainPile.UseMaximumUltimateMoment) -->
                                             <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
                                                 <TextBlock Text="終局時曲げモーメント Mu" Width="150" VerticalAlignment="Center"/>
-                                                <RadioButton x:Name="RadioButtonCaptainMuAtStrain" GroupName="CaptainMu" Content="圧縮縁ひずみ 0.003 のとき" Margin="0,0,10,0"
+                                                <RadioButton x:Name="RadioButtonCaptainMuAtStrain" GroupName="CaptainMu" Content="圧縮縁ひずみ εcu" VerticalAlignment="Center"
                                                              IsChecked="{Binding PileTop.CaptainPile.UseMaximumUltimateMoment, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=False}"
                                                              Checked="RadioButtonCaptainMu_Checked"/>
-                                                <RadioButton x:Name="RadioButtonCaptainMuMaximum" GroupName="CaptainMu" Content="最大曲げモーメント (全塑性)"
+                                                <TextBox x:Name="TextBoxCaptainUltimateStrain" Width="55" Margin="4,0,2,0" HorizontalContentAlignment="Right"
+                                                         Text="{Binding PileTop.CaptainPile.UltimateConcreteStrain, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.####}}"
+                                                         IsEnabled="{Binding IsChecked, ElementName=RadioButtonCaptainMuAtStrain}"
+                                                         LostFocus="TextBoxCaptainMu_LostFocus"/>
+                                                <TextBlock Text="のとき" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                                <RadioButton x:Name="RadioButtonCaptainMuMaximum" GroupName="CaptainMu" Content="最大曲げモーメント (全塑性)" VerticalAlignment="Center"
                                                              IsChecked="{Binding PileTop.CaptainPile.UseMaximumUltimateMoment, Mode=TwoWay, Converter={StaticResource BoolEqualsConverter}, ConverterParameter=True}"
                                                              Checked="RadioButtonCaptainMu_Checked"/>
                                                 <StackPanel.ToolTip>
                                                     <ToolTip>
-                                                        <TextBlock MaxWidth="460" TextWrapping="Wrap">
-                                                            <Run Text="マニュアル 3.4 節 ⑥ は「終局時の曲げモーメント Mu は最大曲げモーメントとする」としています。"/><LineBreak/>
-                                                            <Run Text="コンクリートの応力度は εB = 0.003 を超えても σmax のまま下がらない (式 3.4.9) ので、M は曲率とともに増え続け、最大は全塑性 (圧縮側のコンクリートは一様に σmax、定着筋は ±σy) になります。限界ひずみの規定はありません。"/><LineBreak/>
-                                                            <Run Text="既定は圧縮縁のひずみが εB = 0.003 に達したときの M (以前からの値) で、全塑性より小さくなります。"/>
+                                                        <TextBlock MaxWidth="480" TextWrapping="Wrap">
+                                                            <Run Text="マニュアル 3.4 節 ⑥ は「終局時の曲げモーメント Mu は最大曲げモーメントとする」としていますが、限界ひずみの規定はありません。"/><LineBreak/>
+                                                            <Run Text="コンクリートの応力度は εB = 0.003 を超えても σmax のまま下がらない (式 3.4.9) ので、M は曲率とともに増え続け、最大は全塑性 (圧縮側のコンクリートは一様に σmax、定着筋は ±σy) になります。"/><LineBreak/>
+                                                            <Run Text="既定 (εcu = 0.005・定着筋の強度倍率 1.1) は、設計例 (3.5 節) の Q-α 図から逆算した Mu に合う値です。0.003・1.0 にすると以前の値になります。"/>
                                                         </TextBlock>
                                                     </ToolTip>
                                                 </StackPanel.ToolTip>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,2"
+                                                        ToolTip="Mu を求めるときだけ、引張定着筋の降伏強度 σy に掛けます (降伏曲げモーメント My には掛けません)。既定 1.1 は設計例に合う値です (1.0〜1.5)。">
+                                                <TextBlock Text="Mu に使う定着筋の強度倍率" Width="150" VerticalAlignment="Center"/>
+                                                <TextBox x:Name="TextBoxCaptainUltimateRebarFactor" Width="55" HorizontalContentAlignment="Right"
+                                                         Text="{Binding PileTop.CaptainPile.UltimateRebarStrengthFactor, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.##}}"
+                                                         LostFocus="TextBoxCaptainMu_LostFocus"/>
                                             </StackPanel>
 
                                             <!-- PC リング径 ≠ 杭径 の警告 -->

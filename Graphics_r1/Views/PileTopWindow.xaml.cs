@@ -254,6 +254,9 @@ namespace PileDesign.Views
             Recalculate();
         }
 
+        // εcu・定着筋の強度倍率 (Mu 用) を入力したら組み直す
+        private void TextBoxCaptainMu_LostFocus(object sender, RoutedEventArgs e) => Recalculate();
+
         private void Recalculate()
         {
             PileTopViewModel viewModel = (PileTopViewModel)DataContext;
