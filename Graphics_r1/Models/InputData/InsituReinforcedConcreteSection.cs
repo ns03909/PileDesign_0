@@ -377,7 +377,7 @@ namespace PileDesign.Models.InputData
 
                 default:
                     rows.Add(("pt = 100·(主筋の断面積/Ac)/4", $"{F3(ShearPt)} %"));
-                    rows.Add(("pw", F3(pw)));
+                    rows.Add(("pw", PwText(pw)));
                     rows.Add(("σwy", $"{F3(sigmaWy)} N/mm²"));
                     rows.Add(("β1·β2", isFactored
                         ? $"{F3(ShearBeta1Ultimate)} × {F3(ShearBeta2(sigma0))} (β2: σ0 ≦ ξFc/3 = {F3(xi * fc / 3)} なら 0.75、超えれば 0.65)"
@@ -387,6 +387,12 @@ namespace PileDesign.Models.InputData
                         rows, GetUltimateLimitShear(monQd, sigma0, ShearPt, pw, sigmaWy, isFactored));
             }
         }
+
+        /// <summary>
+        /// せん断補強筋比を内訳に出す文字 (% で小数 3 桁)。以前は比のまま小数 3 桁 (F3) で出していて、
+        /// 0.00373 が「0.004」、上限 0.004 と並ぶと頭打ちされたように読めた (2026-11-23)。
+        /// </summary>
+        private static string PwText(double pw) => $"{F3(pw * 100)} %";
 
         /// <summary>工法の式の内訳 (<see cref="DescribeShearLimit"/>)。値は曲線と同じ工法の関数で求める。</summary>
         private ShearLimitBasis DescribeMethodShearLimit(ShearReinforcementMethodSpec spec, SectionLimitState limit, bool isFactored,
@@ -419,13 +425,13 @@ namespace PileDesign.Models.InputData
                         rows.Add(("κ", F3(MethodKappa)));
                         return new ShearLimitBasis("QAs = sfs·Ac/κ (せん断補強筋は効かない)", rows, GetMethodDamageLimitShear(spec, pw));
                     }
-                    rows.Add(("pw (頭打ち後)", $"{F3(Math.Min(pw, spec.DamagePwCap))} (入力 {F3(pw)}、上限 {F3(spec.DamagePwCap)})"));
+                    rows.Add(("pw (頭打ち後)", $"{PwText(Math.Min(pw, spec.DamagePwCap))} (入力 {PwText(pw)}、上限 {PwText(spec.DamagePwCap)})"));
                     rows.Add(("wft", $"{F3(spec.ShortTermTensileStress)} N/mm²"));
                     return new ShearLimitBasis("QA = b·j·{sfs + 0.5·wft·(pw − 0.001)}", rows, GetMethodDamageLimitShear(spec, pw));
                 }
 
                 default:
-                    rows.Add(("pw (頭打ち後)", $"{F3(Math.Min(pw, spec.UltimatePwCap))} (入力 {F3(pw)}、上限 {F3(spec.UltimatePwCap)})"));
+                    rows.Add(("pw (頭打ち後)", $"{PwText(Math.Min(pw, spec.UltimatePwCap))} (入力 {PwText(pw)}、上限 {PwText(spec.UltimatePwCap)})"));
                     rows.Add(("σwy", $"{F3(spec.UltimateSigmaWy)} N/mm²"));
                     if (HoopUltimateFormula == ShearReinforcementMethods.UltimateFormulaTrussArch)
                     {

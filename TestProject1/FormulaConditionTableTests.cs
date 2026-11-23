@@ -1026,6 +1026,53 @@ namespace TestProject1
                 }
         }
 
+        /// <summary>
+        /// エムケーパイルリング785 の計算例を、杭断面の検定の根拠 (DescribeShearLimit) で解いて一致すること。
+        /// 告示1113 の区分は静的オプションなので (1) に固定して戻す。
+        /// </summary>
+        [TestMethod]
+        public void TheMk785ShearExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-mk785-shear"];
+            int savedCase = ConcreteModelOptions.Notification1113CompressionCase;
+            ConcreteModelOptions.Notification1113CompressionCase = 1;
+            try
+            {
+                var s = new PileSection
+                {
+                    PileBodyType = PileDesign.Constants.PileTypeNames.InsituRc, PileSectionType = PileDesign.Constants.PileTypeNames.RcSection,
+                    ConcreteOutDia = 1200, PileDiameter = 1200, ConcreteFc = 30, ConcreteGsi = 0.75,
+                    MainBarNum = 24, MainBarSize = "D25", MainBarSpec = "SD390", MainBarCenterCover = 150,
+                    HoopMethod = ShearReinforcementMethods.MkPileRing785, HoopSize = "MD16", HoopSpacing = 100, HoopCenterCover = 150,
+                };
+                double Q(SectionLimitState limit, bool factored) => s.DescribeShearLimit(limit, 2, factored, 2.0, 2000.0)!.ValueN / 1000;
+
+                double b = 600 * Math.Sqrt(Math.PI), d = b - 150, j = 7.0 / 8.0 * d, ac = Math.PI * 1200 * 1200 / 4;
+                // 主筋の D25 は 507 mm² (PileSection の表。JIS の公称値 506.7 ではない)。MD16 は工法の表の 198.6 mm²
+                double pw = 2 * 198.6 / (b * 100), pt = 7 * 507.0 * 100 / (b * d);
+                Assert.AreEqual(pw, s.HoopPw, 1e-12, "pw = 2aw/(b·x)");
+                StringAssert.Contains(table, $"$b = {N1(b)}$・$d = {N1(d)}$・$j = {N1(j)}$ mm、$p_w = {pw * 100:0.000}\\%$・$p_t = {pt:0.000}\\%$");
+
+                double lfs = Math.Min(30.0 / 40, 0.75 * (0.49 + 0.30));
+                Assert.AreEqual(lfs * ac / (4.0 / 3) / 1000, Q(SectionLimitState.Service, true), 1e-6, "QAL = Lfs·Ac/κ");
+                Assert.AreEqual(1.5 * lfs * ac / (4.0 / 3) / 1000, Q(SectionLimitState.Damage, true), 1e-6, "QAs = sfs·Ac/κ");
+                StringAssert.Contains(table, $"${{}}_L f_s = {lfs:0.000}$ N/mm² で $Q_{{AL}} = {N1(Q(SectionLimitState.Service, true))}$ kN、$Q_{{As}} = {N1(Q(SectionLimitState.Damage, true))}$ kN ((3.2))");
+
+                double un = Q(SectionLimitState.Ultimate, false), fa = Q(SectionLimitState.Ultimate, true);
+                double hand = (0.053 * Math.Pow(pt, 0.23) * 48 / 2.12 + 0.85 * Math.Sqrt(pw * 785) + 0.1 * 2000e3 / ac) * b * j / 1000;
+                Assert.AreEqual(hand, un, 1e-6, "(4.1) 大野・荒川 min 式");
+                Assert.AreEqual(0.9 * un, fa, 1e-9, "β = 0.9");
+                StringAssert.Contains(table, $"$Q_{{SU}} = {N1(un)}$ kN (低減前)・${N1(fa)}$ kN ($\\beta = 0.9$)");
+
+                s.HoopDamageFormula = ShearReinforcementMethods.DamageFormulaSafetyShortTerm;
+                double qa = Q(SectionLimitState.Damage, true);
+                Assert.AreEqual(b * j * (1.5 * lfs + 0.5 * 590 * (pw - 0.001)) / 1000, qa, 1e-6, "(3.3)");
+                Assert.AreEqual(1.5, s.ShearDesignMagnification, 0.0, "(3.3) を選んだら設計用せん断力を 1.5 倍");
+                StringAssert.Contains(table, $"$Q_A = {N1(qa)}$ kN ((3.3))");
+            }
+            finally { ConcreteModelOptions.Notification1113CompressionCase = savedCase; }
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
