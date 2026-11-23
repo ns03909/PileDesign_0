@@ -116,8 +116,9 @@ namespace PileDesign.Models.InputData
                 SafetyShearMagnification = 1.5,
                 // 4.1 終局は大野・荒川 min 式のみ
                 UltimateFormulaOptions = [UltimateFormulaArakawa],
-                // 2.3 主筋 呼び名 D19〜D41
+                // 2.3 主筋 呼び名 D19〜D41 (範囲外は杭径・Fc と同じく「適用範囲外」。2026-11-23 利用者の判断)
                 MainBarSizeNote = "D19〜D41",
+                MainBarSizes = ["D19", "D22", "D25", "D29", "D32", "D35", "D38", "D41"],
             },
             [UlbonSpiral] = new ShearReinforcementMethodSpec
             {
@@ -296,22 +297,30 @@ namespace PileDesign.Models.InputData
         /// <summary>損傷限界の式が引張軸力の杭体に適用できないか。</summary>
         public required bool DamageExcludesTension { get; init; }
 
-        /// <summary>主筋の呼び名の適用範囲。空なら規定なし。</summary>
+        /// <summary>主筋の呼び名の適用範囲 (画面・メッセージ用の文)。空なら規定なし。</summary>
         public required string MainBarSizeNote { get; init; }
 
         /// <summary>
-        /// 杭径・Fc が工法の適用範囲の外なら、その理由 (利用者向けの文)。範囲内なら null。
+        /// 主筋に使える呼び名。null なら規定なし。<see cref="OutOfScopeReason"/> が見る。
+        /// 以前は <see cref="MainBarSizeNote"/> を持っているだけで、どこからも確かめていなかった (2026-11-23)。
+        /// </summary>
+        public string[]? MainBarSizes { get; init; }
+
+        /// <summary>
+        /// 杭径・Fc・主筋の呼び名が工法の適用範囲の外なら、その理由 (利用者向けの文)。範囲内なら null。
         ///
         /// 範囲の外では工法の指針の式が使えないので、その断面のせん断の検定は OK とも NG とも言わない
         /// (検定の項目に理由を付け、判定を「適用範囲外」にする)。諸元表の注記も同じ判定を使う。
         /// </summary>
-        public string? OutOfScopeReason(double pileDiaMm, double fc)
+        public string? OutOfScopeReason(double pileDiaMm, double fc, string? mainBarSize = null)
         {
             bool hasDiaLimit = !double.IsPositiveInfinity(PileDiaMax);
             if (hasDiaLimit && (pileDiaMm < PileDiaMin || pileDiaMm > PileDiaMax))
                 return $"杭径が{Name}の適用範囲 ({PileDiaMin:N0}〜{PileDiaMax:N0}mm) の外です";
             if (fc < FcMin || fc > FcMax)
                 return $"Fc が{Name}の適用範囲 ({FcMin:N0}〜{FcMax:N0}N/mm2) の外です";
+            if (MainBarSizes != null && mainBarSize != null && !MainBarSizes.Contains(mainBarSize))
+                return $"主筋の呼び名 {mainBarSize} が{Name}の適用範囲 ({MainBarSizeNote}) の外です";
             return null;
         }
 

@@ -41,9 +41,27 @@ namespace TestProject1
             StringAssert.Contains(mk.OutOfScopeReason(1000, 50), "Fc");
             StringAssert.Contains(mk.OutOfScopeReason(1000, 21), "Fc");
 
-            // ウルボンは杭径の規定が無い
+            // 主筋の呼び名 D19〜D41 (2026-11-23 から。以前は諸元に持っているだけで確かめていなかった)
+            Assert.IsNull(mk.OutOfScopeReason(1000, 30, "D19"), "範囲の端 D19 を範囲外にしています");
+            Assert.IsNull(mk.OutOfScopeReason(1000, 30, "D41"), "範囲の端 D41 を範囲外にしています");
+            StringAssert.Contains(mk.OutOfScopeReason(1000, 30, "D16"), "主筋");
+            StringAssert.Contains(mk.OutOfScopeReason(1000, 30, "D51"), "主筋");
+
+            // ウルボンは杭径・主筋の規定が無い
             var ulbon = ShearReinforcementMethods.Get(ShearReinforcementMethods.UlbonSpiral)!;
             Assert.IsNull(ulbon.OutOfScopeReason(500, 30), "杭径の規定が無い工法で、杭径を範囲外としています");
+            Assert.IsNull(ulbon.OutOfScopeReason(1000, 30, "D16"), "主筋の規定が無い工法で、主筋を範囲外としています");
+        }
+
+        /// <summary>断面の主筋の呼び名が範囲の判定 (検定の「適用範囲外」) に届くこと。</summary>
+        [TestMethod]
+        public void TheSectionsMainBarSizeReachesTheScopeCheck()
+        {
+            var s = RcSection(ShearReinforcementMethods.MkPileRing785, 1000, 30);
+            s.MainBarSize = "D25";
+            Assert.IsNull(s.HoopMethodOutOfScopeReason, "範囲内の主筋を範囲外にしています");
+            s.MainBarSize = "D16";
+            StringAssert.Contains(s.HoopMethodOutOfScopeReason, "主筋", "断面の主筋の呼び名を範囲の判定に渡していません");
         }
 
         /// <summary>

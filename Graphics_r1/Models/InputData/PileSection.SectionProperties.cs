@@ -495,7 +495,8 @@ namespace PileDesign.Models.InputData
                                 : "");
                         SelectedPileSectionSpecification.Add(
                             new Spec("せん断補強筋工法の適用範囲", "",
-                                $"{diaText} / Fc {hoopMethod.FcMin:N0}〜{hoopMethod.FcMax:N0}N/mm2",
+                                $"{diaText} / Fc {hoopMethod.FcMin:N0}〜{hoopMethod.FcMax:N0}N/mm2"
+                                + (string.IsNullOrEmpty(hoopMethod.MainBarSizeNote) ? "" : $" / 主筋 {hoopMethod.MainBarSizeNote}"),
                                 "", noteRange));
                     }
                 }

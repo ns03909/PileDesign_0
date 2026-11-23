@@ -93,14 +93,14 @@ namespace PileDesign.Models.InputData
         public ObservableCollection<string> HoopSpecOption => _hoopSpecOption;
 
         /// <summary>
-        /// 工法の断面で、杭径・Fc が工法の適用範囲の外ならその理由。範囲内・工法なし (標準) なら null。
+        /// 工法の断面で、杭径・Fc・主筋の呼び名が工法の適用範囲の外ならその理由。範囲内・工法なし (標準) なら null。
         /// せん断の検定はこの理由を項目に付け、判定を「適用範囲外」にする (EvaluationService)。
         /// </summary>
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
         public string? HoopMethodOutOfScopeReason
             => UsesHoopMethodFormulas
-                ? ShearReinforcementMethods.Get(HoopMethod)?.OutOfScopeReason(ConcreteOutDia, ConcreteFc)
+                ? ShearReinforcementMethods.Get(HoopMethod)?.OutOfScopeReason(ConcreteOutDia, ConcreteFc, MainBarSize)
                 : null;
 
         /// <summary>
