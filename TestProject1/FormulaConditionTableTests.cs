@@ -1282,6 +1282,44 @@ namespace TestProject1
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>
+        /// キャプテンパイル工法の計算例 (1200-N・ν = 1.0・定着筋なし・N = 3,000 kN) が、実装 (CaptainPile) と一致する。
+        /// 杭体の Fc が小さいときに σmax へ届くことも見る。
+        /// </summary>
+        [TestMethod]
+        public void TheCaptainPileExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-captain-pile"];
+            static double E(double fc) => 33_500.0 * Math.Pow(23.0 / 24.0, 2.0) * Math.Pow(fc / 60.0, 1.0 / 3.0);
+            PileDesign.Models.CaptainPile Ring(double pileFc)
+            {
+                var cp = new PileDesign.Models.CaptainPile(24.0, E(24.0));
+                var ring = cp.PCRings.First(r => r.Name == "1200-N");
+                cp.PCRing = ring; cp.D = ring.D; cp.SelectedPCRingName = ring.Name!; cp.Nu = 1.0;
+                cp.CTPTensionRebars.HasTensionRebars = false;
+                cp.SetPileBodyConcrete(pileFc, E(pileFc));
+                cp.Update();
+                return cp;
+            }
+            static string F3(double v) => v.ToString("0.000", CultureInfo.InvariantCulture);
+            const double n = 3000e3;   // N・mm 系
+
+            var cp = Ring(24.0);
+            double m1 = cp.GetM1(n), mu = cp.GetMu(n);
+            var (my, phiY) = cp.GetMyCurvatureY(n);
+            var (thetas, ms) = cp.GetMThetaRelationship(n);
+            Assert.AreEqual(4, thetas.Count, "(前提) 圧縮の 4 点の折れ線");
+            StringAssert.Contains(table, $"($E = {N0(E(24.0))}$ N/mm²)");
+            StringAssert.Contains(table, $"$K_1 = {N0(cp.Ke / 1e6)}$ kN·m/rad");
+            StringAssert.Contains(table, $"$M_1 = {N1(m1 / 1e6)}$ kN·m・$\\theta_1 = {F3(thetas[1] * 1e4)} \\times 10^{{-4}}$");
+            StringAssert.Contains(table, $"$M_y = {N1(my / 1e6)}$ kN·m・$\\theta_y = {F3(phiY * cp.D * 1e3)} \\times 10^{{-3}}$");
+            StringAssert.Contains(table, $"$M_u = {N1(mu / 1e6)}$ kN·m・$\\theta_y' = {F3(thetas[2] * 1e3)} \\times 10^{{-3}}$ rad");
+
+            var weak = Ring(21.0);
+            Assert.AreEqual(21.0, weak.CTPConcrete.SigmaMax, 1e-12);
+            StringAssert.Contains(table, $"杭体の $F_c$ が 21 なら $\\sigma_{{max}} = 21$ で $M_u = {N1(weak.GetMu(n) / 1e6)}$ kN·m");
+        }
+
+        /// <summary>
         /// F.T.Pile 構法の計算例 (φ600・Fc 24・N = 1,000 kN) が、実装 (FTPile) と一致する。
         /// 支承面積 Ac は未入力 ((2Φ)² の仮定) と 1.0 m² の入力の両方を見る。
         /// </summary>

@@ -15007,16 +15007,16 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             <li class="symbol-intro">ここに、</li>
             <li><span class="symbol-label">$K_e$</span>初期回転剛性(kNm/rad)</li>
             <li><span class="symbol-label">$K_p$</span>杭体部分の回転剛性(kNm/rad)</li>
-            <li><span class="symbol-label">$E_p$</span>杭体のヤング係数（kN/m<sup>2</sup>）</li>
+            <li><span class="symbol-label">$E_p$</span>杭体のヤング係数（kN/m<sup>2</sup>）。杭体の最上段の断面のコンクリートの $E_c$ を使います</li>
             <li><span class="symbol-label">$I_p$</span>杭体の断面二次モーメント、絞り部ありの場合は絞り部径を杭径とみなす(m<sup>4</sup>)</li>
-            <li><span class="symbol-label">$H_p$</span>杭体とPCリングの重なり長さ(m)</li>
+            <li><span class="symbol-label">$H_p$</span>杭体とPCリングの重なり長さ(m)。杭径 2,100 mm 未満は 90 mm、以上は 110 mm</li>
             <li><span class="symbol-label">$K_c$</span>PCリング内コンクリート回転剛性(kNm/rad)$K_c=\frac{E_c \cdot I_c}{H_c}$</li>
             <li><span class="symbol-label">$E_c$</span>PCリング内のパイルキャップコンクリートのヤング係数(kN/m<sup>2</sup>)</li>
             <li><span class="symbol-label">$I_c$</span>PCリング内側コンクリートの断面二次モーメント、絞り部有無によらない(m<sup>4</sup>)</li>
-            <li><span class="symbol-label">$H_c$</span>杭頭接合面からPCリング上端までの長さ(m)</li>
+            <li><span class="symbol-label">$H_c$</span>杭頭接合面からPCリング上端までの長さ(m)。$H_c = h_r - H_p$</li>
             <li><span class="symbol-label">$K_b$</span>パイルキャップ部分の回転剛性(kNm/rad)$K_b=\frac{E_b \cdot I_b}{H_b}$</li>
             <li><span class="symbol-label">$E_b$</span>パイルキャップコンクリートのヤング係数(kN/m<sup>2</sup>)</li>
-            <li><span class="symbol-label">$I_b$</span>仮想円柱のコンクリートの断面二次モーメント、絞り部有無によらない(m<sup>4</sup>)</li>
+            <li><span class="symbol-label">$I_b$</span>仮想円柱のコンクリートの断面二次モーメント、絞り部有無によらない(m<sup>4</sup>)。仮想円柱の径は PC リング内径 $r_{D1}$ とし、$I_b = I_c$ です</li>
             <li><span class="symbol-label">$H_b$</span>仮想円柱の高さ($=D/2$)(m)</li>
         </ul>
 
@@ -15030,7 +15030,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
         </p>
 
         <p>
-            引張応力が発生しない離間時曲げモーメントM_1は下式により算定します。
+            引張応力が発生しない離間時曲げモーメント$M_1$は下式により算定します。
         </p>
 
         <p>
@@ -15062,7 +15062,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
         <ol>⑦ コンクリートの応力度$\sigma$とひずみ度$\epsilon$の関係は下式とする。</ol>
         <ul>
             <li>$\epsilon \le 0: \sigma = 0$</li>
-            <li>$0 \lt \epsilon \le \epsilon_B: \sigma = 6.75(e^{-0.812 \frac{\epsilon}{\epsilon_0}} - e^{-1.218 \frac{\epsilon}{\epsilon_0}}), \sigma_{max}$</li>
+            <li>$0 \lt \epsilon \le \epsilon_B: \sigma = 6.75(e^{-0.812 \frac{\epsilon}{\epsilon_B}} - e^{-1.218 \frac{\epsilon}{\epsilon_B}}) \cdot \sigma_{max}$</li>
             <li>$\epsilon_B \lt \epsilon: \sigma = \sigma_{max}$</li>
         </ul>
 
@@ -15070,7 +15070,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             <li class="symbol-intro">ここに、</li>
             <li><span class="symbol-label">$\epsilon_B$</span>コンクリート最大強度時のひずみ度で$\epsilon_B=0.003$とする。</li>
             <li><span class="symbol-label">$\sigma_{max}$</span>コンクリートの最大強度で$\sigma_{max}=\frac{F_c}{\nu^2}$とする。</li>
-            <li><span class="symbol-label">$F_c$</span>コンクリートの設計基準強度で杭体、パイルキャップの設計基準強度のうち、最小の値とする。</li>
+            <li><span class="symbol-label">$F_c$</span>コンクリートの設計基準強度で杭体、パイルキャップの設計基準強度のうち、最小の値とする。杭体は最上段の断面の $F_c$ です。</li>
             <li><span class="symbol-label">$\nu$</span>絞り係数。</li>
         </ul>
 
@@ -15091,7 +15091,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
         </p>
 
         <p>
-            断面解析における曲率から降伏時回転角$\theta_u$への換算は、杭体のヒンジ領域を杭径部とし、ヒンジ領域では一定の曲率であると仮定した下式で評価します。
+            断面解析における曲率から降伏時回転角$\theta_y$への換算は、杭体のヒンジ領域を杭径部とし、ヒンジ領域では一定の曲率であると仮定した下式で評価します。
         </p>
         <p>
             $$
@@ -15117,6 +15117,18 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
         </p>
             <p>①最外縁の引張定着筋が降伏するとき</p>
             <p>②圧縮縁コンクリートが短期許容圧縮応力度($\frac {2}{3} \cdot \frac{F_c}{\nu^2}$($\nu$: 絞り係数))に達するとき</p>
+        <p>
+            本プログラムは短期許容曲げモーメント $M_a$ を求めていません。杭頭接合部の検定は、レベル2 で杭頭回転角を限界回転角 $\theta_u = 0.04$ rad と比べるものだけです。
+        </p>
+
+        <table class="formula-conditions" id="cond-captain-pile">
+            <tr><th>適用対象</th><td>杭頭接合が「キャプテンパイル工法」の場所打ち杭の、杭頭接合部の M-θ 関係 (水平解析の杭頭の回転ばね) と限界回転角 $\theta_u$ (レベル2 の杭頭回転角の検定)</td></tr>
+            <tr><th>入力</th><td>杭頭ウィンドウの PC リング (杭径 $D$・内径 $r_{D1}$・高さ $h_r$)・絞り率 $\nu$ (1.00 / 0.85 / 0.70)・引張定着筋 (本数・径・規格・配置径)、パイルキャップの $F_c$・単位体積重量 ($E_c = E_b$)、杭体の最上段の断面の $F_c$・$E_c$ ($E_p$)、杭の軸力 $N$</td></tr>
+            <tr><th>採用値</th><td>$K_1 = 1/(1/K_p + 1/K_c + 1/K_b)$、$K_p = E_p I_p/H_p$ ($I_p$ は絞り部径 $\nu D$ の円、$H_p$ = 90 mm ($D$ &lt; 2,100) / 110 mm)、$K_c = E_c I_c/H_c$ ($I_c$ は $r_{D1}$ の円、$H_c = h_r - H_p$)、$K_b = E_b I_b/H_b$ ($I_b = I_c$、$H_b = D/2$)。$M_1 = (N/A_e) Z$ ($A_e$・$Z$ は $\nu D$ の円)、$\theta_1 = M_1/K_1$。$M_y$・$M_u$ は $\nu D$ の円の断面解析で、$\sigma_{max} = \min(F_c/\nu^2,\ 2F_c)$、$F_c$ は杭体とパイルキャップの小さい方、$\varepsilon_B = 0.003$。$\theta_y = \phi_y \nu D$、$K_2 = \min(|M_y - M_1|/(\theta_y - \theta_1),\ K_1)$、$\theta_y' = \min(\theta_1 + (M_u - M_1)/K_2,\ 0.04)$。M-θ は (0, 0)・($\theta_1$, $\min(M_1, M_u)$)・($\theta_y'$, $M_u$)・(0.04, $M_u$)。引張は (0, 0)・($M_u \theta_y/M_y$, $M_u$)・(0.04, $M_u$)</td></tr>
+            <tr><th>適用外</th><td>軸力は $-a_g \sigma_y$ (引張定着筋なしは 0) 〜 $0.85\,\sigma_{max} A_e$ の範囲。引張定着筋なしで引張なら M ≡ 0 (ピン)。PC リングは杭径 800〜3,000 mm (カタログの範囲) から選ぶ。PC リングの杭径が杭体の杭径と違えば杭頭ウィンドウで知らせる。短期許容曲げモーメント $M_a$ は求めない (レベル1 の検定は無い)</td></tr>
+            <tr><th>参照箇所</th><td>キャプテンパイル工法協会「キャプテンパイル工法 (場所打ち杭用杭頭半固定工法) 設計・施工マニュアル」(第 5 版、BCJ 評定-FD0230-01) 杭頭接合部の曲げモーメント-回転角関係の評価</td></tr>
+            <tr><th>計算例</th><td>PC リング 1200-N ($r_{D1}$ = 1,300・$h_r$ = 200 mm)、$\nu = 1.0$、引張定着筋なし、杭体・パイルキャップとも $F_c = 24$・$\gamma = 23$ ($E = 22{,}669$ N/mm²)、$N = 3{,}000$ kN: $K_1 = 3{,}810{,}904$ kN·m/rad、$M_1 = 450.0$ kN·m・$\theta_1 = 1.181 \times 10^{-4}$、$M_y = 1{,}318.5$ kN·m・$\theta_y = 5.357 \times 10^{-3}$、$M_u = 1{,}408.5$ kN·m・$\theta_y' = 5.900 \times 10^{-3}$ rad。杭体の $F_c$ が 21 なら $\sigma_{max} = 21$ で $M_u = 1{,}370.7$ kN·m</td></tr>
+        </table>
 
         <h4>実装上の補正</h4>
         <p>

@@ -266,6 +266,9 @@ namespace PileDesign.Views
                     }
 
                     viewModel.PileTop.CaptainPile.UpdateTDorTB();
+                    // 杭体の Fc・Ec (σmax の Fc と Kp の Ep に使う) は最上段の断面から
+                    if (viewModel.PileSection != null)
+                        viewModel.PileTop.CaptainPile.SetPileBodyConcrete(viewModel.PileSection.ConcreteFc, viewModel.PileSection.ConcreteE);
                     viewModel.PileTop.CaptainPile.Update();
                     viewModel.PileTop.SelectedPileTopSpecification = viewModel.PileTop.CaptainPile.GetCombinedSpecs();
                     viewModel.RedrawShapes();

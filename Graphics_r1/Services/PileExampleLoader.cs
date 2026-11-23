@@ -594,7 +594,8 @@ namespace PileDesign.Services
                 }
             }
 
-            // 再計算 (CTPConcrete 再構築 + MN-N インタラクション + θ-M 関係)
+            // 杭体の Fc・Ec を配ってから再計算 (CTPConcrete 再構築 + MN-N インタラクション + θ-M 関係)
+            pileBody.ApplyTopSectionToPileTop();
             cp.Update();
 
             // 諸元表示を更新

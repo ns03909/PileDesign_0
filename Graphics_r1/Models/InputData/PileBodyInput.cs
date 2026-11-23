@@ -855,6 +855,25 @@ namespace PileDesign.Models.InputData
         }
 
         /// <summary>
+        /// 半剛接合の杭頭モデルへ、パイルキャップのコンクリートと杭体の最上段の断面の値を配る。
+        /// 杭頭モデルは「まだ無ければ作る」形でしか生成されず、入力を変えても届かない値があったので、
+        /// 解析の入口・例題の読込・杭頭部ウィンドウから呼ぶ。変わっていなければ何もしない。
+        /// <list type="bullet">
+        /// <item>パイルキャップの Fc・γ … コンストラクタ引数でしか入らなかった</item>
+        /// <item>FT-Pile の杭径 … 画面の操作でしか入らず、読込直後は既定の φ600</item>
+        /// <item>キャプテンパイルの杭体の Fc・Ec … σmax の Fc (杭体・パイルキャップの小さい方) と Kp の Ep (2026-11-24)</item>
+        /// </list>
+        /// </summary>
+        internal void ApplyTopSectionToPileTop()
+        {
+            PileTop?.ApplyPileCapConcrete();
+            var topSection = PileBodySegments?.FirstOrDefault()?.PileSection;
+            if (topSection == null || PileTop == null) return;
+            PileTop.FTPile?.SetDimensionsFromSection(topSection.PileDiameter, topSection.ConcreteThickness);
+            PileTop.CaptainPile?.SetPileBodyConcrete(topSection.ConcreteFc, topSection.ConcreteE);
+        }
+
+        /// <summary>
         /// 杭頭回転角 (杭頭の M-θ) を基本設定「場所打ち杭・鋼管杭の杭頭回転角」で考慮するか選べる杭頭か。
         /// 鉄筋定着工法の場所打ちRC杭 (トリリニア) と鋼管杭 (線形の Kθ)。<see cref="GetMThetaRelationship"/> の分岐と同じ。
         /// </summary>
@@ -886,16 +905,7 @@ namespace PileDesign.Models.InputData
             // 届かない値があったので、ここで揃える。変わっていなければ何もしない。
             //  - パイルキャップの Fc・γ … コンストラクタ引数でしか入らなかった
             //  - FT-Pile の杭径 … 画面の操作でしか入らず、読込直後は既定の φ600
-            PileTop?.ApplyPileCapConcrete();
-            if (PileTop?.FTPile != null)
-            {
-                var topSection = PileBodySegments?.FirstOrDefault()?.PileSection;
-                if (topSection != null)
-                {
-                    PileTop.FTPile.SetDimensionsFromSection(
-                        topSection.PileDiameter, topSection.ConcreteThickness);
-                }
-            }
+            ApplyTopSectionToPileTop();
 
             // 1) キャプテンパイル工法 → PileTop.CaptainPile の M-θ を採用
             if (pileTopType.Contains("キャプテンパイル工法"))

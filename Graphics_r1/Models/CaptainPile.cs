@@ -425,6 +425,36 @@ namespace PileDesign.Models
         private double PileCapFc { get; set; }
         private double PileCapEc { get; set; }
 
+        // 杭体 (最上段の断面) のコンクリートの Fc・Ec (N/mm²)。SetPileBodyConcrete で配る。保存はしない
+        // (解析の入口 PileBodyInput.ApplyTopSectionToPileTop と杭頭部ウィンドウが毎回入れ直す)。
+        private double PileBodyFc { get; set; }
+        private double PileBodyEc { get; set; }
+
+        /// <summary>
+        /// σmax = Fc/ν² に使う Fc。マニュアルどおり杭体とパイルキャップの設計基準強度の小さい方。
+        /// 杭体の値がまだ配られていなければパイルキャップの Fc (以前はいつもこちらだった)。
+        /// </summary>
+        internal double DesignFc => PileBodyFc > 0 ? Math.Min(PileCapFc, PileBodyFc) : PileCapFc;
+
+        /// <summary>
+        /// 杭体部分の回転剛性 Kp = Ep·Ip/Hp の Ep。杭体のコンクリートのヤング係数。
+        /// 杭体の値がまだ配られていなければ 40,000 N/mm² (以前はいつもこの固定値で、既製コンクリート杭の値だった)。
+        /// </summary>
+        internal const double FallbackPileEp = 40_000.0;
+
+        /// <summary>
+        /// 杭体 (最上段の断面) のコンクリートの Fc・Ec を入れ、変わっていれば組み直す (2026-11-24 利用者の判断)。
+        /// 以前は σmax にパイルキャップの Fc だけを使い、Ep を 40,000 で固定していた。
+        /// </summary>
+        internal void SetPileBodyConcrete(double pileFc, double pileEc)
+        {
+            if (!(pileFc > 0) || !(pileEc > 0)) return;
+            if (PileBodyFc == pileFc && PileBodyEc == pileEc) return;
+            PileBodyFc = pileFc;
+            PileBodyEc = pileEc;
+            if (D != 0 && PCRing != null) Update();
+        }
+
         // パラメータなしコンストラクタ（System.Text.Json デシリアライズ用）。
         // CSV テーブル読込は Load*() を明示的に呼んでもらう。
         public CaptainPile() { }
@@ -441,6 +471,8 @@ namespace PileDesign.Models
                 foreach (var s in PCRing.GetSpecs()) combined.Add(s);
             }
             combined.Add(new PileLibrary.Spec("絞り率", "ν", $"{Nu:F2}", ""));
+            combined.Add(new PileLibrary.Spec("コンクリートの設計基準強度 (杭体・パイルキャップの小さい方)", "Fc", $"{DesignFc:0.#}", "N/mm²"));
+            combined.Add(new PileLibrary.Spec("杭体のヤング係数", "Ep", $"{(PileBodyEc > 0 ? PileBodyEc : FallbackPileEp):N0}", "N/mm²"));
             if (CTPTensionRebars != null && CTPTensionRebars.HasTensionRebars)
             {
                 string arrangement = CTPTensionRebars.IsCircleArrangement ? "円形配置"
@@ -610,7 +642,7 @@ namespace PileDesign.Models
             // (遅延キャッシュ + 鍵だけの関数ではない算出) で、こちらが残っていた。
             _forceMomentCache.Clear();
 
-            CTPConcrete = new(PileCapFc, Nu, D);
+            CTPConcrete = new(DesignFc, Nu, D);
             CTPTensionRebars.Update();
             SetBasicProperties(PCRing, PileCapEc);
 
@@ -886,9 +918,9 @@ namespace PileDesign.Models
         internal void SetBasicProperties(PCRing _pcring, double pileCapEc)
         {
             PCRing = _pcring;
-            // 杭体コンクリートのヤング係数。既製コンクリート杭の Ec=40,000 N/mm2 固定
-            // （杭種ごとの実ヤング係数への置換は未対応。旧メモ "kui ni change" の意図と推定）
-            Ep = 40_000;
+            // 杭体のコンクリートのヤング係数 (最上段の断面の Ec)。以前は既製コンクリート杭の 40,000 で固定していたが、
+            // 本工法は場所打ち杭用 (2026-11-24 利用者の判断で杭体の Ec に)。配られる前だけ以前の値
+            Ep = PileBodyEc > 0 ? PileBodyEc : FallbackPileEp;
             Ip = Math.PI * Math.Pow(Nu * PCRing.D, 4) / 64.0;
             if (PCRing.D < 2100)
             { Hp = 90.0; }
