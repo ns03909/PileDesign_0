@@ -1281,6 +1281,42 @@ namespace TestProject1
 
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
+        /// <summary>
+        /// F.T.Pile 構法の計算例 (φ600・Fc 24・N = 1,000 kN) が、実装 (FTPile) と一致する。
+        /// 支承面積 Ac は未入力 ((2Φ)² の仮定) と 1.0 m² の入力の両方を見る。
+        /// </summary>
+        [TestMethod]
+        public void TheFTPileExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-ft-pile"];
+            const double fc = 24.0, n = 1000e3;   // N・mm 系
+            double e = 33_500.0 * Math.Pow(23.0 / 24.0, 2.0) * Math.Pow(fc / 60.0, 1.0 / 3.0);
+            var ft = new PileDesign.Models.FTPile(fc, e);
+            ft.SetDimensionsFromSection(pileDiameter: 600.0, concreteThickness: 90.0);
+            Assert.IsTrue(ft.SelectCap(600.0), "(前提) φ600 の FT キャップ");
+            static string F3(double v) => v.ToString("0.000", CultureInfo.InvariantCulture);
+            static string F5(double v) => v.ToString("0.00000", CultureInfo.InvariantCulture);
+            static string F2(double v) => v.ToString("0.00", CultureInfo.InvariantCulture);
+            double Call(string name) => (double)typeof(PileDesign.Models.FTPile)
+                .GetMethod(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .Invoke(ft, [n])!;
+
+            double ap = ft.FTPilePile.Ap;
+            StringAssert.Contains(table, $"$D_1 = {ft.FTPilePile.D1:0}$・$D_2 = {ft.FTPilePile.D2:0}$ mm ($A_p = {N0(ap)}$ mm²)");
+            StringAssert.Contains(table, $"($E = {N0(ft.FTPileCap.E)}$ N/mm²)");
+            StringAssert.Contains(table, $"($\\sigma_n = {F2(n / ap)}$ N/mm²)");
+
+            Assert.IsTrue(ft.IsPileCapAreaAssumed);
+            StringAssert.Contains(table, $"$\\phi_c = {F3(ft.PhiC)}$・$\\theta_{{ac}} = {F5(ft.GetAllowableRotationAngle(n))}$、");
+            ft.PileCapArea = 1.0;
+            StringAssert.Contains(table, $"$A_c = 1.0$ m² なら $\\phi_c = {F3(ft.PhiC)}$・$\\theta_{{ac}} = {F5(ft.GetAllowableRotationAngle(n))}$ rad");
+
+            ft.GetMThetaRelationship(n);   // K0 は軸力ごとに決まる
+            double mc = Call("GetMc"), mmax = Call("GetMmax");
+            double eta = Math.Clamp(-0.16 * (n / ap) / fc + 1.0, 0.85, 1.0);
+            StringAssert.Contains(table, $"$K_0 = {N0(ft.K0 / 1e6)}$ kN·m/rad、$M_c = {N1(mc / 1e6)}$ kN·m、$\\eta = {F3(eta)}$・$M_e = {N1(mmax / eta / 1e6)}$ で $M_{{max}} = {N1(mmax / 1e6)}$ kN·m");
+        }
+
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
         [TestMethod]
         public void ThePyExamplesMatchTheImplementation()

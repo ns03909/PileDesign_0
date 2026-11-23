@@ -89,7 +89,7 @@ namespace PileDesign.Models
         [System.Text.Json.Serialization.JsonIgnore]
         public double Nu { get; private set; } = 0.2; // パイルキャップコンクリートのポアソン比
         [System.Text.Json.Serialization.JsonIgnore]
-        public double Ac { get; private set; } // 支承面積（パイルキャップ面積）(m2)
+        public double Ac { get; private set; } // 支承面積（パイルキャップ面積）(mm2)。FTPile.PileCapArea (m2) の入力か、未入力なら (2Φ)²
 
         // パラメータなしコンストラクタ（System.Text.Json デシリアライズ用）。
         // Fc / E はセッターが private なので逆直列化されない。読込後は
@@ -118,9 +118,14 @@ namespace PileDesign.Models
             return true;
         }
 
-        public void UpdateAc(double d)
+        /// <summary>
+        /// 支承面積 Ac (mm²) を決める。<paramref name="inputAreaM2"/> (m²) が入力されていればそれ、
+        /// 未入力 (0) なら杭径 <paramref name="d"/> (mm) の 2 倍の正方形 (2d)² と仮定する。
+        /// 以前は入力が無く、いつも (2d)² だった (2026-11-23 利用者の判断で入力にした)。
+        /// </summary>
+        public void UpdateAc(double d, double inputAreaM2 = 0.0)
         {
-            Ac = Math.Pow(2.0 * d, 2); // 仮
+            Ac = inputAreaM2 > 0 ? inputAreaM2 * 1e6 : Math.Pow(2.0 * d, 2);
         }
     }
 
@@ -199,6 +204,12 @@ namespace PileDesign.Models
             if (FTCap != null)
             {
                 foreach (var s in FTCap.GetSpecs()) combined.Add(s);
+            }
+            if (FTPileCap != null && FTPileCap.Ac > 0)
+            {
+                combined.Add(new Spec("パイルキャップ支承面積", "Ac", $"{FTPileCap.Ac / 1e6:N3}", "m²",
+                    IsPileCapAreaAssumed ? "未入力のため杭径の 2 倍の正方形と仮定" : ""));
+                combined.Add(new Spec("支圧係数", "φc", $"{PhiC:N3}", "", "min(√(Ac/Ap), 4)"));
             }
             if (FTPileTensionBars != null && FTPileTensionBars.IsTensionType && FTPileTensionBars.TensionAnchorNum > 0)
             {
@@ -347,9 +358,32 @@ namespace PileDesign.Models
             }
         }
 
+        /// <summary>
+        /// パイルキャップの支承面積 Ac の入力 (m²)。0 は未入力で、杭径の 2 倍の正方形 (2Φ)² と仮定する (解析前に知らせる)。
+        /// 支圧係数 φc = min(√(Ac/Ap), 4) を通して、許容回転角 θac と軸力の上限 (3/5)·φc·Ap·Fc に効く。
+        /// 以前は入力が無く、いつも (2Φ)² だった (コードに「仮」とあった。2026-11-23 利用者の判断で入力にした)。
+        /// </summary>
+        private double _pileCapArea;
+        public double PileCapArea
+        {
+            get => _pileCapArea;
+            set
+            {
+                if (!double.IsFinite(value) || value < 0) return;
+                // 読込の途中 (キャップ・パイルキャップがまだ無い) では組み直さない。読込の後は OnDeserialized が組み直す
+                if (SetProperty(ref _pileCapArea, value) && FTPileCap != null && FTCap != null && FTCap.Phi > 0 && FTPilePile != null)
+                    Update();
+            }
+        }
+
+        /// <summary>支承面積を入力せず、(2Φ)² と仮定しているか。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        public bool IsPileCapAreaAssumed => !(PileCapArea > 0);
+
         public void Update()
         {
-            FTPileCap?.UpdateAc(FTCap.Phi); // パイルキャップAc
+            FTPileCap?.UpdateAc(FTCap.Phi, PileCapArea); // パイルキャップAc (入力が無ければ (2Φ)²)
 
             if (FTPilePile?.Ap != null && FTPileCap?.Ac != null)
             {

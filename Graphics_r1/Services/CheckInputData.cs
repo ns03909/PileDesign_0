@@ -62,6 +62,10 @@ namespace PileDesign.Services
             foreach (var (index, message) in FTCapSelection.FindWithoutCatalogCap(inputModel))
                 warnings.Add(Diagnostic.Notice(affects, DiagnosticTarget.PileBody(index + 1), message,
                     "杭体の杭径を FT キャップのある杭径 (300〜1200 mm) にする"));
+            // F.T.Pile 構法のパイルキャップの支承面積 Ac (未入力なら (2Φ)² と仮定。解析は止めない)
+            foreach (var (index, message) in FTCapSelection.FindPileCapAreaNotices(inputModel))
+                warnings.Add(Diagnostic.Notice(affects, DiagnosticTarget.PileBody(index + 1), message,
+                    "杭頭ウィンドウの F.T.Pile の「パイルキャップの支承面積 Ac」を入力する"));
 
             // 各杭の ΔZc (接合点 − 杭頭オフセット)
             if (inputModel.PileLayoutItems != null)

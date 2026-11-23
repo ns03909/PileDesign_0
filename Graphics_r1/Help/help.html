@@ -4699,7 +4699,7 @@ PileDesign.exe --open project.pdj  <em>(--open / -o オプションでも可)</e
             <p>杭頭接合タイプに応じて、以下の工法別の入力が表示されます。</p>
             <ul>
                 <li><b>キャプテンパイル工法</b>：PCリング、絞り率ν、引張定着筋の有無と配置（正方形/円形配置、配筋径・規格・配置辺長/直径）</li>
-                <li><b>FT-Pile構法</b>：FTキャップの選択、引張定着筋の有無と配置（本数・規格）</li>
+                <li><b>FT-Pile構法</b>：FTキャップの選択、パイルキャップの支承面積 $ (m²。0 なら杭径の 2 倍の正方形と仮定)、引張定着筋の有無と配置（本数・規格）</li>
                 <li><b>キャプリングパイル工法</b>：PCリング (N / S1 / S2 タイプ × 12 径)、引張定着筋の有無と標準配筋 (3-D19〜5-D38) 選択、鋼種 (SD345 / SD390)。鋼管杭の場合は杭頭部をコンクリート充填鋼管部として合成 EI で評価</li>
                 <li><b>鉄筋（定着筋）</b>：主筋の本数・呼び径、規格（SD295/SD345/SD390/SD490）、重心かぶり厚</li>
             </ul>
@@ -14789,6 +14789,10 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             \theta_{as} = \frac{\delta_a}{D_s}
             $$
         </p>
+        <p>
+            $\theta_{as}$ は引抜き対応タイプ (引張定着筋あり) だけが使います。標準タイプは $\theta_a = \theta_{ac}$ です。
+            $\sigma_{nc} = N/A_p$ で、M-θ 関係を作る軸力の範囲は $0$ (引抜き対応タイプは $-a_g f_u$) 〜 $\frac{3}{5}\phi_c A_p F_c$ です。
+        </p>
 
         <ul class="symbol-list">
             <li class="symbol-intro">ここに、</li>
@@ -14796,9 +14800,9 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             <li><span class="symbol-label">$\theta_{ac}$</span>パイルキャップのひび割れで決まる許容回転角(rad)</li>
             <li><span class="symbol-label">$\theta_{as}$</span>引抜き抵抗用鋼棒の短期許容応力で決まる許容回転角(rad)</li>
             <li><span class="symbol-label">$\sigma_{nc}$</span>圧縮合力によるｙ軸応力度(N/mm<sup>2</sup>)</li>
-            <li><span class="symbol-label">$A_p$</span>支圧面積（杭頭面積）(m<sup>2</sup>)</li>
-            <li><span class="symbol-label">$\phi_c$</span>支圧係数</li>
-            <li><span class="symbol-label">$A_c$</span>支承面積（パイルキャップ面積）(m<sup>2</sup>)</li>
+            <li><span class="symbol-label">$A_p$</span>支圧面積（杭頭面積 $\pi(D_1^2 - D_2^2)/4$、$D_1$・$D_2$ は杭の外径・内径）(m<sup>2</sup>)</li>
+            <li><span class="symbol-label">$\phi_c$</span>支圧係数 $\phi_c = \min(\sqrt{A_c/A_p},\ 4)$</li>
+            <li><span class="symbol-label">$A_c$</span>支承面積（パイルキャップ面積）(m<sup>2</sup>)。杭頭ウィンドウで入力します。未入力 (0) なら杭径の 2 倍の正方形 $(2\Phi)^2$ と仮定し、解析前に知らせます</li>
             <li><span class="symbol-label">$F_c$</span>パイルキャップのコンクリートの設計基準強度(N/mm<sup>2</sup>)</li>
             <li><span class="symbol-label">$\delta_a$</span>鋼棒の許容伸び（$\delta_a=\epsilon_a \times L_s$）(m)</li>
             <li><span class="symbol-label">$\epsilon_a$</span>鋼棒の許容ひずみ（$\epsilon_a=f_t/E_S$）</li>
@@ -14833,7 +14837,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             <li><span class="symbol-label">$M$</span>杭頭接合部の曲げモーメント(kNm)</li>
             <li><span class="symbol-label">$\theta$</span>杭頭接合部の回転角(rad)</li>
             <li><span class="symbol-label">$\theta_{c}$</span>浮き上がり回転角(rad)</li>
-            <li><span class="symbol-label">$\sigma_{f}$</span>基準回転角(rad)</li>
+            <li><span class="symbol-label">$\theta_{f}$</span>基準回転角(rad)</li>
             <li><span class="symbol-label">$K_0$</span>初期回転剛性(kNm/rad)</li>
             <li><span class="symbol-label">$M_{max}$</span>最大抵抗モーメント(kNm)</li>
         </ul>
@@ -14850,12 +14854,16 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
         </p>
 
         <p>
+            軸力が圧縮 ($N &gt; 0$) のとき
+        </p>
+        <p>
             $$K_0=\frac{\pi \cdot E}{32(1-\nu^2)}(D_1^3-D_2^3)$$
         </p>
         <ul class="symbol-list">
             <li class="symbol-intro">ここに、</li>
             <li><span class="symbol-label">$E$</span>[N/mm<sup>2</sup>]</li>
-            <li><span class="symbol-label">$D_1, D_2$</span>[mm]</li>
+            <li><span class="symbol-label">$D_1, D_2$</span>杭の外径・内径 [mm]（下の FT キャップ標準仕様の $D_1$・$D_2$ とは別物です）</li>
+            <li><span class="symbol-label">$\nu$</span>パイルキャップのコンクリートのポアソン比 (0.2)</li>
             <li><span class="symbol-label">$K_0$</span>[N·mm/rad]</li>
         </ul>
 
@@ -14864,6 +14872,9 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             <figcaption>F.T.Pile 構法　初期回転剛性を求める際の仮定</figcaption>
         </figure>
 
+        <p>
+            軸力が 0 以下 ($N \le 0$、引抜き対応タイプ) のとき
+        </p>
         <p>
             $$K_0=\frac{M_a}{\theta_a}$$
         </p>
@@ -14881,15 +14892,21 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
         </p>
 
         <p>
-            $$\eta=-0.16 \frac{\sigma_n}{F_c}+1.0$$
+            $$\eta=-0.16 \frac{\sigma_n}{F_c}+1.0 \quad (0.85 \le \eta \le 1.0)$$
         </p>
 
+        <p>
+            標準タイプ
+        </p>
         <p>
             $$M_e=0.5N\cdot D_1$$
         </p>
 
         <p>
-            $$M_e=5\times 10^{-4} \times a_g \cdot f_u \cdot D_s + 0.5N \cdot D_S$$
+            引抜き対応タイプ
+        </p>
+        <p>
+            $$M_e=5\times 10^{-4} \times a_g \cdot f_u \cdot D_s + 0.5N \cdot D_s$$
         </p>
 
         <figure>
@@ -14926,6 +14943,15 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                 <tr><td>1,100</td><td>3.2</td><td>1,101</td><td>1,145</td><td>201</td><td>38.6</td></tr>
                 <tr><td>1,200</td><td>3.2</td><td>1,201</td><td>1,245</td><td>201</td><td>44.3</td></tr>
             </tbody>
+        </table>
+
+        <table class="formula-conditions" id="cond-ft-pile">
+            <tr><th>適用対象</th><td>杭頭接合が「FT-Pile構法」の既製コンクリート杭の、杭頭接合部の M-θ 関係 (水平解析の杭頭の回転ばね) と許容回転角 $\theta_a$ (検定の杭頭回転角)</td></tr>
+            <tr><th>入力</th><td>杭体の最上段の杭断面 (杭径 = $D_1$、コンクリート厚から $D_2$)、杭頭ウィンドウのパイルキャップの $F_c$・単位体積重量 ($E$)・<strong>支承面積 $A_c$</strong>・引張定着筋の有無と本数・規格、杭の軸力 $N$。FT キャップは杭径から自動で決まる</td></tr>
+            <tr><th>採用値</th><td>$A_p = \pi(D_1^2 - D_2^2)/4$ (杭頭の断面積)、$\phi_c = \min(\sqrt{A_c/A_p},\ 4)$、$\sigma_n = N/A_p$、$\nu = 0.2$。$A_c$ が未入力 (0) なら杭径の 2 倍の正方形 $(2D_1)^2$ と仮定する。$\theta_{ac} = 0.03 - 0.05\,\sigma_n/(\phi_c F_c)$、引抜き対応タイプは $\theta_{as} = \delta_a/D_s$ ($\delta_a = f_t L_s/E_s$、$L_s = 600$ mm・$D_s = 500$ mm・$E_s = 205{,}000$) との小さい方。$K_0$ は $N &gt; 0$ で $\frac{\pi E}{32(1-\nu^2)}(D_1^3 - D_2^3)$、$N \le 0$ (引抜き対応タイプ) で $M_a/\theta_a$。$M_c = \max(\frac{D_1^2 + D_2^2}{8D_1}N,\ 0)$、$\theta_c = M_c/K_0$。$M_{max} = \eta M_e$、$\eta = -0.16\,\sigma_n/F_c + 1.0$ を 0.85〜1.0 に収める。$M_e$ は標準タイプ $0.5 N D_1$、引抜き対応タイプ $0.5\,a_g f_u D_s + 0.5 N D_s$。$\theta_f = (M_{max} - M_c)/K_0$</td></tr>
+            <tr><th>適用外</th><td>軸力は $0$ (引抜き対応タイプは $-a_g f_u$) 〜 $\frac{3}{5}\phi_c A_p F_c$ の範囲。杭径に合う FT キャップがカタログ (300〜1200 mm) に無いときは解析を止める。支承面積が未入力・杭頭の断面積より小さいときは解析前に知らせる。終局時の限界回転角は指針に無い (短期の照査だけ)</td></tr>
+            <tr><th>参照箇所</th><td>F.T.Pile 構法既製杭協会「F.T.Pile 構法既製コンクリート杭 設計・施工指針【暫定版】」(BCJ 評定-FD0141-05) 4.3.1・表4-3-1・(4.8)(4.9) 式</td></tr>
+            <tr><th>計算例</th><td>$D_1 = 600$・$D_2 = 420$ mm ($A_p = 144{,}199$ mm²)、$F_c = 24$・$\gamma = 23$ ($E = 22{,}669$ N/mm²)、標準タイプ、$N = 1{,}000$ kN ($\sigma_n = 6.93$ N/mm²): $A_c$ 未入力 ($1.2$ m 角) なら $\phi_c = 3.160$・$\theta_{ac} = 0.02543$、$A_c = 1.0$ m² なら $\phi_c = 2.633$・$\theta_{ac} = 0.02451$ rad。$K_0 = 328{,}987$ kN·m/rad、$M_c = 111.8$ kN·m、$\eta = 0.954$・$M_e = 300.0$ で $M_{max} = 286.1$ kN·m</td></tr>
         </table>
 
         <h4>参考</h4>

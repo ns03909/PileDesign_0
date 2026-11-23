@@ -42,6 +42,26 @@ namespace PileDesign.Services
                 .ToList();
 
         /// <summary>
+        /// パイルキャップの支承面積 Ac の注意 (入力を書き換えずに調べる)。未入力なら (2Φ)² と仮定していること、
+        /// 杭の断面積より小さければ支圧係数 φc = √(Ac/Ap) が 1 を下回ること (2026-11-23 から入力)。
+        /// </summary>
+        public static List<(int Index, string Message)> FindPileCapAreaNotices(InputModel? inputModel)
+        {
+            var notices = new List<(int, string)>();
+            foreach (var (index, body, diameter) in FTBodies(inputModel))
+            {
+                var ft = body.PileTop!.FTPile!;
+                if (ft.IsPileCapAreaAssumed)
+                    notices.Add((index, $"杭体 {index + 1}: F.T.Pile 構法のパイルキャップの支承面積 Ac が未入力のため、杭径の 2 倍の正方形"
+                        + $" ({2 * diameter / 1000:N2} m 角) と仮定しています。支圧係数 φc を通して許容回転角と軸力の上限に効きます。"));
+                else if (ft.FTPilePile != null && ft.PileCapArea * 1e6 < ft.FTPilePile.Ap)
+                    notices.Add((index, $"杭体 {index + 1}: F.T.Pile 構法のパイルキャップの支承面積 Ac = {ft.PileCapArea:N3} m² が"
+                        + $"杭頭の断面積 Ap = {ft.FTPilePile.Ap / 1e6:N3} m² より小さく、支圧係数 φc が 1 を下回ります。"));
+            }
+            return notices;
+        }
+
+        /// <summary>
         /// キャップが杭径と合っていない杭体のキャップを、杭径から決め直す。決め直した杭体の数と、
         /// カタログに杭径が無くて決められなかった杭体の説明を返す。
         /// </summary>

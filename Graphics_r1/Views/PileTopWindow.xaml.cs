@@ -276,6 +276,8 @@ namespace PileDesign.Views
             else if (viewModel.PileTopType == "FT-Pile構法")
             {
                 viewModel.PileTop.FTPile.Update();
+                // 諸元 (支承面積 Ac・支圧係数 φc を含む) を出し直す
+                viewModel.PileTop.SelectedPileTopSpecification = viewModel.PileTop.FTPile.GetCombinedSpecs();
                 viewModel.RedrawShapes();
                 viewModel.ChartUpdate();
                 viewModel.RaiseRingDiameterWarningChanged();
@@ -438,6 +440,12 @@ namespace PileDesign.Views
         }
 
         private void TextBoxFTTensionNumChanged(object sender, TextChangedEventArgs e)
+        {
+            Recalculate();
+        }
+
+        // パイルキャップの支承面積 Ac (F.T.Pile)。値が変わると FTPile が M-θ を組み直すので、諸元を出し直す
+        private void TextBoxFTPileCapArea_LostFocus(object sender, RoutedEventArgs e)
         {
             Recalculate();
         }

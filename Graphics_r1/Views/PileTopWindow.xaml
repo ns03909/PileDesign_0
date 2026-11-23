@@ -647,6 +647,28 @@
                                                 </TextBlock.Style>
                                             </TextBlock>
 
+                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+                                                <TextBlock Text="パイルキャップの支承面積 Ac (m²)" VerticalAlignment="Center"/>
+                                                <TextBox x:Name="TextBoxFTPileCapArea" Width="70" Margin="6,0,0,0"
+                                                         AutomationProperties.Name="パイルキャップの支承面積 Ac"
+                                                         Text="{Binding PileTop.FTPile.PileCapArea, UpdateSourceTrigger=LostFocus, StringFormat={}{0:0.###}}"
+                                                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="1000"
+                                                         LostFocus="TextBoxFTPileCapArea_LostFocus"
+                                                         GotFocus="TextBox_GotFocus"
+                                                         PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown" PreviewKeyDown="TextBox_PreviewKeyDown">
+                                                    <TextBox.ToolTip>
+                                                        <ToolTip>
+                                                            <TextBlock>
+                                                                <Run Text="杭頭を受けるパイルキャップの面積 (支承面積)。支圧係数 φc = min(√(Ac/Ap), 4) を決め、"/><LineBreak/>
+                                                                <Run Text="許容回転角 θac と軸力の上限 (3/5)·φc·Ap·Fc に効きます。"/><LineBreak/>
+                                                                <Run Text="0 (未入力) のときは杭径の 2 倍の正方形と仮定し、解析前に知らせます。"/>
+                                                            </TextBlock>
+                                                        </ToolTip>
+                                                    </TextBox.ToolTip>
+                                                </TextBox>
+                                                <TextBlock Margin="6,0,0,0" VerticalAlignment="Center" Foreground="{StaticResource ReadOnlyBrush}" Text="0 で杭径の 2 倍の正方形"/>
+                                            </StackPanel>
+
                                             <CheckBox x:Name="CheckBoxHasFTTensionAnchors" Content="引張定着筋"
                                                       IsChecked="{Binding PileTop.FTPile.FTPileTensionBars.IsTensionType, UpdateSourceTrigger=PropertyChanged}"
                                                       Checked="CheckBoxHasFTTensionAnchorsChecked" Unchecked="CheckBoxHasFTTensionAnchorsUnchecked"/>
