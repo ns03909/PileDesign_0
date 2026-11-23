@@ -1157,6 +1157,28 @@ namespace TestProject1
             StringAssert.Contains(shear, $"$Q_s = {N1(qs / 1e3)}$ kN・$Q_d = {N1(1.5 * qs / 1e3)}$ kN。${{}}_sQ_0 = {N1(q0 / 1e3)}$ kN、$N = 1{{,}}000$ kN で杭中間部 $\\eta = {F3(eta)}$・$Q_u = {N1(s.GetUltimateLimitShearMiddle(n) / 1e3)}$ kN、杭頭部 $Q_u = {N1(s.GetUltimateLimitShearHead(n) / 1e3)}$ kN");
         }
 
+        /// <summary>
+        /// P-S 非線形ばねの杭先端の計算例を、水平解析が呼ぶ関数 (VerticalLoadTransferMethod) で解いて一致すること。
+        /// 引き抜かれると杭先端の剛性が 0 になることも確かめる。
+        /// </summary>
+        [TestMethod]
+        public void ThePsSpringExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-ps-spring"];
+            const double dp = 1.2, rpu = 10000, alpha = 0.23, n = 2.7;
+            double sp = 0.1 * dp * (alpha * 0.5 + (1 - alpha) * Math.Pow(0.5, n));   // m (式 6.3.1、Rp/(Rp)u = 0.5)
+            double kSec = PileDesign.FEM.VerticalLoadTransferMethod.GetSecantStiffnessPileToeFromSettlement(sp, dp, rpu, alpha, n);
+            double kTan = PileDesign.FEM.VerticalLoadTransferMethod.GetTangentStiffnessPileToeFromSettlement(sp, dp, rpu, alpha, n);
+            double k0 = PileDesign.FEM.VerticalLoadTransferMethod.GetTangentStiffnessPileToeFromSettlement(0.0, dp, rpu, alpha, n);
+
+            Assert.AreEqual(5000 / sp, kSec, 5000 / sp * 1e-6, "割線剛性 = Rp/Sp");
+            Assert.AreEqual(rpu / (0.1 * dp * alpha), k0, 1e-6, "初期の剛性");
+            Assert.AreEqual(0.0, PileDesign.FEM.VerticalLoadTransferMethod.GetSecantStiffnessPileToeFromSettlement(-0.01, dp, rpu, alpha, n), 0.0, "引き抜かれると杭先端は効かない");
+
+            StringAssert.Contains(table, $"$(R_p)_u/(0.1\\,d_p\\,\\alpha) = {N0(k0)}$ kN/m");
+            StringAssert.Contains(table, $"$S_p = {sp * 1000:0.00}$ mm で、割線剛性 $5{{,}}000/{sp:0.00000} = {N0(kSec)}$ kN/m・接線剛性 ${N0(kTan)}$ kN/m");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
