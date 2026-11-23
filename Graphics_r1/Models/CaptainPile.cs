@@ -928,11 +928,14 @@ namespace PileDesign.Models
             { Hp = 110.0; }
 
             Ec = pileCapEc;
-            Ic = Math.PI * Math.Pow(PCRing.RD1, 4) / 64.0;
+            // マニュアル 式 3.4.3: Ic は「絞り有無にかかわらず、杭径断面とする」。
+            // 以前は PC リング内径 rD1 の円で (Ib と同じ)、Kc を (rD1/D)⁴ 倍 (1200-N で 1.38 倍) 大きく見ていた (2026-11-24 修正)
+            Ic = Math.PI * Math.Pow(PCRing.D, 4) / 64.0;
             Hc = PCRing.Hr - Hp; ///
 
+            // マニュアル 式 3.4.4: Ib は仮想円柱で「絞り有無にかかわらず、PC リング内径とする」
             Eb = Ec;
-            Ib = Ic; ///
+            Ib = Math.PI * Math.Pow(PCRing.RD1, 4) / 64.0;
             Hb = PCRing.D * 0.5;
 
             double Kp = GetK(Ep, Ip, Hp);

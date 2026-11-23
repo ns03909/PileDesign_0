@@ -63,6 +63,20 @@ namespace TestProject1
             Assert.AreEqual(Math.PI * Math.Pow(0.85 * 1200.0, 4) / 64.0, cp.Ip, 1.0, "Ip は絞り部径で");
         }
 
+        /// <summary>
+        /// マニュアル 式 3.4.3・3.4.4: Ic は絞りによらず杭径 D の円、Ib は絞りによらず PC リング内径 rD1 の円。
+        /// 以前は Ic も rD1 の円 (Ib = Ic) で、Kc を大きく見ていた。
+        /// </summary>
+        [TestMethod]
+        public void IcIsThePileDiameterAndIbIsTheRingInnerDiameter()
+        {
+            var cp = Ring1200(0.85);
+            Assert.AreEqual(1300.0, cp.PCRing.RD1, 0.0, "(前提) 1200-N の PC リング内径");
+            Assert.AreEqual(Math.PI * Math.Pow(1200.0, 4) / 64.0, cp.Ic, 1.0, "Ic は杭径の円 (絞りによらない)");
+            Assert.AreEqual(Math.PI * Math.Pow(1300.0, 4) / 64.0, cp.Ib, 1.0, "Ib は PC リング内径の円 (絞りによらない)");
+            Assert.AreEqual(600.0, cp.Hb, 0.0, "Hb = D/2");
+        }
+
         /// <summary>解析の入口 (杭体の M-θ) が最上段の断面の Fc・Ec を配る。</summary>
         [TestMethod]
         public void TheAnalysisEntryHandsOverTheTopSection()
