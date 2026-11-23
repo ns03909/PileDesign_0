@@ -1179,6 +1179,41 @@ namespace TestProject1
             StringAssert.Contains(table, $"$S_p = {sp * 1000:0.00}$ mm で、割線剛性 $5{{,}}000/{sp:0.00000} = {N0(kSec)}$ kN/m・接線剛性 ${N0(kTan)}$ kN/m");
         }
 
+        /// <summary>
+        /// 換算断面二次モーメント・曲げ剛性の計算例を、杭断面の EI で一致させること。
+        /// PRC 杭 (PC 鋼材と異形棒鋼が別の配置円) も式どおりかを確かめる。
+        /// </summary>
+        [TestMethod]
+        public void TheSectionEIExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-section-ei"];
+            PileSection Product(string type, string name)
+            {
+                var p = new PileSection { PileBodyType = PileDesign.Constants.PileTypeNames.PrecastConcrete, PileSectionType = type };
+                p.SelectedPrecastPile.Name = name;
+                p.RecalculateSelectedPrecastPile();
+                return p;
+            }
+            static double Ie(PileSection p)
+            {
+                double d = p.ConcreteOutDia, di = d - 2 * p.ConcreteThickness;
+                double i = Math.PI * (Math.Pow(d, 4) - Math.Pow(di, 4)) / 64;
+                double tendon = 0.5 * (p.TendonEp / p.ConcreteE - 1) * p.TendonAp * Math.Pow(p.TendonDp / 2, 2);
+                double bars = p.MainBarAg > 0 ? 0.5 * (p.MainBarEr / p.ConcreteE - 1) * p.MainBarAg * Math.Pow(p.MainBarDr / 2, 2) : 0;
+                return i + tendon + bars;
+            }
+
+            var phc = Product(PileDesign.Constants.PileTypeNames.Phc, "PHC-600-標準-85-B");
+            Assert.AreEqual((600.0, 90.0, 40000.0, 1408.0, 520.0, 200000.0), (phc.ConcreteOutDia, phc.ConcreteThickness, phc.ConcreteE, phc.TendonAp, phc.TendonDp, phc.TendonEp), "(前提) 製品の値");
+            Assert.AreEqual(phc.ConcreteE * Ie(phc) * 1e-9, phc.EI, 1e-6, "PHC: EI = Ec·Ie");
+            double i0 = Math.PI * (Math.Pow(600, 4) - Math.Pow(420, 4)) / 64, tendon = 0.5 * 4 * 1408 * 260.0 * 260;
+            StringAssert.Contains(table, $"$I = {i0 / 1e9:0.000} \\times 10^9$、PC 鋼材の項 $\\tfrac{{1}}{{2}}(5 - 1) \\times 1{{,}}408 \\times 260^2 = {tendon / 1e8:0.000} \\times 10^8$ mm⁴ で $EI = {N0(phc.EI)}$ kN·m²");
+
+            var prc = Product(PileDesign.Constants.PileTypeNames.Prc, "CPRC-300-85-Ⅰ");
+            Assert.IsTrue(prc.MainBarAg > 0 && prc.TendonAp > 0, "(前提) PRC は PC 鋼材と異形棒鋼の両方を持つ");
+            Assert.AreEqual(prc.ConcreteE * Ie(prc) * 1e-9, prc.EI, 1e-6, "PRC: 異形棒鋼の項も配置円 Dr で入る");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
