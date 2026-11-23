@@ -650,7 +650,7 @@
                                     <ToolTip>
                                         <TextBlock>
                                             <Run Text="杭周固定部の掘削径の節部径 D1 に対する比。1.0 は軸部を拡大掘削しないことを意味します。"/><LineBreak/>
-                                            <Run Text="適用範囲は 1.0〜2.0 (e が 1.7 以上のときは 1.0〜1.6)、かつ es ≦ e。"/><LineBreak/>
+                                            <Run Text="適用範囲は 1.0〜2.0、かつ es ≦ e。粘土質の層の周面摩擦 (γ) には 1.6 を上限として掛けます。"/><LineBreak/>
                                             <Run Text="摩擦強化型のときだけ節杭区間の周面摩擦力係数に掛かります。"/>
                                         </TextBlock>
                                     </ToolTip>
@@ -684,6 +684,32 @@
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="根固め部内の最上部節部の高さ (m)" Width="200"/>
+                            <TextBox Width="100" HorizontalContentAlignment="Right"
+                                     AutomationProperties.Name="根固め部内の最上部節部の高さ"
+                                     PreviewKeyDown="TextBox_PreviewKeyDown"
+                                     PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown">
+                                <TextBox.Text>
+                                    <Binding Path="PileBody.HybridTopNodeHeight" UpdateSourceTrigger="LostFocus"
+                                             ValidatesOnDataErrors="True" StringFormat="N2">
+                                        <Binding.ValidationRules>
+                                            <common:RangeValidationRule Min="0" Max="10" />
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                                <TextBox.ToolTip>
+                                    <ToolTip>
+                                        <TextBlock>
+                                            <Run Text="杭先端から、根固め部の中でいちばん上にある節部までの高さ。"/><LineBreak/>
+                                            <Run Text="引抜き方向の杭先端平均N値は、この節部から上方 4·D1 の区間で数えます (カタログ p.7・p.8)。"/><LineBreak/>
+                                            <Run Text="節の位置は製品の節の間隔で決まるので入力としています。0 (未入力) のときは先端支持力算定位置から数え、解析前に知らせます。"/>
+                                        </TextBlock>
+                                    </ToolTip>
+                                </TextBox.ToolTip>
+                            </TextBox>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
                             <TextBlock Text="摩擦強化型" Width="200"/>
                             <CheckBox IsChecked="{Binding PileBody.HybridIsFrictionEnhanced}"
                                       VerticalAlignment="Center">
@@ -698,6 +724,14 @@
                                 </CheckBox.ToolTip>
                             </CheckBox>
                         </StackPanel>
+
+                        <!-- 杭先端の詳細図 (カタログ p.4・p.8 にならう)。根固め部・杭周固定部・Lu・平均 N 値の区間 -->
+                        <ctrl:HybridToeDiagram Margin="0,8,0,0" HorizontalAlignment="Left"
+                            NodeDiameter="{Binding PileBody.HybridD1, Mode=OneWay}"
+                            ExpansionRatio="{Binding PileBody.HybridExpansionRatio, Mode=OneWay}"
+                            ExcavationRatio="{Binding PileBody.HybridExcavationRatio, Mode=OneWay}"
+                            PileBelowLength="{Binding PileBody.HybridPileBelowLength, Mode=OneWay}"
+                            TopNodeHeight="{Binding PileBody.HybridTopNodeHeight, Mode=OneWay}"/>
 
                         <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
                             <TextBlock Width="200"/>

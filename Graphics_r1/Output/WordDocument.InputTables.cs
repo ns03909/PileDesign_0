@@ -1164,6 +1164,20 @@ namespace PileDesign.Output
                 table.Append(row);
             }
             body.Append(table);
+
+            // 引抜きの杭先端平均 N 値の区間 (カタログ p.7: 根固め部内の最上部節部から上方 4·D1) と、κ = 0 の理由。
+            // 表の列は増やさず注記にする (2026-11-23)
+            i = 0;
+            foreach (var sp in targets)
+            {
+                i += 1;
+                double topNode = sp.PileBodyInput?.HybridTopNodeHeight ?? 0;
+                string basis = topNode > 0
+                    ? $"根固め部内の最上部節部 (杭先端から {topNode:N2} m)"
+                    : "先端支持力算定位置 (根固め部内の最上部節部が未入力)";
+                string kappa = sp.HybridUpliftToeOutOfScope ? "。杭先端が粘土質地盤のため引抜きの評定の適用外で κ = 0" : "";
+                AddTableNote(body, $"※ {i}: 引抜きの杭先端平均N値 = {sp.HybridUpliftNValue:N1} ({basis} から上方 4·D1 の平均){kappa}");
+            }
         }
     }
 }

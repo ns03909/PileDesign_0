@@ -665,6 +665,22 @@ namespace PileDesign.Models.InputData
             }
         }
 
+        // 根固め部内の最上部節部の高さ (m、杭先端から上を正)。0 は未入力。
+        // 引抜き方向の杭先端平均 N 値は「基礎杭の根固め部内の最上部節部より上方に 4D1 区間」
+        // (カタログ p.7・p.8 の平均 N 値算出区間の図) で数える。節の位置は製品の節の間隔と根固め部の長さで決まり、
+        // 杭断面からは求まらないので入力とする (2026-11-23 利用者の判断)。
+        // 以前は先端支持力算定位置 (杭先端の Lu 上) から上方 4D1 で数えていた。未入力 (0) のときは従来どおり。
+        private double _hybridTopNodeHeight;
+        public double HybridTopNodeHeight
+        {
+            get => _hybridTopNodeHeight;
+            set
+            {
+                if (!double.IsFinite(value) || value < 0) return;
+                SetProperty(ref _hybridTopNodeHeight, value);
+            }
+        }
+
         // 杭先端閉塞性
         private double _tipNonPermability;
         public double TipNonPermability

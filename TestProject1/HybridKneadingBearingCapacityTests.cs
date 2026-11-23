@@ -216,6 +216,67 @@ namespace TestProject1
             Assert.AreEqual(157.0, BuildPile(e: 1.4, es: 1.0).HybridKappaValue, 1e-12);
         }
 
+        /// <summary>
+        /// 引抜きの評定は先端地盤が砂質・礫質地盤だけ (カタログ p.7「適用する地盤の種類」)。
+        /// 杭先端が粘土質なら κ = 0 にして知らせる (2026-11-23 利用者の判断。以前は粘土質でも見込んでいた)。
+        /// </summary>
+        [TestMethod]
+        public void UpliftToeTerm_IsZeroWhenTheToeIsInClay()
+        {
+            var pile = BuildPile(e: 1.8, es: 1.0);
+            Assert.AreEqual(157.0, pile.HybridKappaValue, 1e-12, "(前提) 礫質の先端では κ = 157");
+            pile.GroundInput.GroundLayers[1].GranularityClass = Clay;
+            pile.GroundInput.GroundLayers[1].Cohesive = 100;
+            pile.UpdateProperties();
+            Assert.AreEqual(Clay, pile.PileToeGranularityClass, "(前提) 杭先端は粘土質");
+            Assert.AreEqual(0.0, pile.HybridKappaValue, 1e-12, "粘土質の先端では κ = 0");
+            Assert.AreEqual(0.0, pile.HybridUpliftToeResistance, 1e-12);
+            Assert.IsTrue(pile.ValidateHybridKneadingRange().Any(w => w.Contains("引抜きの評定")),
+                string.Join(" / ", pile.ValidateHybridKneadingRange()));
+        }
+
+        /// <summary>
+        /// 引抜きの杭先端平均 N 値は、根固め部内の最上部節部から上方 4·D1 の区間 (カタログ p.7・p.8)。
+        /// 最上部節部の高さを入力すれば区間がそこから始まり、未入力 (0) なら先端支持力算定位置から数えて知らせる。
+        /// 杭先端は標高 −25 m、D1 = 1.2 m (4·D1 = 4.8 m)、Lu = 0。土質点: −23 m は N = 50、−24 m は N = 10。
+        /// </summary>
+        [TestMethod]
+        public void UpliftNValue_StartsAtTheTopNodeInTheBulb()
+        {
+            var pile = BuildPile(e: 1.8, es: 1.0);
+            foreach (var m in pile.GroundInput.GroundMassesData)
+                m.NValue = m.AltitudeDepth == -23.0 ? 50 : m.AltitudeDepth == -24.0 ? 10 : 45;
+            pile.UpdateProperties();
+
+            Assert.AreEqual(-25.0, pile.HybridUpliftNBasisAltitude, 1e-9, "未入力なら先端支持力算定位置 (Lu = 0 で杭先端)");
+            Assert.AreEqual(30.0, pile.HybridUpliftNValue, 1e-9, "−25〜−20.2 m: N = 50・10 の平均");
+            Assert.IsTrue(pile.ValidateHybridKneadingRange().Any(w => w.Contains("最上部節部の高さが未入力")));
+
+            pile.PileBodyInput.HybridTopNodeHeight = 1.5;   // 最上部節部は −23.5 m
+            Assert.AreEqual(-23.5, pile.HybridUpliftNBasisAltitude, 1e-9);
+            Assert.AreEqual(50.0, pile.HybridUpliftNValue, 1e-9, "−23.5〜−18.7 m: N = 50 だけ");
+            Assert.IsFalse(pile.ValidateHybridKneadingRange().Any(w => w.Contains("最上部節部")),
+                string.Join(" / ", pile.ValidateHybridKneadingRange()));
+
+            pile.PileBodyInput.HybridTopNodeHeight = 3.5;   // 根固め部の上端 (e = 1.8 で 3 m) より上
+            Assert.IsTrue(pile.ValidateHybridKneadingRange().Any(w => w.Contains("根固め部の上端") && w.Contains("超えています")));
+        }
+
+        /// <summary>杭先端の詳細図の高さは、計算と同じ定義 (先端支持力算定位置・根固め部上端・引抜きの区間) で描く。</summary>
+        [TestMethod]
+        public void TheToeDiagramUsesTheSameHeightsAsTheCalculation()
+        {
+            var pile = BuildPile(e: 1.8, es: 1.0, lu: 0.6);
+            pile.PileBodyInput.HybridTopNodeHeight = 2.0;
+            var g = PileDesign.Views.Controls.HybridToeDiagram.Layout(pile.HybridD1 * 1000, 1.8, 1.0, 0.6, 2.0);
+            double toe = pile.PileBottomAltitude;
+            Assert.AreEqual(pile.HybridToeEvaluationAltitude - toe, g.Eval, 1e-9, "先端支持力算定位置");
+            Assert.AreEqual(pile.HybridToeEvaluationAltitude + pile.HybridBulbTopAboveEvaluation - toe, g.BulbTop, 1e-9, "根固め部上端");
+            Assert.AreEqual(pile.HybridUpliftNBasisAltitude - toe, g.UpliftFrom, 1e-9, "引抜きの区間の下端");
+            Assert.AreEqual(4 * pile.HybridD1, g.UpliftTo - g.UpliftFrom, 1e-9, "引抜きの区間は 4·D1");
+            Assert.AreEqual(pile.HybridD3, g.D3, 1e-9, "根固め部径 D3 = e·D1");
+        }
+
         [TestMethod]
         public void UpliftToeTerm_IsZeroWhenShaftIsExcavated()
         {
@@ -298,7 +359,9 @@ namespace TestProject1
         [TestMethod]
         public void RangeCheck_PassesForATypicalDesign()
         {
-            var warnings = BuildPile(e: 1.5, es: 1.0).ValidateHybridKneadingRange().ToList();
+            var pile = BuildPile(e: 1.5, es: 1.0);
+            pile.PileBodyInput.HybridTopNodeHeight = 1.0;   // 根固め部内の最上部節部 (未入力なら知らせる。2026-11-23 から)
+            var warnings = pile.ValidateHybridKneadingRange().ToList();
             Assert.AreEqual(0, warnings.Count, "警告が出ている: " + string.Join(" / ", warnings));
         }
 

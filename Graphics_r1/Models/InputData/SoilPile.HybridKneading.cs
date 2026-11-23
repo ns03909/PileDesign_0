@@ -174,17 +174,40 @@ namespace PileDesign.Models.InputData
         /// </summary>
         [JsonIgnore]
         public double HybridKappaValue =>
-            HybridE <= HybridKappaExpansionThreshold || HybridEs > HybridRatioMin ? 0 : HybridKappa;
+            HybridE <= HybridKappaExpansionThreshold || HybridEs > HybridRatioMin || HybridUpliftToeOutOfScope ? 0 : HybridKappa;
 
         /// <summary>
-        /// 引抜き用の杭先端平均 N 値。先端支持力算定位置から上方 4·D1 の区間の平均。
+        /// 杭先端が粘土質地盤で、引抜きの評定の適用外か。カタログ p.7「適用する地盤の種類」は、引抜きの
+        /// 基礎杭の先端地盤を砂質地盤・礫質地盤に限る (評定も砂 FD0421・礫 FD0422 の 2 つ)。押込み (p.3) は粘土質を含む。
+        /// 適用外では引抜きの先端項 κ·N·Ap を見込まない (κ = 0)。2026-11-23 利用者の判断。以前は粘土質でも見込んでいた。
+        /// </summary>
+        [JsonIgnore]
+        public bool HybridUpliftToeOutOfScope => IsCohesive(PileToeGranularityClass);
+
+        /// <summary>
+        /// 引抜き用の杭先端平均 N 値を数える区間の下端 (標高 m)。「基礎杭の根固め部内の最上部節部」
+        /// (カタログ p.7・p.8)。最上部節部の高さ (<see cref="PileBodyInput.HybridTopNodeHeight"/>) が未入力 (0) なら
+        /// 先端支持力算定位置 (以前の扱い。解析前の確認で知らせる)。
+        /// </summary>
+        [JsonIgnore]
+        public double HybridUpliftNBasisAltitude
+        {
+            get
+            {
+                double h = PileBodyInput?.HybridTopNodeHeight ?? 0;
+                return h > 0 ? PileBottomAltitude + h : HybridToeEvaluationAltitude;
+            }
+        }
+
+        /// <summary>
+        /// 引抜き用の杭先端平均 N 値。根固め部内の最上部節部から上方 4·D1 の区間の平均 (カタログ p.7「0&lt;N̄≦60、個々の N 値: N≦100」)。
         /// </summary>
         [JsonIgnore]
         public double HybridUpliftNValue
         {
             get
             {
-                double basis = HybridToeEvaluationAltitude;
+                double basis = HybridUpliftNBasisAltitude;
                 return Math.Min(AverageNValueInAltitudeRange(basis, basis + 4.0 * HybridD1), HybridToeNMax);
             }
         }
@@ -402,6 +425,20 @@ namespace PileDesign.Models.InputData
             double minDepth = Math.Max(6.0, 10.0 * d1);
             if (depth < minDepth)
                 yield return $"{label}: 杭先端深度 {depth:N1} m は引抜き検討の最小施工深さ {minDepth:N1} m（6m かつ 10·D1）を下回っています。";
+
+            // 引抜きの評定は先端地盤が砂質・礫質だけ (カタログ p.7)
+            if (HybridUpliftToeOutOfScope)
+                yield return $"{label}: 杭先端が粘土質地盤のため、引抜きの評定 (先端地盤は砂質・礫質) の適用外です"
+                    + "（引抜きの先端項 κ·N·Ap を見込まず κ = 0 として計算します）。";
+
+            // 引抜きの先端平均 N 値の区間の起点 = 根固め部内の最上部節部 (カタログ p.7・p.8)
+            double topNode = PileBodyInput?.HybridTopNodeHeight ?? 0;
+            double bulbTopAboveToe = HybridLu + HybridBulbTopAboveEvaluation;
+            if (!(topNode > 0))
+                yield return $"{label}: 根固め部内の最上部節部の高さが未入力のため、引抜きの杭先端平均N値を先端支持力算定位置"
+                    + $"（杭先端から {HybridLu:N2} m 上）から上方 4·D1 で数えています。杭体の「根固め部内の最上部節部の高さ」を入力してください。";
+            else if (topNode > bulbTopAboveToe + 1e-9)
+                yield return $"{label}: 根固め部内の最上部節部の高さ {topNode:N2} m が根固め部の上端（杭先端から {bulbTopAboveToe:N2} m 上）を超えています。";
 
             // 周面の平均 N̄s (30 以下)・q̄u (40〜200)。カタログの範囲は杭周囲の地盤の平均値に対するもの。
             // 平均値と計算に使う平均を並べて出す (外部レビュー 2026-11-20 の「入力値と計算に使う値を並べる」)
