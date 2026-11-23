@@ -641,6 +641,32 @@ namespace PileDesign.Models.InputData
                         hasWarning = true;
                         warningMessage += $"- 土質点番号 {groundMassData.No}: 細粒分含有率 Fc が 0〜100% ではありません ({groundMassData.Fc:0.##})。\n";
                     }
+                    // 液状化の判定は土質の区分を見ず Fc だけで決める (基礎指針'19 3.2 (1))。Fc の既定は 0 なので、
+                    // 粘性土の土質点で Fc を入れ忘れると液状化の判定に入り、地盤反力の低減や液状化時の地盤変位が付く。
+                    // 判定の派生値 (IsLiquefactionLayer) は地盤ウィンドウの再計算までは古いので、規則から直に判定する
+                    bool liquefiable = !groundMassData.IsEngineeringBedrock
+                        && Liquefaction.IsLiquefactionLayer(GroundWaterGLDepth, groundMassData.GLDepth, groundMassData.Fc, groundMassData.LiquefactionJudgement);
+                    if (liquefiable && groundMassData.GranularityClass == "粘性土" && groundMassData.Fc == 0
+                        && groundMassData.LiquefactionJudgement == GroundMassDataInput.LiquefactionAuto)
+                    {
+                        hasWarning = true;
+                        warningMessage += $"- 土質点番号 {groundMassData.No}: 粘性土ですが細粒分含有率 Fc が 0 のため、液状化の判定の対象になっています。"
+                            + "Fc を入力するか、「液状化の判定」を「対象にしない」にしてください。\n";
+                    }
+                    // 指針は 20 m 以深について「液状化危険度予測の精度が悪くなるので、地盤応答解析を用いることが推奨される」としている
+                    if (liquefiable && groundMassData.GLDepth <= -20)
+                    {
+                        hasWarning = true;
+                        warningMessage += $"- 土質点番号 {groundMassData.No}: GL−20 m 以深を液状化の判定の対象にしています。"
+                            + "基礎指針'19 はこの深さでは簡易判定の精度が悪くなるとして、地盤応答解析を推奨しています。\n";
+                    }
+                    // 図3.2.2 (細粒分含有率と N 値の補正) は Fc = 50% までしか線がない。その先は 50% の値で読む
+                    if (liquefiable && groundMassData.Fc > 50)
+                    {
+                        hasWarning = true;
+                        warningMessage += $"- 土質点番号 {groundMassData.No}: 細粒分含有率 Fc が 50% を超えています ({groundMassData.Fc:0.##}%)。"
+                            + "基礎指針'19 図3.2.2 の範囲外なので、N 値の補正 ΔNf は Fc = 50% の値 (11) で読んでいます。\n";
+                    }
                     // 最下層より深い土質点は、どの土層からも密度などを写せない。密度 0 のまま地盤の
                     // 計算に入ると、せん断ばね剛性が 0 になってその下の地盤変位が求まらない
                     // (地盤変位はその位置から下を 0 として扱う)。土層データの入力漏れなので警告する。

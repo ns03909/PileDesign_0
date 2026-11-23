@@ -1041,6 +1041,17 @@ namespace PileDesign.Views
             }
         }
 
+        /// <summary>土質点の「液状化の判定」を変えたら、選択をソースへ確定して液状化の判定から計算し直す。</summary>
+        private void LiquefactionJudgement_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // 行を表示しただけ (前の選択が無い) なら何もしない。開くたびに再計算が走らないように
+            if (e.RemovedItems.Count == 0) return;
+            if (sender is ComboBox comboBox)
+                BindingOperations.GetBindingExpression(comboBox, ComboBox.SelectedItemProperty)?.UpdateSource();
+            if (DataContext is GroundLayerViewModel viewModel)
+                viewModel.ComboBox_SelectionChangedCommand();
+        }
+
         private void TextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)

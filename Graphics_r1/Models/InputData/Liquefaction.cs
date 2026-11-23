@@ -8,6 +8,12 @@ namespace PileDesign.Models.InputData
     [Serializable]
     public class Liquefaction : BaseDataItem // 液状化
     {
+        // 基礎指針'19 図3.2.6 (補正 N 値と繰返しせん断ひずみの関係) の読み取り。
+        // NaSet_xxyy は γcy = xx〜yy% の範囲の境 — <b>曲線そのものではなく、隣り合う曲線の中間の線</b>
+        // (例: NaSet_0510 は 0.5% と 1% の曲線の中間。τd/σz' = 0.3 で図の 0.5% ≈ 21.5、1% ≈ 19 に対し 20.75)。
+        // NaSet_0005 は 0.5% の曲線より右へ間隔の半分ほどの線で、これより右は γcy = 0。
+        // だから CalculateGammaCy は「もっとも近い曲線」を採る。表を曲線と読み違えると
+        // 「ひずみの小さい側に切り下げている (危険側)」と誤解する (2026-11-23 に一度そう誤読した)。
         private static readonly double[] TauDonSigmaZPrimeSet = [0.05, 0.08, 0.10, 0.15, 0.20, 0.30, 0.40, 0.50, 0.60];
         private static readonly double[] NaSet_0005 = [0.00, 5.75, 8.45, 15.75, 20.35, 25.00, 27.25, 28.00, 28.00];
         private static readonly double[] NaSet_0510 = [0.00, 5.25, 7.70, 13.00, 16.60, 20.75, 22.25, 22.75, 22.50];
@@ -19,10 +25,20 @@ namespace PileDesign.Models.InputData
         private static readonly double[] Na0010 = [0.0, 10.0, 15.7, 19.0, 21.0, 22.4, 23.4, 24.0, 24.5, 24.8, 25.0];
         private static readonly double[] Na1020 = [0.0, 6.0, 10.0, 12.5, 14.5, 16.0, 17.3, 18.3, 19.0, 19.6, 20.0];
 
-        internal static bool IsLiquefactionLayer(double groundWaterGLDepth, double z, double Fc)
-        // _groundWaterGLDepth 負の数
-        // _z 負の数
+        /// <summary>
+        /// 液状化の判定の対象か。基礎指針'19 3.2 (1) の「原則的に地表面から 20 m 程度以浅、細粒分含有率 35% 以下の飽和土層」。
+        /// 指針は例外 (造成地盤が 20 m 以深まで続くなら下端まで、粘土分 10% 以下か塑性指数 15 以下の埋立・盛土は Fc &gt; 35% でも、
+        /// 洪積層でも N 値が小さい層・透水性の低い層に囲まれた礫も検討) を挙げており、それは設計者が土質点ごとに
+        /// <paramref name="judgement"/> で決める (<see cref="GroundMassDataInput.LiquefactionJudgement"/>)。
+        /// 「対象にする」でも地下水位より上は飽和していないので対象にしない。工学的基盤は呼び出し側で外す。
+        /// </summary>
+        /// <param name="groundWaterGLDepth">地下水位の GL 深さ (下向き負)</param>
+        /// <param name="z">土質点の GL 深さ (下向き負)</param>
+        internal static bool IsLiquefactionLayer(double groundWaterGLDepth, double z, double Fc, string? judgement = null)
         {
+            if (judgement == GroundMassDataInput.LiquefactionExclude) return false;
+            if (judgement == GroundMassDataInput.LiquefactionInclude) return groundWaterGLDepth >= z;
+
             if (groundWaterGLDepth < z)　// 地下水位より高い場合
             { return false; }
             else if (z <= -20) // 深さが20m以深の場合

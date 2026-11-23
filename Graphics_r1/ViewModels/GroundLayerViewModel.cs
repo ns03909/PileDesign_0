@@ -1817,7 +1817,7 @@ namespace PileDesign.ViewModels
                 {
                     double Fc = groundMassData.Fc;
                     double z = groundMassData.GLDepth;
-                    groundMassData.IsLiquefactionLayer = Liquefaction.IsLiquefactionLayer(groundWaterGLDepth, z, Fc);
+                    groundMassData.IsLiquefactionLayer = Liquefaction.IsLiquefactionLayer(groundWaterGLDepth, z, Fc, groundMassData.LiquefactionJudgement);
                 }
             }
         }
@@ -1841,6 +1841,11 @@ namespace PileDesign.ViewModels
                         groundMassData.DeltaNf = 0.2 * (Fc - 10.0) + 6.0;
                     else if (Fc >= 20.0 && Fc <= 50.0)
                         groundMassData.DeltaNf = 0.1 * (Fc - 20.0) + 8.0;
+                    else if (Fc > 50.0)
+                        // 図3.2.2 の線は Fc = 50% (ΔNf = 11) で止まっている。その先は端の値で
+                        // 頭打ちにする (2026-11-23 利用者の判断)。Fc > 35% は「対象にする」で
+                        // だけここへ来る。解析前の確認で範囲外を読んでいると知らせる。
+                        groundMassData.DeltaNf = 11.0;
 
                     groundMassData.NL = groundMassData.N1 + groundMassData.DeltaNf;
                 }

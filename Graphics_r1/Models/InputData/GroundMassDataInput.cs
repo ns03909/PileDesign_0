@@ -1,5 +1,7 @@
 ﻿using Newtonsoft.Json;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 using PileDesign.Common;
 
@@ -124,6 +126,29 @@ namespace PileDesign.Models.InputData
         {
             get => _granularityClass;
             set => SetProperty(ref _granularityClass, value);
+        }
+
+        /// <summary>「液状化の判定」の既定。規則 (地下水位以深・GL−20 m 以浅・Fc ≦ 35%) で決める。</summary>
+        public const string LiquefactionAuto = "自動";
+        /// <summary>規則によらず対象にする (地下水位より上は除く)。埋立・盛土の低塑性シルト、20 m 以深まで続く造成地盤など。</summary>
+        public const string LiquefactionInclude = "対象にする";
+        /// <summary>規則によらず対象にしない。</summary>
+        public const string LiquefactionExclude = "対象にしない";
+        public static IReadOnlyList<string> LiquefactionJudgementOptions { get; } = [LiquefactionAuto, LiquefactionInclude, LiquefactionExclude];
+
+        /// <summary>
+        /// 液状化の判定の対象を設計者が決める (基礎指針'19 3.2 (1) の例外を規則にせず、設計者の判断に任せる。2026-11-23 利用者の判断)。
+        /// 以前のファイルには無いので「自動」で読む。選択肢に無い値 (ComboBox が書き戻す null など) は無視する。
+        /// </summary>
+        private string _liquefactionJudgement = LiquefactionAuto;
+        public string LiquefactionJudgement
+        {
+            get => _liquefactionJudgement;
+            set
+            {
+                if (value is null || !LiquefactionJudgementOptions.Contains(value)) return;
+                SetProperty(ref _liquefactionJudgement, value);
+            }
         }
 
         // 細粒分含有率 35.0;

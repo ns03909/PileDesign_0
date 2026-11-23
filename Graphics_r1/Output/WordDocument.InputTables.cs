@@ -391,7 +391,9 @@ namespace PileDesign.Output
                     //dataRow.Append(CreateTableCell($"{groundMass.AgeCategory}", "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.NValue:N1}"], fontSize, "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.Fc:N0}"], fontSize, "right"));
-                    dataRow.Append(CreateTableCell([BoolMark(groundMass.IsLiquefactionLayer)], fontSize, "center"));
+                    // 設計者が「液状化の判定」で対象を決めた土質点は * を付け、表の下で断る (規則で決まったものと見分けられるように)
+                    bool designated = groundMass.LiquefactionJudgement != GroundMassDataInput.LiquefactionAuto;
+                    dataRow.Append(CreateTableCell([BoolMark(groundMass.IsLiquefactionLayer) + (designated ? "*" : "")], fontSize, "center"));
                     dataRow.Append(CreateTableCell([$"{groundMass.SigmaZ:N1}"], fontSize, "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.SigmaZPrime:N1}"], fontSize, "right"));
                     dataRow.Append(CreateTableCell([$"{groundMass.RD:N3}"], fontSize, "right"));
@@ -412,6 +414,8 @@ namespace PileDesign.Output
                     table.Append(dataRow);
                 }
                 body.Append(table);
+                if (groundMasses.Any(m => m.LiquefactionJudgement != GroundMassDataInput.LiquefactionAuto))
+                    AddTableNote(body, "* 設計者が液状化の判定の対象を指定した土質点 (基礎指針'19 3.2 (1) の例外。規則は地下水位以深・GL−20 m 以浅・Fc ≦ 35%)");
                 AddText(body, "");
             }
         }

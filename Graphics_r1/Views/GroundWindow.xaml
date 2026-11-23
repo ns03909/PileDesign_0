@@ -14,6 +14,7 @@
         Title="地盤" WindowState="Maximized"
         Closing="Window_Closing"
         xmlns:common="clr-namespace:PileDesign.Common"
+        xmlns:models="clr-namespace:PileDesign.Models.InputData"
         PreviewKeyDown="GroundWindow_PreviewKeyDown"
         common:UndoCapture.Enabled="True">
     
@@ -2399,6 +2400,22 @@
                                                 </DataGridTextColumn.Header>
                                             </DataGridTextColumn>
 
+                                            <!-- 液状化の判定の対象を設計者が決める (基礎指針'19 3.2 (1) の例外。既定は「自動」) -->
+                                            <DataGridTemplateColumn>
+                                                <DataGridTemplateColumn.Header>
+                                                    <StackPanel ToolTip="自動: 地下水位以深・GL−20 m 以浅・Fc ≦ 35% を対象にします。&#x0a;対象にする: 埋立・盛土の低塑性シルト (粘土分 10% 以下か塑性指数 15 以下)、20 m 以深まで続く造成地盤、&#x0a;　N 値の小さい洪積層など、基礎指針'19 3.2 (1) が検討を求める土層 (地下水位より上は除く)。&#x0a;対象にしない: 規則によらず外します。">
+                                                        <TextBlock Text="液状化" TextAlignment="Center"/>
+                                                        <TextBlock Text="の判定" TextAlignment="Center" HorizontalAlignment="Center"/>
+                                                    </StackPanel>
+                                                </DataGridTemplateColumn.Header>
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <ComboBox SelectedItem="{Binding LiquefactionJudgement, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                                  ItemsSource="{x:Static models:GroundMassDataInput.LiquefactionJudgementOptions}"
+                                                                  SelectionChanged="LiquefactionJudgement_SelectionChanged"/>
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
                                             <DataGridCheckBoxColumn Binding="{Binding IsLiquefactionLayer}" IsReadOnly="True" 
                                                     ElementStyle="{StaticResource GrayCheckBoxStyle}"
                                                     EditingElementStyle="{StaticResource GrayCheckBoxStyle}">

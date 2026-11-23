@@ -474,6 +474,58 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 液状化の判定の計算例を、地盤ウィンドウの計算 (GroundLayerViewModel.Update) で解いて一致すること。
+        /// γcy は図3.2.6 のもっとも近い曲線 (実装の表は隣り合う曲線の中間の線。2026-11-23 に図と突き合わせて確認)、
+        /// 対象外の条件 (地下水位より上・GL−20 m 以深・Fc &gt; 35%) が表のとおりであること。
+        /// </summary>
+        [TestMethod]
+        public void TheLiquefactionExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-liquefaction"];
+            var g = new GroundInput
+            {
+                GroundTopAltitude = 0.0, BedrockDensity = 19.0, BedrockShearWaveVelocity = 400.0,
+                ShallowSoilType = "砂質土", CalculationMethod = "a1(b1)",
+                GroundWaterGLDepth = -1.0, GroundAcceleration1 = 2.0, GroundAcceleration2 = 3.5,
+            };
+            g.GroundLayers = [new GroundLayerInput
+            {
+                No = 1, BottomGLDepth = -25.0, LayerThickness = 25.0, BottomAltitude = -25.0,
+                Name = "砂質土", GranularityClass = "砂質土", Density = 18.0, NValue = 10.0, Vs = 180.0, Es = 7000.0,
+            }];
+            g.GroundMassesData = [];
+            for (int i = 1; i <= 22; i++)
+                g.GroundMassesData.Add(new GroundMassDataInput { No = i, GLDepth = -i, H = 1.0, NValue = 10.0, VS0 = 180.0, Fc = 10.0 });
+            new PileDesign.ViewModels.GroundLayerViewModel(new PileDesign.ViewModels.MainWindowViewModel()) { GroundInput = g }.Update();
+
+            static string F(double? v, string f) => v!.Value.ToString(f, CultureInfo.InvariantCulture);
+            var m = g.GroundMassesData[4];
+            Assert.AreEqual(-5.0, m.GLDepth, "(前提) 例の土質点");
+            StringAssert.Contains(table, $"$\\sigma_z = {m.SigmaZ:0}$・$\\sigma_z' = {m.SigmaZPrime:0}$ kN/m²、$N_1 = {F(m.N1, "0.00")}$、$\\Delta N_f = {F(m.DeltaNf, "0")}$、$N_a = {F(m.NL, "0.00")}$、$\\tau_L/\\sigma_z' = {F(m.TauLonSigmaZPrime, "0.000")}$、$r_d = {F(m.RD, "0.000")}$");
+            StringAssert.Contains(table, $"$\\tau_d/\\sigma_z' = {F(m.TauDonSigmaZPrime[1], "0.000")}$・$F_L = {F(m.FL[1], "0.000")}$・$\\gamma_{{cy}} = {F(m.GammaCy[1], "0")}\\%$");
+            StringAssert.Contains(table, $"$\\tau_d/\\sigma_z' = {F(m.TauDonSigmaZPrime[0], "0.000")}$・$F_L = {F(m.FL[0], "0.000")}$・$\\gamma_{{cy}} = 0$");
+            Assert.AreEqual(0.0, m.GammaCy[0]!.Value, "FL ≥ 1 なら γcy = 0");
+            StringAssert.Contains(table, $"$D_{{cy}} = {F(g.GroundMassesData[0].SigmaGammaCyH[1], "0")}$ mm");
+
+            // 手計算: σz' = 18·5 − 10·4、Na = √(100/σz')·N + ΔNf (Fc = 10 で 6)、τd/σz' = 0.65·amax/9.8·σz/σz'·(1 − 0.015z)
+            Assert.AreEqual(50.0, m.SigmaZPrime, 1e-9);
+            Assert.AreEqual(Math.Sqrt(2) * 10 + 6, m.NL!.Value, 1e-9);
+            Assert.AreEqual(0.65 * 3.5 / 9.8 * 90 / 50 * (1 - 0.015 * 5), m.TauDonSigmaZPrime[1]!.Value, 1e-9);
+
+            // γcy はもっとも近い曲線。実装の表 (Liquefaction.NaSet_0510 など) は曲線そのものではなく、隣り合う曲線の中間の線。
+            // GL−8 m (τd/σz' = 0.398、Na = 17.62) は図の 1% (Na ≈ 20.5) と 2% (≈ 14.5) のほぼ中間で、中間の線 (17.2) よりわずかに右なので 1%
+            Assert.AreEqual(1.0, g.GroundMassesData[7].GammaCy[1]!.Value, "1% と 2% の中間の線より右は 1%");
+            Assert.AreEqual(2.0, Liquefaction.CalculateGammaCy(16.0, 0.4), "1% と 2% の中間の線より左は 2%");
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "Help", "help.html"), "もっとも近い曲線のひずみ</strong>を採ります");
+
+            // 対象外: GL−20 m ちょうど、Fc > 35%、地下水位より上
+            Assert.IsFalse(g.GroundMassesData[19].IsLiquefactionLayer, "GL−20 m ちょうどは対象外");
+            Assert.IsFalse(Liquefaction.IsLiquefactionLayer(-1.0, -5.0, 35.1), "Fc > 35% は対象外");
+            Assert.IsTrue(Liquefaction.IsLiquefactionLayer(-1.0, -5.0, 35.0));
+            Assert.IsFalse(Liquefaction.IsLiquefactionLayer(-3.0, -2.0, 10.0), "地下水位より上は対象外");
+        }
+
+        /// <summary>
         /// 単杭沈下の表: 杭先端の曲線の計算例が実装 (VerticalLoadTransferMethod.GetSettlementPileToe) と一致し、
         /// 例に使った α・n がプリセットにあること、τ-s の折れ点が表のとおりであること。
         /// </summary>
