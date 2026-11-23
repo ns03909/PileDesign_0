@@ -8143,7 +8143,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             <p>
                 リボン「ツール」タブ→「サブプログラム」グループ→「<strong>Chang</strong>」ボタンで、
                 Chang の式による一様地盤中の長い杭の横抵抗計算を行うサブプログラムウィンドウを開きます。
-                杭の非線形性は非考慮、地盤は変位 1&nbsp;mm 以上で非線形性 H を考慮します (塑性地盤反力 p<sub>y</sub> は非考慮)。
+                杭の非線形性は非考慮、地盤は地表面の変位が 1&nbsp;cm 以上で k<sub>h</sub> = k<sub>h0</sub>(y/1&nbsp;cm)<sup>−1/2</sup> と低減します (塑性地盤反力 p<sub>y</sub> は非考慮)。
                 計算式の詳細は <span class="xref"><a href="#chang-uniform-ground">一様地盤中の杭の横抵抗計算</a></span> を参照してください。
             </p>
             <p>
@@ -8170,7 +8170,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             <p>EI と K<sub>H0</sub> の計算式が左側に表示され、右側のテーブルで杭ごとに入力します。</p>
             <ul>
                 <li><strong>EI</strong>: 鋼板部の <em>E<sub>s</sub> (B<sup>4</sup>-(B-2t<sub>s</sub>)<sup>4</sup>)</em> とコンクリート部の <em>E<sub>c</sub> ((B-2t<sub>s</sub>)<sup>4</sup>-(B-2t)<sup>4</sup>) × π/64</em> の合計</li>
-                <li><strong>E<sub>c</sub></strong>: F<sub>c</sub> ≧ 85 のとき 40,000、それ未満で 33,500&times;(γ<sub>c</sub>/24)<sup>2</sup>&times;(F<sub>c</sub>/60)<sup>−1/3</sup></li>
+                <li><strong>E<sub>c</sub></strong>: F<sub>c</sub> ≧ 85 のとき 40,000、それ未満で 33,500&times;(γ<sub>c</sub>/24)<sup>2</sup>&times;(F<sub>c</sub>/60)<sup>1/3</sup></li>
                 <li><strong>k<sub>h0</sub></strong>: α &middot; ξ &middot; E<sub>0</sub> &middot; (B/B<sub>0</sub>)<sup>−3/4</sup></li>
                 <li>列項目: 外径 B (mm)、中空部チェック、総肉厚 t (mm)、鋼板厚 t<sub>s</sub> (mm)、鋼板ヤング率 E<sub>s</sub> (N/mm<sup>2</sup>、既定 205,000)、コンクリート基準強度 F<sub>c</sub>、コンクリート密度 γ<sub>c</sub>、コンクリートヤング率 E<sub>c</sub>、曲げ剛性 EI (kNm<sup>2</sup>、自動計算または手動上書き)</li>
             </ul>
@@ -14677,7 +14677,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     <td>杭各部の曲げモーメント</td>
                     <td>
                         $$
-                        M_m=-\frac{H}{2\beta}\sqrt{(1-\alpha_r)^2+1}\,exp(-tan^{-1}(\frac{1}{1-\alpha_r}))
+                        M=-\frac{H}{2\beta}e^{-\beta x} ((2-\alpha_r)\sin\beta x - \alpha_r \cos\beta x)
                         $$
                     </td>
                 </tr>
@@ -14685,7 +14685,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     <td>地中部最大曲げモーメント</td>
                     <td>
                         $$
-                        l_m=-\frac{1}{\beta}tan^{-1}(\frac{1}{1-\alpha_r})
+                        M_m=-\frac{H}{2\beta}\sqrt{(1-\alpha_r)^2+1}\,\exp\left(-\tan^{-1}\frac{1}{1-\alpha_r}\right)
                         $$
                     </td>
                 </tr>
@@ -14693,7 +14693,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
                     <td>地中部最大曲げモーメント発生深さ</td>
                     <td>
                         $$
-                        M=-\frac{H}{2\beta}e^{-\beta x} ((2-\alpha_r)sin\beta x - \alpha_r cos\beta x)
+                        l_m=\frac{1}{\beta}\tan^{-1}\frac{1}{1-\alpha_r}
                         $$
                     </td>
                 </tr>
@@ -14746,6 +14746,15 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             $$
         </p>
 
+
+        <table class="formula-conditions" id="cond-chang">
+            <tr><th>適用対象</th><td>リボン「ツール」→「Chang」のサブプログラム (概算用)。一様地盤中の長い杭の杭頭変位・地表面変位・杭頭モーメント・地中部最大曲げモーメントとその深さ、深さごとの変位・曲げモーメント・せん断力。本体の水平解析・検定・計算書には使わない</td></tr>
+            <tr><th>入力</th><td>杭地盤セット (外径 $B$・総肉厚 $t$・鋼板厚 $t_s$・$F_c$・$\gamma_c$、または EI の直接入力、$\alpha$・$\xi$・$E_0$)、配置ごとの杭頭の固定度 $\alpha_r$ (自由 0・固定 1・半固定)・地上高 $h$・水平荷重 $H$</td></tr>
+            <tr><th>採用値</th><td>$EI = \{E_s(B^4 - (B - 2t_s)^4) + E_c((B - 2t_s)^4 - (B - 2t)^4)\}\pi/64$ ($E_s = 205{,}000$、$E_c$ は $F_c \ge 85$ で 40,000、それ未満で $33{,}500(\gamma_c/24)^2(F_c/60)^{1/3}$)。$k_{h0} = \alpha\xi E_0 \bar{B}^{-3/4}$ ($\bar{B}$ は cm)、$\beta_0 = \sqrt[4]{k_{h0}B/4EI}$。地表面の変位 $y$ が 1 cm 以上なら $k_h = k_{h0}(y/1\,\text{cm})^{-1/2}$、$\beta = \beta_0(k_h/k_{h0})^{1/4}$ とし、$\beta$ の相対変化が $10^{-6}$ 以下になるまで繰り返す (最大 500 回)。$h &gt; 0$ は地上部を含む一般式 (杭頭変位 $\frac{H}{12EI\beta^3}\{(1+\beta h)^3(4-3\alpha_r)+2\}$ など)</td></tr>
+            <tr><th>適用外</th><td>杭の非線形 (EI は一定)、塑性地盤反力 $p_y$、成層地盤 (一様地盤とみなす)、群杭の影響、杭の長さ (半無限長の杭)。$EI$・$k_{h0}$・$\beta_0$ が正でない、$\alpha_r$ が 0〜1 の外、地上高が負のときは計算しない。反復が収束しないときは最後の値に注意を付ける</td></tr>
+            <tr><th>参照箇所</th><td>日本コンクリート工業会「TECHNICAL NOTE」杭の横抵抗に関する一般式、<a href="#cond-kh0">基準水平地盤反力係数 $k_{h0}$</a></td></tr>
+            <tr><th>計算例</th><td>$EI = 100{,}000$ kN·m²、$k_{h0} = 20{,}000$ kN/m³、$B = 0.6$ m なら $\beta_0 = 0.4162$ 1/m。杭頭固定 ($\alpha_r = 1$)・$h = 0$・$H = 200$ kN: 杭頭変位 6.94 mm (1 cm 未満で低減なし)、$M_0 = 240.3$ kN·m、$M_m = -49.95$ kN·m、$l_m = 3.774$ m。$H = 500$ kN: 変位 24.13 mm で $k_h = 12{,}876$ kN/m³・$\beta = 0.3728$ 1/m に下がり、$M_0 = 670.6$ kN·m・$l_m = 4.214$ m</td></tr>
+        </table>
 
         <h2 id="h-杭頭工法の検討式" data-purpose="theory">杭頭工法の検討式</h2>
         <p>

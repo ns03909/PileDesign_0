@@ -1249,6 +1249,36 @@ namespace TestProject1
             StringAssert.Contains(table, $"$\\bar{{N}}_s = (900 + 125)/25 = {F1(avg)}$ で範囲の外なので、各層を $30/{F1(avg)}$ 倍して上の層 $\\tau_2 = 4.4 \\times {F1(45 * k)} = {F1(top.Tau2)}$ kN/m²");
         }
 
+        /// <summary>
+        /// Chang のサブプログラムの計算例を、Chang クラスで解いて一致すること (1 cm 未満は低減なし、1 cm 以上は kh を低減)。
+        /// </summary>
+        [TestMethod]
+        public void TheChangExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-chang"];
+            double beta0 = Math.Pow(20000 * 0.6 / (4 * 100000.0), 0.25);
+            PileDesign.Common.Chang Run(double load)
+            {
+                var c = new PileDesign.Common.Chang(_EI: 100000, _beta: beta0, _h: 0.0, _horizontalLoad: 0.0, _ar: 1.0)
+                { Kh0 = 20000, Beta0 = beta0 };
+                c.HorizontalLoad = load;
+                c.Update();
+                return c;
+            }
+            static string F2(double v) => v.ToString("0.00", CultureInfo.InvariantCulture);
+            static string F3(double v) => v.ToString("0.000", CultureInfo.InvariantCulture);
+            static string F4(double v) => v.ToString("0.0000", CultureInfo.InvariantCulture);
+
+            StringAssert.Contains(table, $"$\\beta_0 = {F4(beta0)}$ 1/m");
+            var a = Run(200);
+            Assert.AreEqual(20000, a.Kh, 1e-9, "1 cm 未満は kh0 のまま");
+            StringAssert.Contains(table, $"杭頭変位 {F2(a.PileHeadDisplacement * 1000)} mm (1 cm 未満で低減なし)、$M_0 = {N1(a.PileHeadMoment)}$ kN·m、$M_m = {F2(a.MaxBendingMoment)}$ kN·m、$l_m = {F3(a.DepthOfMaxBendingMoment)}$ m");
+
+            var b = Run(500);
+            Assert.AreEqual(20000 / Math.Sqrt(b.GroundSurfaceDisplacement / 0.01), b.Kh, b.Kh * 1e-4, "kh = kh0·(y/1cm)^(-1/2)");
+            StringAssert.Contains(table, $"変位 {F2(b.PileHeadDisplacement * 1000)} mm で $k_h = {N0(b.Kh)}$ kN/m³・$\\beta = {F4(b.Beta)}$ 1/m に下がり、$M_0 = {N1(b.PileHeadMoment)}$ kN·m・$l_m = {F3(b.DepthOfMaxBendingMoment)}$ m");
+        }
+
         private static string N1(double v) => v.ToString("#,0.0", CultureInfo.InvariantCulture).Replace(",", "{,}");
 
         /// <summary>塑性水平地盤反力度 py の計算例が、実装の式 (表 6.6.3・6.6.4) と一致する。</summary>
