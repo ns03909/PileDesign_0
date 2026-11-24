@@ -20,7 +20,7 @@ import shutil
 import sys
 from pathlib import Path
 
-MARKER = "\n## [1.0.40-beta] — 2026-11-05"   # [Unreleased] の直後にある節
+MARKER = "\n## [1.1.0] — 2026-11-24"   # [Unreleased] の直後にある節
 
 
 def main() -> int:
