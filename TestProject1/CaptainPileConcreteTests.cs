@@ -102,6 +102,25 @@ namespace TestProject1
             var notice = PileDesign.Services.CheckInputData.CollectInputWarningDiagnostics(input).Single(d => IsNotice(d.Message));
             Assert.AreEqual(PileDesign.Common.DiagnosticSeverity.Warning, notice.Severity, "結果に影響 (計算書に載る重さ)");
             Assert.IsTrue(PileDesign.Output.WordDocument.InputNoticeLines(input).Any(IsNotice), "計算書の「入力についての注意」に載る");
+            StringAssert.Contains(notice.Message, "パイルキャップのパンチング");
+        }
+
+        /// <summary>
+        /// キャプリングパイル工法の杭体でも、マニュアルの設計フローにあるのに行わないパイルキャップのパンチングを知らせる
+        /// (算定式がマニュアルに無く、パイルキャップ・柱の寸法も入力に無い。2026-11-25 利用者の判断)。
+        /// </summary>
+        [TestMethod]
+        public void TheCapringPunchingIsShownBeforeAnalysisAndInTheReport()
+        {
+            var input = new MainWindowViewModel().CurrentInputModel!;
+            static bool IsNotice(string m) => m.Contains("キャプリングパイル工法の杭頭接合部") && m.Contains("パイルキャップのパンチング");
+            Assert.IsFalse(PileDesign.Services.CheckInputData.CollectInputWarningDiagnostics(input).Any(d => IsNotice(d.Message)),
+                "(前提) キャプリングでなければ出さない");
+
+            input.PileBodies[0].PileTopType = "キャプリングパイル工法";
+            var notice = PileDesign.Services.CheckInputData.CollectInputWarningDiagnostics(input).Single(d => IsNotice(d.Message));
+            Assert.AreEqual(PileDesign.Common.DiagnosticSeverity.Warning, notice.Severity);
+            Assert.IsTrue(PileDesign.Output.WordDocument.InputNoticeLines(input).Any(IsNotice), "計算書の「入力についての注意」に載る");
         }
 
         /// <summary>
