@@ -85,6 +85,25 @@ namespace TestProject1
             Assert.IsFalse(messages.Any(m => m.Contains("引張定着筋")), string.Join("\n", messages));
         }
 
+        /// <summary>
+        /// キャプテンパイル工法の杭体では、マニュアルが求めるのに行わない照査 (浮き上がり・短期許容曲げ Ma・PC リングのせん断) を、
+        /// 解析前の注意 (結果に影響) と計算書の「入力についての注意」に出す。検定の行 (検定不能) にはしない (2026-11-24 利用者の判断)。
+        /// </summary>
+        [TestMethod]
+        public void TheUncheckedItemsAreShownBeforeAnalysisAndInTheReport()
+        {
+            var input = new MainWindowViewModel().CurrentInputModel!;
+            static bool IsNotice(string m) => m.Contains("キャプテンパイル工法の杭頭接合部") && m.Contains("浮き上がり")
+                                              && m.Contains("短期許容曲げモーメント Ma") && m.Contains("PC リングのせん断");
+            Assert.IsFalse(PileDesign.Services.CheckInputData.CollectInputWarningDiagnostics(input).Any(d => IsNotice(d.Message)),
+                "(前提) キャプテンパイルでなければ出さない");
+
+            input.PileBodies[0].PileTopType = "キャプテンパイル工法";
+            var notice = PileDesign.Services.CheckInputData.CollectInputWarningDiagnostics(input).Single(d => IsNotice(d.Message));
+            Assert.AreEqual(PileDesign.Common.DiagnosticSeverity.Warning, notice.Severity, "結果に影響 (計算書に載る重さ)");
+            Assert.IsTrue(PileDesign.Output.WordDocument.InputNoticeLines(input).Any(IsNotice), "計算書の「入力についての注意」に載る");
+        }
+
         [TestMethod]
         public void TheSmallerOfThePileAndCapFcIsUsed()
         {
