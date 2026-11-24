@@ -1312,7 +1312,7 @@ namespace TestProject1
             StringAssert.Contains(table, $"$K_1 = {N0(cp.Ke / 1e6)}$ kN·m/rad");
             StringAssert.Contains(table, $"$M_1 = {N1(m1 / 1e6)}$ kN·m・$\\theta_1 = {F3(thetas[1] * 1e4)} \\times 10^{{-4}}$");
             StringAssert.Contains(table, $"$M_y = {N1(my / 1e6)}$ kN·m・$\\theta_y = {F3(phiY * cp.D * 1e3)} \\times 10^{{-3}}$");
-            StringAssert.Contains(table, $"$M_u = {N1(mu / 1e6)}$ kN·m・$\\theta_y' = {F3(thetas[2] * 1e3)} \\times 10^{{-3}}$ rad");
+            StringAssert.Contains(table, $"$M_u = {N1(mu / 1e6)}$ kN·m・$\\theta_y' = {F3(thetas[2] * 1e3)} \\times 10^{{-3}}$ rad、$M_a = {N1(cp.GetShortTermAllowableMoment(n) / 1e6)}$ kN·m");
 
             var weak = Ring(21.0);
             Assert.AreEqual(21.0, weak.CTPConcrete.SigmaMax, 1e-12);

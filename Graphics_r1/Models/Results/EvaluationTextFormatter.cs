@@ -33,6 +33,9 @@ namespace PileDesign.Models.Results
                 case EvaluationKind.PCRingShear:
                     AppendPCRingShear(sb, item);
                     break;
+                case EvaluationKind.PileHeadJointMoment:
+                    AppendJointMoment(sb, item);
+                    break;
                 case EvaluationKind.PileHeadDeformationAngle:
                     AppendDeformationAngle(sb, item);
                     break;
@@ -97,6 +100,19 @@ namespace PileDesign.Models.Results
             string op = item.IsOk ? "≤" : ">";
             string limitName = string.IsNullOrEmpty(item.LimitName) ? "" : item.LimitName;
             sb.AppendLine($"       θ={item.Response:F5} rad {op} {limitName}θ={item.Limit:F5} rad");
+            sb.AppendLine();
+        }
+
+        /// <summary>杭頭接合部の短期の曲げ (キャプテンパイル工法の Ma)。</summary>
+        private static void AppendJointMoment(StringBuilder sb, EvaluationItem item)
+        {
+            string over = OverSuffix(item).Length > 0 ? " 超過" : "";
+            sb.AppendLine($"  [{Verdict(item)}] {item.Category}{over}: {item.TargetName}  {PileLabel(item)}");
+
+            AppendCondition(sb, item);
+
+            string op = item.IsOk ? "≤" : ">";
+            sb.AppendLine($"       M={item.Response:F1} kNm {op} Ma={item.Limit:F1} kNm (N={item.AxialForce:F1} kN)");
             sb.AppendLine();
         }
 

@@ -86,7 +86,7 @@ namespace TestProject1
         }
 
         /// <summary>
-        /// キャプテンパイル工法の杭体では、マニュアルが求めるのに行わない照査 (浮き上がり・短期許容曲げ Ma) を、
+        /// キャプテンパイル工法の杭体では、マニュアルが求めるのに行わない照査 (浮き上がり) を、
         /// 解析前の注意 (結果に影響) と計算書の「入力についての注意」に出す。検定の行 (検定不能) にはしない (2026-11-24 利用者の判断)。
         /// </summary>
         [TestMethod]
@@ -94,7 +94,7 @@ namespace TestProject1
         {
             var input = new MainWindowViewModel().CurrentInputModel!;
             static bool IsNotice(string m) => m.Contains("キャプテンパイル工法の杭頭接合部") && m.Contains("浮き上がり")
-                                              && m.Contains("短期許容曲げモーメント Ma");
+                                              && m.Contains("別途確認してください");
             Assert.IsFalse(PileDesign.Services.CheckInputData.CollectInputWarningDiagnostics(input).Any(d => IsNotice(d.Message)),
                 "(前提) キャプテンパイルでなければ出さない");
 
@@ -102,6 +102,54 @@ namespace TestProject1
             var notice = PileDesign.Services.CheckInputData.CollectInputWarningDiagnostics(input).Single(d => IsNotice(d.Message));
             Assert.AreEqual(PileDesign.Common.DiagnosticSeverity.Warning, notice.Severity, "結果に影響 (計算書に載る重さ)");
             Assert.IsTrue(PileDesign.Output.WordDocument.InputNoticeLines(input).Any(IsNotice), "計算書の「入力についての注意」に載る");
+        }
+
+        /// <summary>
+        /// 短期許容曲げモーメント Ma (第 6 版 3.4(2)): 定着筋なしは圧縮縁が (2/3)·Fc/ν² に達するとき。
+        /// My (圧縮縁 0.85σmax) より小さく、軸力だけで断面が一様に (2/3)·Fc/ν² に達すれば 0、定着筋なしの引張も 0。
+        /// </summary>
+        [TestMethod]
+        public void TheShortTermAllowableMoment_WithoutAnchors()
+        {
+            var cp = Ring1200();
+            double sigmaA = 2.0 / 3.0 * CapFc;
+            Assert.AreEqual(sigmaA, cp.CTPConcrete.GetStress(cp.CTPConcrete.GetEpsilon(sigmaA)), 1e-3, "(前提) e 関数の上昇側で σa になるひずみ");
+
+            double ma = cp.GetShortTermAllowableMoment(3000e3);
+            double my = cp.GetMyCurvatureY(3000e3).Item1;
+            Assert.IsTrue(ma > 0 && ma < my, $"Ma = {ma / 1e6:F1} kN·m は 0 より大きく My = {my / 1e6:F1} より小さい");
+            Assert.IsTrue(cp.GetShortTermAllowableMoment(1000e3) < ma, "低い軸力では軸力とともに増える");
+
+            double ae = Math.PI / 4.0 * 1200.0 * 1200.0;
+            Assert.AreEqual(0.0, cp.GetShortTermAllowableMoment(sigmaA * ae * 1.001), "軸力だけで短期許容を超えれば 0");
+            Assert.IsTrue(cp.GetShortTermAllowableMoment(sigmaA * ae * 0.98) > 0);
+            Assert.AreEqual(0.0, cp.GetShortTermAllowableMoment(-100e3), "定着筋なしの引張は曲げを負担できない");
+        }
+
+        /// <summary>
+        /// 定着筋ありの Ma は、定着筋の降伏と圧縮縁の (2/3)·Fc/ν² の小さい方。軸力 0・引張では定着筋の降伏で決まり、
+        /// 同じ条件で求める My (定着筋の降伏) と一致する。引張で定着筋の降伏軸力を超えれば 0。
+        /// </summary>
+        [TestMethod]
+        public void TheShortTermAllowableMoment_WithAnchors()
+        {
+            var cp = Ring1200(1.0);
+            cp.CTPTensionRebars.HasTensionRebars = true;
+            cp.CTPTensionRebars.IsCircleArrangement = true;
+            cp.CTPTensionRebars.IsSquareArrangement = false;
+            cp.CTPTensionRebars.SelectedBarNumberCircle = 8;
+            cp.CTPTensionRebars.TDorTB = 600.0;
+            cp.Update();
+            double nyBars = cp.CTPTensionRebars.Ag * cp.CTPTensionRebars.SigmaY;
+
+            foreach (double n in new[] { 0.0, -0.5 * nyBars })
+            {
+                double ma = cp.GetShortTermAllowableMoment(n), my = cp.GetMyCurvatureY(n).Item1;
+                Assert.IsTrue(ma > 0, $"N = {n / 1e3:F0} kN");
+                Assert.AreEqual(my, ma, my * 0.01, $"N = {n / 1e3:F0} kN: 定着筋の降伏で決まり My と同じ");
+            }
+            Assert.AreEqual(0.0, cp.GetShortTermAllowableMoment(-1.001 * nyBars), "定着筋の降伏軸力を超える引張");
+            Assert.IsTrue(cp.GetShortTermAllowableMoment(3000e3) < cp.GetMyCurvatureY(3000e3).Item1, "高い圧縮では圧縮縁で決まり My より小さい");
         }
 
         [TestMethod]

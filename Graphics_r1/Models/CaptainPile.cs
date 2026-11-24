@@ -975,6 +975,58 @@ namespace PileDesign.Models
         }
         
 
+        /// <summary>
+        /// 短期許容曲げモーメント Ma (N·mm)。マニュアル第 6 版 3.4(2): My の算定に用いたモーメント－曲率関係で、
+        /// ① 最外縁の引張定着筋が降伏するとき、② 圧縮縁コンクリートが短期許容圧縮応力度 (2/3)·Fc/ν² に達するとき、の小さい方
+        /// (引張定着筋が無ければ ② だけ)。断面・材料は My と同じ (絞り部径 νD の円、e 関数、Fc は杭体とパイルキャップの小さい方)。
+        /// ① の定着筋の位置は My と同じく配置寸法の半分 (tD/2・tB/2)。
+        /// 軸力 N (N、圧縮が正) だけで短期許容を超える (圧縮側で一様に σa を超える・引張側で定着筋の降伏軸力を超える) ときは 0。
+        /// </summary>
+        internal double GetShortTermAllowableMoment(double NTarget)
+        {
+            if (CTPConcrete == null || !double.IsFinite(NTarget)) return double.NaN;
+            bool hasBars = CTPTensionRebars.HasTensionRebars;
+            double halfDepth = CTPConcrete.D * Nu * 0.5;
+
+            // ② 圧縮縁が短期許容圧縮応力度 σa = (2/3)·Fc/ν² (e 関数の上昇側のひずみ)
+            double sigmaA = 2.0 / 3.0 * CTPConcrete.PileCapFc / (Nu * Nu);
+            double epsA = CTPConcrete.GetEpsilon(Math.Min(sigmaA, CTPConcrete.SigmaMax));
+            // 曲率 0 (一様に εa) の軸力が上限。これを超える圧縮では曲げを足せない
+            double nMaxCompression = GetForceAndMoment(GetEpsilon0(0.0, -halfDepth, epsA), 0.0).Item1;
+            if (NTarget >= nMaxCompression) return 0.0;
+            // 引張側の下限: 定着筋の降伏軸力 (定着筋なしは 0)
+            double nMinTension = hasBars ? -CTPTensionRebars.Ag * CTPTensionRebars.SigmaY : 0.0;
+            if (NTarget <= nMinTension) return 0.0;
+
+            double ma = double.PositiveInfinity;
+            if (SolveMomentAt(-halfDepth, epsA, NTarget) is double mConcrete) ma = Math.Min(ma, mConcrete);
+            if (hasBars && SolveMomentAt(CTPTensionRebars.TDorTB * 0.5, -CTPTensionRebars.SigmaY / CTPTensionRebars.Es, NTarget) is double mBar)
+                ma = Math.Min(ma, mBar);
+            return double.IsPositiveInfinity(ma) ? double.NaN : ma;
+        }
+
+        /// <summary>
+        /// 位置 x (mm、断面中心から引張側を正) のひずみを ε に固定したまま曲率を動かし、軸力が NTarget になるときの |M| (N·mm)。
+        /// 軸力は曲率に対して単調なので二分法で解く。届かなければ null (その条件はこの軸力では決まらない)。
+        /// </summary>
+        private double? SolveMomentAt(double x, double epsilon, double NTarget)
+        {
+            double F(double phi) => GetForceAndMoment(GetEpsilon0(phi, x, epsilon), phi).Item1 - NTarget;
+            double lo = 0.0, hi = 1e-7;
+            double fLo = F(lo), fHi = F(hi);
+            // 符号が変わるところまで曲率を広げる (杭径 300 mm でも 1e-3 /mm は圧縮縁ひずみ 0.15 で十分大きい)
+            while (Math.Sign(fLo) == Math.Sign(fHi) && hi < 1e-3) { hi *= 2.0; fHi = F(hi); }
+            if (Math.Sign(fLo) == Math.Sign(fHi)) return null;
+            for (int i = 0; i < 100; i++)
+            {
+                double mid = 0.5 * (lo + hi);
+                double fMid = F(mid);
+                if (Math.Sign(fMid) == Math.Sign(fLo)) { lo = mid; fLo = fMid; } else { hi = mid; }
+            }
+            double phiSol = 0.5 * (lo + hi);
+            return Math.Abs(GetForceAndMoment(GetEpsilon0(phiSol, x, epsilon), phiSol).Item2);
+        }
+
         // 終局時曲げモーメントMuを返すメソッド
         internal double GetMu(double NTarget)
         {

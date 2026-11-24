@@ -445,6 +445,9 @@ namespace PileDesign.ViewModels
                 // θ チェック: 場所打ちRC杭で 1/100rad
                 items.AddRange(CheckThetaLimit(model, soilPileByPileBodyNo,
                     stepResult, lcName, combName));
+
+                // キャプテンパイル工法の杭頭接合部の短期許容曲げモーメント Ma (レベル1 だけ)
+                items.AddRange(CheckCaptainShortTermMoment(stepResult, lcName, combName));
             }
 
             return items;
@@ -1362,6 +1365,82 @@ namespace PileDesign.ViewModels
                 : DefaultInsituRcUltimateRotationAngleLimit;
 
             return new RotationCriterion(limit, "安全限界", "場所打ちRC杭・杭頭固定");
+        }
+
+        /// <summary>
+        /// キャプテンパイル工法の杭頭接合部の曲げを、短期許容曲げモーメント Ma と比べる (レベル1 だけ)。
+        /// マニュアル第 6 版 3.2(3)②「短期は曲げ応力が短期許容曲げモーメント以内であることを確認する」、Ma の算定は 3.4(2)
+        /// (<see cref="CaptainPile.GetShortTermAllowableMoment"/>)。応答は杭頭の要素の i 端の |M| = √(My² + Mz²)、
+        /// 軸力は曲げ・せん断と同じ規則 (<see cref="ResolveCheckAxialForce"/>)。
+        /// </summary>
+        private List<EvaluationItem> CheckCaptainShortTermMoment(AnalysisStepResult stepResult, string lcName, string combName)
+        {
+            var items = new List<EvaluationItem>();
+            var input = _mainVm.ResultInputModel;
+            int level = stepResult.LoadCase?.Level ?? 0;
+            if (level != 1 || input?.PileLayoutItems == null) return items;
+            const string category = "杭頭接合部の曲げ (キャプテンパイル工法・短期許容)";
+            const string limitName = "短期許容";
+
+            foreach (var pile in input.PileLayoutItems)
+            {
+                int pb = pile.PileBodyNo;
+                var inputBody = pb >= 1 && pb <= (input.PileBodies?.Count ?? 0) ? input.PileBodies![pb - 1] : null;
+                if (!(inputBody?.PileTopType ?? "").Contains("キャプテンパイル工法")) continue;
+                var head = PileHeadBeam(pile);
+                string target = head?.Name ?? $"杭 No.{pile.PileNo}";
+
+                void Unavailable(string reason, DiagnosticTarget? fix = null)
+                    => items.Add(UnavailableItem(EvaluationKind.PileHeadJointMoment, category, limitName, target, pb, pile, null,
+                        stepResult, lcName, combName, "kN·m", reason, fix));
+
+                var cp = pile.SoilPileAt(input)?.PileBodyInput?.PileTop?.CaptainPile;
+                if (cp == null) { Unavailable(MissingSoilPileReason(pile.PileNo)); continue; }
+                var r = head?.ResultLookup.AtStepOf(stepResult);
+                if (r?.CumulativeForce == null) { Unavailable(NoResultReason); continue; }
+                double? headFxi = r.CumulativeForce.Fxi;
+                if (LacksHeadAxialForce(input, level, headFxi)) { Unavailable(MissingHeadAxialForceReason); continue; }
+                var (axialN, axialSource) = ResolveCheckAxialForce(input, pile, stepResult.LoadCase?.No ?? 0, level, stepResult.LoadCombination, headFxi);
+
+                double ma;
+                try { ma = cp.GetShortTermAllowableMoment(axialN * 1000.0) * 1e-6; }
+                catch (Exception) { ma = double.NaN; }
+                if (!double.IsFinite(ma))
+                {
+                    Unavailable("杭頭接合部の断面を組めず、短期許容曲げモーメント Ma を求められません (杭頭部の画面で PC リング・引張定着筋を確かめてください)",
+                        DiagnosticTarget.PileBody(pb));
+                    continue;
+                }
+                double m = PileDesign.Common.StableNumerics.Norm(r.CumulativeForce.Myi, r.CumulativeForce.Mzi);
+                items.Add(new EvaluationItem
+                {
+                    Kind = EvaluationKind.PileHeadJointMoment,
+                    Level = level,
+                    Category = category,
+                    LimitName = limitName,
+                    TargetName = target,
+                    EndLabel = "i端",
+                    PileBodyNo = pb,
+                    PileNo = pile.PileNo,
+                    LoadCaseName = lcName,
+                    LoadCombinationName = combName,
+                    IsLiquefaction = stepResult.IsLiquefaction,
+                    LoadCaseNo = stepResult.LoadCase?.No,
+                    LoadCombinationNo = stepResult.LoadCombination?.No,
+                    Response = m,
+                    Limit = ma,
+                    Unit = "kN·m",
+                    AxialForce = axialN,
+                    IsOk = !(m > ma),
+                    Basis =
+                    [
+                        new("限界値", "短期許容曲げモーメント Ma: 最外縁の引張定着筋が降伏するときと、圧縮縁が (2/3)·Fc/ν² に達するときの小さい方 (マニュアル第 6 版 3.4(2))"),
+                        new("軸力 N", $"{axialN:N1} kN ({axialSource})"),
+                        new("応答", "杭頭の要素の i 端の曲げモーメント |M| = √(My² + Mz²)"),
+                    ],
+                });
+            }
+            return items;
         }
 
         /// <summary>

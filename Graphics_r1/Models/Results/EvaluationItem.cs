@@ -28,6 +28,12 @@ namespace PileDesign.Models.Results
         PCRingShear,
 
         /// <summary>
+        /// 杭頭接合部の短期の曲げ (キャプテンパイル工法)。応答 = 杭頭の要素の i 端の |M|、
+        /// 限界 = 短期許容曲げモーメント Ma (軸力で変わる。マニュアル第 6 版 3.4(2))。レベル1 だけ。
+        /// </summary>
+        PileHeadJointMoment,
+
+        /// <summary>
         /// 杭頭 2 点間の変形角。すべての杭頭の組について
         /// θ = |Uz_i − Uz_j| / (2 点間の水平距離) を求め、その<b>最大値</b>を照査する。
         /// 基礎の回転・不同沈下による変形角で、限界値は限界状態ごとに決まる。
@@ -231,6 +237,7 @@ namespace PileDesign.Models.Results
             EvaluationKind.PileSectionShear => "N1",
             EvaluationKind.PileHeadRotation => "N3",
             EvaluationKind.PCRingShear => "N1",
+            EvaluationKind.PileHeadJointMoment => "N1",
             EvaluationKind.PileHeadDeformationAngle => "N5",
             EvaluationKind.FoundationBeamInclination => "N5",
             EvaluationKind.PileBearingCompression => "N1",
