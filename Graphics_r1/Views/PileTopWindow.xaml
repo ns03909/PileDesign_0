@@ -426,6 +426,13 @@
                                                 </ComboBox>
                                             </StackPanel>
 
+                                            <!-- PC リングの終局せん断耐力に摩擦 μN を見込むか (PileTop.CaptainPile.UltimateShearConsidersFriction) -->
+                                            <CheckBox x:Name="CheckBoxCaptainShearFriction" Margin="0,2,0,2"
+                                                      Content="PC リングの終局せん断耐力に、圧縮側の杭頭の摩擦 μN を見込む"
+                                                      IsChecked="{Binding PileTop.CaptainPile.UltimateShearConsidersFriction, UpdateSourceTrigger=PropertyChanged}"
+                                                      Checked="CheckBoxRingShearFriction_Changed" Unchecked="CheckBoxRingShearFriction_Changed"
+                                                      ToolTip="マニュアル第 6 版 3.2(2)②「終局時のみ、圧縮軸力側杭頭では接合面摩擦による伝達も考慮してよい」(μ = 0.1)。 既定は見込みません (マニュアルは通常「摩擦無視」を用いるとしています)。見込むと、安全限界の検定で圧縮軸力 N の 0.1 倍を足し、表の「摩擦考慮上限」で頭打ちにします。"/>
+
                                             <!-- 終局時曲げモーメント Mu の取り方 (CaptainPile.UseMaximumUltimateMoment) -->
                                             <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
                                                 <TextBlock Text="終局時曲げモーメント Mu" Width="150" VerticalAlignment="Center"/>
@@ -581,6 +588,13 @@
                                                           HorizontalContentAlignment="Right"
                                                           DropDownOpened="ComboBox_DropDownOpened"/>
                                             </StackPanel>
+
+                                            <!-- PC リングの終局せん断耐力に摩擦 μN を見込むか (PileTop.CapringPile.UltimateShearConsidersFriction) -->
+                                            <CheckBox x:Name="CheckBoxCapringShearFriction" Margin="0,2,0,2"
+                                                      Content="PC リングの終局せん断耐力に、圧縮側の杭頭の摩擦 μN を見込む"
+                                                      IsChecked="{Binding PileTop.CapringPile.UltimateShearConsidersFriction, UpdateSourceTrigger=PropertyChanged}"
+                                                      Checked="CheckBoxRingShearFriction_Changed" Unchecked="CheckBoxRingShearFriction_Changed"
+                                                      ToolTip="設計マニュアル 2.2(4)「終局時圧縮軸力を受ける杭頭では (2-9) 式を用い、『摩擦考慮上限』まで使用可能」(μ = 0.1)。 既定は見込みません (マニュアルは通常「摩擦無視」を用いるとしています)。見込むと、安全限界の検定で圧縮軸力 N の 0.1 倍を足し、表の「摩擦考慮上限」で頭打ちにします。"/>
 
                                             <!-- PC リング径 ≠ 杭径 の警告 (RingDiameterWarning が空のときは非表示) -->
                                             <TextBlock Text="{Binding RingDiameterWarning}"

@@ -615,9 +615,15 @@ namespace PileDesign.Services
         /// </summary>
         /// <summary>
         /// キャプテンパイル工法の杭体ごとに、マニュアル (第 6 版 3.2(3)・3.4(2)) が求めるのに本プログラムが行わない照査を知らせる。
-        /// 浮き上がり (終局時に PC リングと杭体の重なりを超えない) は量を算定できず、短期許容曲げモーメント Ma・
-        /// PC リングのせん断も計算しない。検定の行 (検定不能) にはせず、解析前の注意と計算書の「入力についての注意」に出す
+        /// 浮き上がり (終局時に PC リングと杭体の重なりを超えない) は量を算定できず、短期許容曲げモーメント Ma も計算しない。
+        /// 検定の行 (検定不能) にはせず、解析前の注意と計算書の「入力についての注意」に出す
         /// (2026-11-24 利用者の判断。検定不能の行にすると、キャプテンパイルのモデルの判定がいつも検定不能を含むため)。
+        /// PC リングのせん断は 2026-11-25 から検定する (EvaluationService.CheckPCRingShear)。
+        /// <para>
+        /// あわせて、キャプテンパイル・キャプリングとも、パイルキャップの Fc が 21 N/mm² 未満なら知らせる。
+        /// PC リングのせん断耐力の表は Fc = 21 の値 (キャプテンパイル 表 2.2.4・2.2.5 の注記) で、
+        /// 両工法とも基礎部コンクリートは Fc ≧ 21 が使用材料の条件。Fc が大きいときは表の値のまま (安全側。マニュアルの設計例も同じ)。
+        /// </para>
         /// </summary>
         internal static List<Diagnostic> CollectCaptainPileUncheckedNotices(InputModel inputModel)
         {
@@ -625,13 +631,27 @@ namespace PileDesign.Services
             if (inputModel?.PileBodies == null) return notices;
             for (int i = 0; i < inputModel.PileBodies.Count; i++)
             {
-                if (inputModel.PileBodies[i]?.PileTopType != "キャプテンパイル工法") continue;
-                notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, DiagnosticTarget.PileBody(i + 1),
-                    $"杭体{i + 1}: キャプテンパイル工法の杭頭接合部は、レベル2 の限界回転角 (0.04 rad) だけを検定します。"
-                    + "マニュアルが求める次の照査は行わないので、別途確認してください: "
-                    + "終局時に杭頭が PC リングと杭体の重なりを超えて浮き上がらないこと (浮き上がり量を算定しません)、"
-                    + "短期の曲げが短期許容曲げモーメント Ma 以内であること、PC リングのせん断。",
-                    "杭頭の浮き上がり・短期許容曲げモーメント・PC リングのせん断を、マニュアル (3.2(3)・3.4(2)) に従って別途確認する"));
+                var body = inputModel.PileBodies[i];
+                string top = body?.PileTopType ?? "";
+                if (top == "キャプテンパイル工法")
+                {
+                    notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, DiagnosticTarget.PileBody(i + 1),
+                        $"杭体{i + 1}: キャプテンパイル工法の杭頭接合部は、レベル2 の限界回転角 (0.04 rad) と PC リングのせん断を検定します。"
+                        + "マニュアルが求める次の照査は行わないので、別途確認してください: "
+                        + "終局時に杭頭が PC リングと杭体の重なりを超えて浮き上がらないこと (浮き上がり量を算定しません)、"
+                        + "短期の曲げが短期許容曲げモーメント Ma 以内であること。",
+                        "杭頭の浮き上がり・短期許容曲げモーメントを、マニュアル (3.2(3)・3.4(2)) に従って別途確認する"));
+                }
+                if ((top == "キャプテンパイル工法" || top == "キャプリングパイル工法")
+                    && body?.PileTop is { } pileTop && pileTop.PileCapFc > 0
+                    && pileTop.PileCapFc < PileDesign.Models.PileLibrary.PCRingShearTable.TableBasisFc)
+                {
+                    notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, DiagnosticTarget.PileBody(i + 1),
+                        $"杭体{i + 1}: パイルキャップの Fc ({pileTop.PileCapFc:0.#} N/mm²) が 21 N/mm² 未満です。"
+                        + $"{top}は基礎部コンクリートを Fc ≧ 21 N/mm² としており、PC リングのせん断耐力の表も Fc = 21 の値なので、"
+                        + "PC リングのせん断の検定は耐力を過大に見ています。",
+                        "パイルキャップの Fc を 21 N/mm² 以上にする"));
+                }
             }
             return notices;
         }

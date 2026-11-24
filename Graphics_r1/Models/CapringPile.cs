@@ -152,6 +152,22 @@ namespace PileDesign.Models
         private string _selectedPCRingName = string.Empty;
         public string SelectedPCRingName { get => _selectedPCRingName; set => SetProperty(ref _selectedPCRingName, value); }
 
+        private bool _ultimateShearConsidersFriction;
+        /// <summary>
+        /// PC リングの終局せん断耐力に、圧縮軸力を受ける杭頭の接合面摩擦 μN (μ = 0.1) を見込むか。既定は見込まない。
+        /// 設計マニュアル (2023 年 4 月版) 2.2(4)「終局せん断耐力は『摩擦無視』を用いる。ただし、終局時圧縮軸力を受ける杭頭では
+        /// (2-9) 式を用い、『摩擦考慮上限』まで使用可能」。
+        /// </summary>
+        public bool UltimateShearConsidersFriction
+        {
+            get => _ultimateShearConsidersFriction;
+            set => SetProperty(ref _ultimateShearConsidersFriction, value);
+        }
+
+        /// <summary>選んだ PC リングのせん断耐力 (設計マニュアル 2.2(4) の表)。表に無ければ null。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public PCRingShearCapacity? ShearCapacity => PCRingShearTable.Find(PCRingShearTable.CapringFile, PCRing?.Name);
+
         // ───────── PC リング内コンクリート ─────────
         private double _ec;
         // [System.Text.Json.Serialization.JsonIgnore] を付けたものは Update() が求める派生値か、PileTop がパイルキャップの Fc・Ec を配るもの。保存しない
@@ -376,6 +392,7 @@ namespace PileDesign.Models
                 combined.Add(new PileLibrary.Spec("杭体と PC リングの重なり長さ", "Hp", $"{Hp:N0}", "mm"));
                 combined.Add(new PileLibrary.Spec("杭頭接合面から PC リング上端までの長さ", "Hc", $"{Hc:N0}", "mm"));
                 combined.Add(new PileLibrary.Spec("初期回転剛性 (圧縮時)", "Ke", $"{Ke * 1e-6:N0}", "kN·m/rad"));
+                PCRingShearTable.AddSpecs(combined, ShearCapacity, UltimateShearConsidersFriction);
             }
             if (HasTensionBars && TensionBar != null && TensionBar.BarNum > 0)
             {

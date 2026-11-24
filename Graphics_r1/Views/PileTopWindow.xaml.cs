@@ -259,6 +259,16 @@ namespace PileDesign.Views
         // εcu・定着筋の強度倍率 (Mu 用) を入力したら組み直す
         private void TextBoxCaptainMu_LostFocus(object sender, RoutedEventArgs e) => Recalculate();
 
+        // PC リングの終局せん断耐力に摩擦を見込むか。M-θ には効かないので、諸元 (摩擦の行) だけ出し直す
+        private void CheckBoxRingShearFriction_Changed(object sender, RoutedEventArgs e)
+        {
+            if (!IsLoaded || DataContext is not PileTopViewModel vm) return;
+            if (vm.PileTopType == "キャプテンパイル工法" && vm.PileTop.CaptainPile?.PCRing != null)
+                vm.PileTop.SelectedPileTopSpecification = vm.PileTop.CaptainPile.GetCombinedSpecs();
+            else if (vm.PileTopType == "キャプリングパイル工法" && vm.PileTop.CapringPile?.PCRing != null)
+                vm.PileTop.SelectedPileTopSpecification = vm.PileTop.CapringPile.GetCombinedSpecs();
+        }
+
         private void Recalculate()
         {
             PileTopViewModel viewModel = (PileTopViewModel)DataContext;

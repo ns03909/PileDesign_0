@@ -22,6 +22,12 @@ namespace PileDesign.Models.Results
         PileHeadRotation,
 
         /// <summary>
+        /// PC リングのせん断 (キャプテンパイル工法・キャプリングパイル工法)。応答 = 杭頭の要素の i 端の |Q|、
+        /// 限界 = 工法協会のマニュアルの表の長期・短期許容せん断力・終局せん断耐力 (限界状態で選ぶ)。
+        /// </summary>
+        PCRingShear,
+
+        /// <summary>
         /// 杭頭 2 点間の変形角。すべての杭頭の組について
         /// θ = |Uz_i − Uz_j| / (2 点間の水平距離) を求め、その<b>最大値</b>を照査する。
         /// 基礎の回転・不同沈下による変形角で、限界値は限界状態ごとに決まる。
@@ -224,6 +230,7 @@ namespace PileDesign.Models.Results
             EvaluationKind.PileSectionMoment => "N1",
             EvaluationKind.PileSectionShear => "N1",
             EvaluationKind.PileHeadRotation => "N3",
+            EvaluationKind.PCRingShear => "N1",
             EvaluationKind.PileHeadDeformationAngle => "N5",
             EvaluationKind.FoundationBeamInclination => "N5",
             EvaluationKind.PileBearingCompression => "N1",

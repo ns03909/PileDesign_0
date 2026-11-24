@@ -510,6 +510,23 @@ namespace PileDesign.Models
             set => SetProperty(ref _selectedPCRingName, value);
         }
 
+        private bool _ultimateShearConsidersFriction;
+        /// <summary>
+        /// PC リングの終局せん断耐力に、圧縮軸力を受ける杭頭の接合面摩擦 μN (μ = 0.1) を見込むか。既定は見込まない。
+        /// マニュアル第 6 版 3.2(2)②「終局時のみ、圧縮軸力側杭頭では接合面摩擦による伝達も考慮してよい」、
+        /// 表 2.2.5 ※1「通常は『摩擦無視』を用いる」。
+        /// </summary>
+        public bool UltimateShearConsidersFriction
+        {
+            get => _ultimateShearConsidersFriction;
+            set => SetProperty(ref _ultimateShearConsidersFriction, value);
+        }
+
+        /// <summary>選んだ PC リングのせん断耐力 (第 6 版 表 2.2.4・表 2.2.5、パイルキャップ Fc = 21 の場合)。表に無ければ null。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public PileLibrary.PCRingShearCapacity? ShearCapacity
+            => PileLibrary.PCRingShearTable.Find(PileLibrary.PCRingShearTable.CaptainFile, PCRing?.Name);
+
         private double PileCapFc { get; set; }
         private double PileCapEc { get; set; }
 
@@ -557,6 +574,7 @@ namespace PileDesign.Models
             if (PCRing != null)
             {
                 foreach (var s in PCRing.GetSpecs()) combined.Add(s);
+                PileLibrary.PCRingShearTable.AddSpecs(combined, ShearCapacity, UltimateShearConsidersFriction);
             }
             combined.Add(new PileLibrary.Spec("絞り率", "ν", $"{Nu:F2}", ""));
             combined.Add(new PileLibrary.Spec("コンクリートの設計基準強度 (杭体・パイルキャップの小さい方)", "Fc", $"{DesignFc:0.#}", "N/mm²"));

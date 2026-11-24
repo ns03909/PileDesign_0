@@ -30,6 +30,9 @@ namespace PileDesign.Models.Results
                 case EvaluationKind.PileHeadRotation:
                     AppendRotation(sb, item);
                     break;
+                case EvaluationKind.PCRingShear:
+                    AppendPCRingShear(sb, item);
+                    break;
                 case EvaluationKind.PileHeadDeformationAngle:
                     AppendDeformationAngle(sb, item);
                     break;
@@ -94,6 +97,22 @@ namespace PileDesign.Models.Results
             string op = item.IsOk ? "≤" : ">";
             string limitName = string.IsNullOrEmpty(item.LimitName) ? "" : item.LimitName;
             sb.AppendLine($"       θ={item.Response:F5} rad {op} {limitName}θ={item.Limit:F5} rad");
+            sb.AppendLine();
+        }
+
+        /// <summary>
+        /// PC リングのせん断。杭頭回転角と同じく工法名と限界状態を見出し (Category) に出す。
+        /// </summary>
+        private static void AppendPCRingShear(StringBuilder sb, EvaluationItem item)
+        {
+            string over = OverSuffix(item).Length > 0 ? " 超過" : "";
+            sb.AppendLine($"  [{Verdict(item)}] {item.Category}{over}: {item.TargetName}  {PileLabel(item)}");
+
+            AppendCondition(sb, item);
+
+            string op = item.IsOk ? "≤" : ">";
+            string axial = item.AxialForce is double n ? $" (N={n:F1} kN)" : "";
+            sb.AppendLine($"       Q={item.Response:F1} kN {op} {item.LimitName}Q={item.Limit:F1} kN{axial}");
             sb.AppendLine();
         }
 

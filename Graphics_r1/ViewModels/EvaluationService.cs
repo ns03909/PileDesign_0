@@ -1,4 +1,5 @@
-﻿using PileDesign.Constants;
+﻿using PileDesign.Models.PileLibrary;
+using PileDesign.Constants;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
@@ -387,6 +388,9 @@ namespace PileDesign.ViewModels
                     stepResult, factored, limit,
                     lcName, combName));
 
+                // PC リングのせん断 (キャプテンパイル・キャプリング): 曲げ・せん断と同じ限界状態
+                items.AddRange(CheckPCRingShear(stepResult, limit, lcName, combName));
+
                 // 杭頭 2 点間の変形角: 使用限界
                 items.AddRange(CheckPileHeadDeformationAngle(
                     stepResult, angleLimit, lcName, combName));
@@ -430,6 +434,9 @@ namespace PileDesign.ViewModels
                     pileByBeam, maxForcesByPileCase, nqCache,
                     stepResult, factored, limit,
                     lcName, combName));
+
+                // PC リングのせん断 (キャプテンパイル・キャプリング): 曲げ・せん断と同じ限界状態
+                items.AddRange(CheckPCRingShear(stepResult, limit, lcName, combName));
 
                 // 杭頭 2 点間の変形角: 損傷限界
                 items.AddRange(CheckPileHeadDeformationAngle(
@@ -476,6 +483,9 @@ namespace PileDesign.ViewModels
                     pileByBeam, maxForcesByPileCase, nqCache,
                     stepResult, factored, limit,
                     lcName, combName));
+
+                // PC リングのせん断 (キャプテンパイル・キャプリング): 曲げ・せん断と同じ限界状態
+                items.AddRange(CheckPCRingShear(stepResult, limit, lcName, combName));
 
                 // 杭頭 2 点間の変形角も同じ限界状態に揃える
                 items.AddRange(CheckPileHeadDeformationAngle(
@@ -1352,6 +1362,130 @@ namespace PileDesign.ViewModels
                 : DefaultInsituRcUltimateRotationAngleLimit;
 
             return new RotationCriterion(limit, "安全限界", "場所打ちRC杭・杭頭固定");
+        }
+
+        /// <summary>
+        /// PC リングのせん断を照査する (キャプテンパイル工法・キャプリングパイル工法)。
+        /// 応答は杭頭の要素の i 端のせん断力 |Q| = √(Fy² + Fz²)、限界は工法協会のマニュアルの表の値
+        /// (<see cref="PCRingShearTable"/>): 使用限界 → 長期許容 LQa、損傷限界 → 短期許容 sQa、安全限界 → 終局 uQr (摩擦無視。
+        /// 杭頭モデルで選べば、圧縮軸力の μN を摩擦考慮上限まで足す)。限界状態は杭体の曲げ・せん断と同じ割り当て。
+        /// 設計用せん断力は割増ししない (キャプテン 式 3.2.10・3.2.11、キャプリングは PC リングの割増し係数 n = 1.0)。
+        /// </summary>
+        private List<EvaluationItem> CheckPCRingShear(AnalysisStepResult stepResult, LimitState limit, string lcName, string combName)
+        {
+            var items = new List<EvaluationItem>();
+            var input = _mainVm.ResultInputModel;
+            if (input?.PileLayoutItems == null) return items;
+            int level = stepResult.LoadCase?.Level ?? 0;
+            string limitName = LimitStateName(limit);
+
+            foreach (var pile in input.PileLayoutItems)
+            {
+                int pb = pile.PileBodyNo;
+                var inputBody = pb >= 1 && pb <= (input.PileBodies?.Count ?? 0) ? input.PileBodies![pb - 1] : null;
+                string top = inputBody?.PileTopType ?? "";
+                bool isCaptain = top.Contains("キャプテンパイル工法");
+                bool isCapring = top.Contains("キャプリングパイル工法");
+                if (!isCaptain && !isCapring) continue;
+                string method = isCaptain ? "キャプテンパイル工法" : "キャプリングパイル工法";
+                string category = $"PC リングのせん断 ({method}・{limitName})";
+                var head = PileHeadBeam(pile);
+                string target = head?.Name ?? $"杭 No.{pile.PileNo}";
+
+                void Unavailable(string reason, DiagnosticTarget? fix = null)
+                    => items.Add(UnavailableItem(EvaluationKind.PCRingShear, category, limitName, target, pb, pile, null,
+                        stepResult, lcName, combName, "kN", reason, fix));
+
+                // 杭頭モデルは解析に使った土層-杭セットの杭体から (杭頭回転角の照査と同じ)
+                var body = pile.SoilPileAt(input)?.PileBodyInput;
+                if (body == null) { Unavailable(MissingSoilPileReason(pile.PileNo)); continue; }
+                PCRingShearCapacity? capacity;
+                bool friction;
+                string ringName;
+                if (isCaptain)
+                {
+                    var cp = body.PileTop?.CaptainPile;
+                    capacity = cp?.ShearCapacity; friction = cp?.UltimateShearConsidersFriction ?? false; ringName = cp?.PCRing?.Name ?? "";
+                }
+                else
+                {
+                    var cr = body.PileTop?.CapringPile;
+                    capacity = cr?.ShearCapacity; friction = cr?.UltimateShearConsidersFriction ?? false; ringName = cr?.PCRing?.Name ?? "";
+                }
+                if (capacity == null)
+                {
+                    Unavailable(string.IsNullOrEmpty(ringName)
+                        ? "PC リングが選ばれていないため、PC リングのせん断耐力を決められません (杭頭部の画面で PC リングを選んでください)"
+                        : $"PC リング「{ringName}」がせん断耐力の表にありません (杭頭部の画面で PC リングを選び直してください)",
+                        DiagnosticTarget.PileBody(pb));
+                    continue;
+                }
+
+                var r = head?.ResultLookup.AtStepOf(stepResult);
+                if (r?.CumulativeForce == null) { Unavailable(NoResultReason); continue; }
+                double q = PileDesign.Common.StableNumerics.Norm(r.CumulativeForce.Fyi, r.CumulativeForce.Fzi);
+
+                // 終局で摩擦を見込むときだけ軸力が要る (曲げ・せん断と同じ規則 ResolveCheckAxialForce)
+                double? axialN = null;
+                string? axialSource = null;
+                if (limit == LimitState.Ultimate && friction)
+                {
+                    double? headFxi = r.CumulativeForce.Fxi;
+                    if (LacksHeadAxialForce(input, level, headFxi)) { Unavailable(MissingHeadAxialForceReason); continue; }
+                    (double n, string src) = ResolveCheckAxialForce(input, pile, stepResult.LoadCase?.No ?? 0, level, stepResult.LoadCombination, headFxi);
+                    axialN = n; axialSource = src;
+                }
+
+                double allowable;
+                string limitDescription;
+                switch (limit)
+                {
+                    case LimitState.Service:
+                        allowable = capacity.LongQa; limitDescription = $"長期許容せん断力 LQa ({capacity.Name})"; break;
+                    case LimitState.Damage:
+                        allowable = capacity.ShortQa; limitDescription = $"短期許容せん断力 sQa ({capacity.Name})"; break;
+                    default:
+                        allowable = capacity.Ultimate(friction, axialN ?? 0.0);
+                        limitDescription = friction && axialN is double nf && nf > 0
+                            ? $"終局せん断耐力 uQr = min({capacity.UltNoFriction:N0} + {PCRingShearCapacity.FrictionCoefficient:0.0}×{nf:N1}, 上限 {capacity.UltFrictionMax:N0}) ({capacity.Name})"
+                            : $"終局せん断耐力 uQr (摩擦無視) ({capacity.Name})";
+                        break;
+                }
+
+                var basis = new List<EvaluationBasisEntry>
+                {
+                    new("限界値", limitDescription),
+                    new("出典", isCaptain
+                        ? "キャプテンパイル工法 設計・施工マニュアル 第 6 版 表 2.2.4・表 2.2.5 (パイルキャップ Fc = 21 N/mm² の場合)"
+                        : "キャプリングパイル工法 設計マニュアル (2023 年 4 月版) 2.2(4) の表"),
+                    new("応答", "杭頭の要素の i 端のせん断力 |Q| = √(Fy² + Fz²) (割増ししない)"),
+                };
+                if (axialN is double na) basis.Add(new("軸力 N", $"{na:N1} kN ({axialSource})"));
+
+                items.Add(new EvaluationItem
+                {
+                    Kind = EvaluationKind.PCRingShear,
+                    Level = level,
+                    Category = category,
+                    LimitName = limitName,
+                    TargetName = target,
+                    EndLabel = "i端",
+                    PileBodyNo = pb,
+                    PileNo = pile.PileNo,
+                    LoadCaseName = lcName,
+                    LoadCombinationName = combName,
+                    IsLiquefaction = stepResult.IsLiquefaction,
+                    LoadCaseNo = stepResult.LoadCase?.No,
+                    LoadCombinationNo = stepResult.LoadCombination?.No,
+                    Response = q,
+                    Limit = allowable,
+                    Unit = "kN",
+                    AxialForce = axialN,
+                    IsOk = !(q > allowable),
+                    Basis = basis,
+                });
+            }
+            return items;
         }
 
         /// <summary>

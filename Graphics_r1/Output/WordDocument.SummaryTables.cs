@@ -961,7 +961,8 @@ namespace PileDesign.Output
             static bool IsLongTermSectionCheck(Models.Results.EvaluationItem i) =>
                 i.Level == 0
                 && i.Kind is Models.Results.EvaluationKind.PileSectionMoment
-                          or Models.Results.EvaluationKind.PileSectionShear;
+                          or Models.Results.EvaluationKind.PileSectionShear
+                          or Models.Results.EvaluationKind.PCRingShear;
 
             int longTermCount = result.Items.Count(IsLongTermSectionCheck);
             bool includeLongTerm = mainWindowViewModel.DocxOutput.IncludeHorizontal_LongTermEvaluation;
