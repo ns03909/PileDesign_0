@@ -1501,11 +1501,12 @@ namespace PileDesign.Models
 
         // 引張鉄筋材質
         [System.Text.Json.Serialization.JsonIgnore]
-        public string[] TensionAnchorGradeOption { get; } = ["SD390", "SD490", "SD685"];
+        // マニュアル第 6 版 2.3(1)「鉄筋種別: SD390, SD490, SD590, SD685　鉄筋径: D29〜D41」(SD590 は第 6 版で追加)
+        public string[] TensionAnchorGradeOption { get; } = ["SD390", "SD490", "SD590", "SD685"];
 
         // 引張鉄筋径
         [System.Text.Json.Serialization.JsonIgnore]
-        public string[] TensionAnchorDiaOption { get; } = ["D38", "D41",];
+        public string[] TensionAnchorDiaOption { get; } = ["D29", "D32", "D35", "D38", "D41"];
 
         // 円形配置引張鉄筋本数オプション
         public int[] CaptainPileTensionBarNumberOption_circle { get; set; } = [6, 8, 10, 12, 16, 20];
@@ -1547,22 +1548,29 @@ namespace PileDesign.Models
             Update();
         }
 
+        /// <summary>規格の降伏強度 (N/mm²)。選択肢に無い規格は null。</summary>
+        internal static double? GradeStrength(string? grade) => grade switch
+        {
+            "SD390" => 390.0,
+            "SD490" => 490.0,
+            "SD590" => 590.0,
+            "SD685" => 685.0,
+            _ => null,
+        };
+
+        /// <summary>選択肢にある径か。</summary>
+        internal bool IsAvailableDia(string? dia) => dia != null && Array.IndexOf(TensionAnchorDiaOption, dia) >= 0;
+
         // キャプテンパイル引張鉄筋クラス 更新メソッド
         public void Update()
         {
-            if (SelectedTensionAnchorGrade == "SD390")
-            { SigmaY = 390; }
-            else if (SelectedTensionAnchorGrade == "SD490")
-            { SigmaY = 490; }
-            else if (SelectedTensionAnchorGrade == "SD685")
-            { SigmaY = 685; }
+            // 選択肢に無い規格・径 (壊れたファイルなど) は直前の値のまま。解析前の確認 (CheckInputData) が止める。
+            // ここで例外にすると、解析の入口が捕まえて杭頭を黙って剛接合として解いてしまう
+            if (GradeStrength(SelectedTensionAnchorGrade) is double fy) SigmaY = fy;
 
             EpsilonY = SigmaY / Es;
 
-            if (SelectedTensionAnchorDia == "D38")
-            { BarArea = 1140.0; }
-            else if (SelectedTensionAnchorDia == "D41")
-            { BarArea = 1340.0; }
+            if (IsAvailableDia(SelectedTensionAnchorDia)) BarArea = RebarAreas.Of(SelectedTensionAnchorDia);   // JIS G 3112 の公称断面積
 
             if (IsSquareArrangement)
             {

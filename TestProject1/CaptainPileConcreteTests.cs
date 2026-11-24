@@ -32,6 +32,59 @@ namespace TestProject1
             return cp;
         }
 
+        /// <summary>
+        /// マニュアル第 6 版 2.3(1) の引張定着筋 (SD590 と D29〜D35 を追加) が、強度・断面積 (JIS 公称値) を通って Mu に届く。
+        /// </summary>
+        [DataTestMethod]
+        [DataRow("D29", 642.4)]
+        [DataRow("D32", 794.2)]
+        [DataRow("D35", 956.6)]
+        public void NewAnchorSizesAndGradeReachTheSectionCalculation(string size, double area)
+        {
+            var cp = Ring1200();
+            var bars = cp.CTPTensionRebars;
+            bars.HasTensionRebars = true;
+            bars.SelectedTensionAnchorGrade = "SD590";
+            bars.SelectedTensionAnchorDia = size;
+            bars.SelectedBarNumberSquare = 8;
+            bars.TDorTB = 600;
+            cp.Update();
+
+            CollectionAssert.Contains(bars.TensionAnchorGradeOption, "SD590");
+            CollectionAssert.Contains(bars.TensionAnchorDiaOption, size);
+            Assert.AreEqual(590.0, bars.SigmaY, 0.0);
+            Assert.AreEqual(area, bars.BarArea, 0.0);
+            Assert.AreEqual(8 * area, bars.Ag, 1e-9);
+            Assert.IsTrue(cp.GetMu(0) > 0, "新しい定着筋で終局曲げモーメントを求められない");
+        }
+
+        /// <summary>
+        /// 選択肢に無い規格・径 (壊れたファイルなど) は、Update で例外にせず (解析の入口が捕まえて黙って剛接合になる)、
+        /// 解析前の確認で止める。
+        /// </summary>
+        [TestMethod]
+        public void AnUnknownAnchorGradeOrSizeStopsTheAnalysis()
+        {
+            var input = new MainWindowViewModel().CurrentInputModel!;
+            var pb = input.PileBodies[0];
+            pb.PileTopType = "キャプテンパイル工法";
+            pb.PileTop.CaptainPile = Ring1200();
+            var bars = pb.PileTop.CaptainPile.CTPTensionRebars;
+            bars.HasTensionRebars = true;
+            bars.SelectedTensionAnchorGrade = "SD345";
+            bars.SelectedTensionAnchorDia = "D25";
+            pb.PileTop.CaptainPile.Update();   // 例外にしない
+
+            var messages = PileDesign.Services.CheckInputData.CollectPileBodyGeometryProblems(input).Select(d => d.Message).ToList();
+            Assert.IsTrue(messages.Any(m => m.Contains("規格「SD345」")), string.Join("\n", messages));
+            Assert.IsTrue(messages.Any(m => m.Contains("径「D25」")), string.Join("\n", messages));
+
+            bars.SelectedTensionAnchorGrade = "SD590";
+            bars.SelectedTensionAnchorDia = "D35";
+            messages = PileDesign.Services.CheckInputData.CollectPileBodyGeometryProblems(input).Select(d => d.Message).ToList();
+            Assert.IsFalse(messages.Any(m => m.Contains("引張定着筋")), string.Join("\n", messages));
+        }
+
         [TestMethod]
         public void TheSmallerOfThePileAndCapFcIsUsed()
         {

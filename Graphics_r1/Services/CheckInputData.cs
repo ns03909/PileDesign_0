@@ -482,6 +482,17 @@ namespace PileDesign.Services
                     problems.Add(Diagnostic.InputAt(DiagnosticTarget.PileBody(pbNo),
                         $"パイルキャップのコンクリートのヤング係数が {PileDesign.Common.NumberDisplay.Modulus(pb.PileTop.PileCapEc)} N/mm² で、小さすぎます ({MinConcreteE:N0} N/mm² 未満)。杭頭部のパイルキャップの単位体積重量 γ・Fc を確認してください."));
 
+                // キャプテンパイル工法の引張定着筋の規格・径が選択肢に無い (壊れたファイルなど)。強度・断面積を決められない
+                if (pb.PileTopType == "キャプテンパイル工法" && pb.PileTop?.CaptainPile?.CTPTensionRebars is { HasTensionRebars: true } bars)
+                {
+                    if (PileDesign.Models.CTPTensionRebars.GradeStrength(bars.SelectedTensionAnchorGrade) == null)
+                        problems.Add(Diagnostic.InputAt(DiagnosticTarget.PileBody(pbNo),
+                            $"キャプテンパイル工法の引張定着筋の規格「{bars.SelectedTensionAnchorGrade}」は選べる規格 ({string.Join("・", bars.TensionAnchorGradeOption)}) にありません。杭頭ウィンドウで選び直してください."));
+                    if (!bars.IsAvailableDia(bars.SelectedTensionAnchorDia))
+                        problems.Add(Diagnostic.InputAt(DiagnosticTarget.PileBody(pbNo),
+                            $"キャプテンパイル工法の引張定着筋の径「{bars.SelectedTensionAnchorDia}」は選べる径 ({string.Join("・", bars.TensionAnchorDiaOption)}) にありません。杭頭ウィンドウで選び直してください."));
+                }
+
                 for (int j = 0; j < pb.PileBodySegments.Count; j++)
                 {
                     var seg = pb.PileBodySegments[j];
