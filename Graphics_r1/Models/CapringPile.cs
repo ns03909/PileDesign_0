@@ -39,6 +39,13 @@ namespace PileDesign.Models
         public const double EsRebar = 2.05e5;
         /// <summary>鋼管杭の鋼材ヤング係数 (N/mm²)</summary>
         public const double EsSteelPipe = 2.05e5;
+        /// <summary>
+        /// 杭体と PC リングとの重なり長さ Hp (mm)。
+        /// 出典: 設計マニュアル (2023 年 4 月版) 3.5 設計例「杭体と PC リングの重なり長さ Hp = 0.07m」・
+        /// 「Hc = 0.15 − 0.07 = 0.08 m」、Q&amp;A (5-9)「PC リングと杭頭との重なり 70mm … せん断力の伝達に必要な重なり」。
+        /// 以前は「標準値の明記なし」としてリング高さの半分 (75 mm、hr = 200 では 100 mm) を使っていた (2026-11-25 修正)。
+        /// </summary>
+        public const double PileRingOverlap = 70.0;
 
         // ───────── 杭種・杭体寸法 ─────────
         private string _pileBodyType = string.Empty;
@@ -61,17 +68,50 @@ namespace PileDesign.Models
             }
         }
 
+        // Ep・Ip・Hp・Hc・CompositeEpIp は Update() が求める派生値。画面では編集できないので保存しない。
+        // 以前は保存していたので、一度入った値 (パイルキャップの Ec・杭径の中実円・リング高さの半分) が
+        // ファイルに残り続けた。保存しないので、以前のファイルも開き直すと求め直した値になる (2026-11-25)
+
         private double _ep;
-        /// <summary>杭体ヤング係数 (N/mm²)</summary>
+        /// <summary>杭体ヤング係数 (N/mm²)。杭断面が配られていれば最上段の断面の値 (<see cref="SetPileBodyFromSection"/>)</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ep { get => _ep; set => SetProperty(ref _ep, value); }
 
         private double _ip;
-        /// <summary>杭体断面二次モーメント (mm⁴)</summary>
+        /// <summary>杭体断面二次モーメント (mm⁴)。杭断面が配られていれば EI / Ep (中空・鋼材の換算を含む)</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Ip { get => _ip; set => SetProperty(ref _ip, value); }
 
         private double _hp;
-        /// <summary>杭体と PC リングとの重なり長さ (mm)</summary>
+        /// <summary>杭体と PC リングとの重なり長さ (mm)。<see cref="PileRingOverlap"/></summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Hp { get => _hp; set => SetProperty(ref _hp, value); }
+
+        // 杭体 (最上段の断面) のヤング係数 (N/mm²) と曲げ剛性 EI (N·mm²)。SetPileBodyFromSection で配る。保存はしない
+        // (解析の入口 PileBodyInput.ApplyTopSectionToPileTop・例題の読込・杭頭部ウィンドウが入れ直す)
+        private double _pileBodyEp;
+        private double _pileBodyEI;
+        [System.Text.Json.Serialization.JsonIgnore]
+        internal double PileBodyEp => _pileBodyEp;
+        [System.Text.Json.Serialization.JsonIgnore]
+        internal double PileBodyEI => _pileBodyEI;
+
+        /// <summary>
+        /// 杭体の Ep と EI を最上段の杭断面から受け取り、変わったときだけ組み直す。変わったら true。
+        /// マニュアル 3.4 (3-2) の Kp = Ep·Ip/Hp は杭体の値 (設計例 3.5 は PHC 800 の Ep = 39,200 N/mm²、Ip は中空の環で
+        /// 1.46×10⁻² m⁴)。以前は杭断面から何も渡っておらず、Ep にパイルキャップの Ec、Ip に杭径の中実円を使っていた (2026-11-25 修正)。
+        /// </summary>
+        /// <param name="ep">杭体のヤング係数 (N/mm²)。コンクリート杭は杭体コンクリートの Ec、鋼管杭は鋼材の Es</param>
+        /// <param name="eiNmm2">杭体の曲げ剛性 (N·mm²)。解析が使う断面の EI (SC 杭の鋼管・PRC の鋼材の換算を含む)</param>
+        internal bool SetPileBodyFromSection(double ep, double eiNmm2)
+        {
+            if (!(ep > 0.0) || !(eiNmm2 > 0.0)) return false;
+            if (_pileBodyEp == ep && _pileBodyEI == eiNmm2) return false;
+            _pileBodyEp = ep;
+            _pileBodyEI = eiNmm2;
+            Update();
+            return true;
+        }
 
         // ───────── 鋼管杭+キャプリング (コンクリート充填鋼管部) 専用 ─────────
         /// <summary>
@@ -90,8 +130,9 @@ namespace PileDesign.Models
         private double _pipeFillEc;
         public double PipeFillEc { get => _pipeFillEc; set => SetProperty(ref _pipeFillEc, value); }
 
-        /// <summary>合成 EpIp が直接設定されている場合に使用 (N·mm²)。0 なら Ep·Ip を使用。</summary>
+        /// <summary>コンクリート充填鋼管部の合成 EpIp (N·mm²)。0 なら Ep·Ip を使用。Update() が求める</summary>
         private double _compositeEpIp;
+        [System.Text.Json.Serialization.JsonIgnore]
         public double CompositeEpIp { get => _compositeEpIp; set => SetProperty(ref _compositeEpIp, value); }
 
         // ───────── PC リング ─────────
@@ -125,7 +166,8 @@ namespace PileDesign.Models
         public double Ic { get => _ic; set => SetProperty(ref _ic, value); }
 
         private double _hc;
-        /// <summary>杭頭接合面から PC リング上端までの長さ (mm)</summary>
+        /// <summary>杭頭接合面から PC リング上端までの長さ (mm)。Hc = hr − Hp</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
         public double Hc { get => _hc; set => SetProperty(ref _hc, value); }
 
         // ───────── パイルキャップ仮想円柱 ─────────
@@ -328,6 +370,12 @@ namespace PileDesign.Models
             if (PCRing != null)
             {
                 foreach (var s in PCRing.GetSpecs()) combined.Add(s);
+                // 初期回転剛性の元になる量 (計算書で検算できるように)
+                double epIp = CompositeEpIp > 0 ? CompositeEpIp : Ep * Ip;
+                combined.Add(new PileLibrary.Spec("杭体の曲げ剛性", "Ep·Ip", $"{epIp * 1e-9:N0}", "kN·m²"));
+                combined.Add(new PileLibrary.Spec("杭体と PC リングの重なり長さ", "Hp", $"{Hp:N0}", "mm"));
+                combined.Add(new PileLibrary.Spec("杭頭接合面から PC リング上端までの長さ", "Hc", $"{Hc:N0}", "mm"));
+                combined.Add(new PileLibrary.Spec("初期回転剛性 (圧縮時)", "Ke", $"{Ke * 1e-6:N0}", "kN·m/rad"));
             }
             if (HasTensionBars && TensionBar != null && TensionBar.BarNum > 0)
             {
@@ -430,11 +478,22 @@ namespace PileDesign.Models
             // PC リングから派生
             double rd1 = PCRing.RD1;          // mm
             double hr = PCRing.Hr;            // mm
-            // Hp / Hc は標準値の明記なし → リング高さの折半をデフォルトとする
-            if (Hp <= 0) Hp = hr * 0.5;
-            if (Hc <= 0) Hc = hr * 0.5;
+            // Hp = 70 mm、Hc = hr − Hp (設計例 3.5)。標準の PC リングは hr = 150・200 なので Hc > 0。
+            // 70 mm 以下のリング (カタログには無い) だけは以前の折半で、Hc が 0 以下にならないようにする
+            if (hr > PileRingOverlap)
+            {
+                Hp = PileRingOverlap;
+                Hc = hr - PileRingOverlap;
+            }
+            else
+            {
+                Hp = hr * 0.5;
+                Hc = hr * 0.5;
+            }
 
-            // PC リング内コンクリート断面二次モーメント (rd1 直径の充実円)
+            // PC リング内側コンクリートの断面二次モーメント (rd1 直径の充実円)。
+            // マニュアル 3.4 (3-3)「Ic: PC リング内側コンクリートの断面二次モーメント」、設計例は 800N (rD1 = 820) で Ic = 2.22×10⁻² m⁴。
+            // キャプテンパイル工法 (Ic は杭径断面) とは違う
             Ic = Math.PI * Math.Pow(rd1, 4) / 64.0;
 
             // パイルキャップ仮想円柱 (Ib = Ic, Eb = Ec, Hb = D/2)
@@ -446,18 +505,23 @@ namespace PileDesign.Models
             Ec = PileCapEc;
             Eb = PileCapEc;
 
-            // 杭体 Ep, Ip が未設定 (鋼管杭 etc) ならフォールバック
-            if (Ep <= 0)
+            // 杭体の Ep・Ip。杭断面が配られていれば Ep = 断面の E、Ip = EI / Ep (中空・鋼材の換算を含む)。
+            // 配られる前 (杭断面の無い単体の組み立て) だけ、以前と同じ近似 (パイルキャップの Ec または鋼材の Es、杭径の中実円)
+            if (PileBodyEp > 0 && PileBodyEI > 0)
+            {
+                Ep = PileBodyEp;
+                Ip = PileBodyEI / PileBodyEp;
+            }
+            else
             {
                 Ep = (PileBodyType?.Contains("鋼管") ?? false) ? EsSteelPipe : Math.Max(PileCapEc, 1.0);
-            }
-            if (Ip <= 0 && D > 0)
-            {
-                Ip = Math.PI * Math.Pow(D, 4) / 64.0;
+                Ip = D > 0 ? Math.PI * Math.Pow(D, 4) / 64.0 : 0.0;
             }
 
-            // 鋼管杭 + キャプリング: 杭頭はコンクリート充填鋼管部。
-            // EpIp = Es·I_pipe(環) + Ec·I_filled(中実円) で合成剛性を算定。
+            // 鋼管杭 + キャプリング: 杭頭はコンクリート充填鋼管部 (マニュアル Q&A 5-5: 鋼管杭は杭径程度の深さまで中詰コンクリートを充填する)。
+            // EpIp = Es·I_pipe(環) + Ec·I_filled(中実円) で合成剛性を算定。マニュアルに Ep·Ip の算定式は無い。
+            // 合成でないときは 0 に戻す (以前は鋼管杭から杭種を変えても前の合成 EpIp が残り、Kp に使われていた)
+            CompositeEpIp = 0.0;
             if (IsConcreteFilledSteelPipe && D > 0 && SteelPipeWallThickness > 0)
             {
                 double dOuter = D;
@@ -475,8 +539,13 @@ namespace PileDesign.Models
             Ke = ComputeKe();
 
             // M-θ 曲線群を更新
-            (Ns, ThetasMs) = GetNMThetaRelationship();
+            _updating = true;
+            try { (Ns, ThetasMs) = GetNMThetaRelationship(); }
+            finally { _updating = false; }
         }
+
+        // Update() が曲線群を求めている間は true (GetMThetaRelationship から Update() を呼び直さないため)
+        private bool _updating;
 
         // ───────── 直列ばね計算 ─────────
         /// <summary>杭体回転剛性 Kp = EpIp / Hp。コンクリート充填鋼管部の場合は合成 EpIp を使用。</summary>
@@ -613,8 +682,10 @@ namespace PileDesign.Models
         /// </summary>
         public (ObservableCollection<double>, ObservableCollection<double>) GetMThetaRelationship(double N)
         {
-            // 派生量未初期化の場合は安全に Update() を呼ぶ (idempotent)
-            if (Ke <= 0 && PCRing != null && PCRing.D > 0)
+            // 派生量未初期化の場合は安全に Update() を呼ぶ (idempotent)。
+            // Update() の中 (曲線群の算定) からは呼ばない。パイルキャップの Ec が配られる前などで Ke が 0 のままだと、
+            // Update → GetNMThetaRelationship → ここ → Update と再帰してスタックが溢れ、プロセスごと落ちていた
+            if (Ke <= 0 && !_updating && PCRing != null && PCRing.D > 0)
             {
                 Update();
             }

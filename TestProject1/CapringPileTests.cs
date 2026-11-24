@@ -466,6 +466,120 @@ namespace TestProject1
         }
 
         // ============================================================
+        // 10b. 杭体の Ep・Ip と Hp・Hc (マニュアル 3.4・設計例 3.5)
+        // ============================================================
+
+        /// <summary>
+        /// Hp は 70 mm、Hc = hr − 70 (設計例 3.5「Hp = 0.07m」「Hc = 0.15 − 0.07 = 0.08 m」)。
+        /// 以前はリング高さの半分 (75 mm、hr = 200 では 100 mm) だった。hr = 200 のリングでも 70 mm。
+        /// </summary>
+        [TestMethod]
+        public void Hp_Is70mm_AndHcIsTheRest()
+        {
+            var cp = new CapringPile(22669.0);
+            foreach (var name in new[] { "800N", "1200N" })
+            {
+                var ring = cp.PCRings.First(r => r.Name == name);
+                cp.PCRing = ring; cp.D = ring.D;
+                cp.Update();
+                Assert.AreEqual(70.0, cp.Hp, 1e-12, name);
+                Assert.AreEqual(ring.Hr - 70.0, cp.Hc, 1e-12, name);
+            }
+        }
+
+        /// <summary>
+        /// 杭体の Ep・Ip は最上段の杭断面から (Kp = Ep·Ip/Hp)。以前は杭断面から何も渡っておらず、
+        /// Ep にパイルキャップの Ec、Ip に杭径の中実円を使っていた (PHC 600 で Ke が 3.5% ほど小さかった)。
+        /// </summary>
+        [TestMethod]
+        public void PileBodyEpIp_ComeFromTheTopSection()
+        {
+            var section = new PileDesign.Models.InputData.PileSection
+            {
+                PileBodyType = PileDesign.Constants.PileTypeNames.PrecastConcrete,
+                PileSectionType = PileDesign.Constants.PileTypeNames.Phc,
+            };
+            section.SelectedPrecastPile.Name = "PHC-600-標準-85-B";
+            section.RecalculateSelectedPrecastPile();
+            Assert.AreEqual((600.0, 90.0, 40000.0), (section.ConcreteOutDia, section.ConcreteThickness, section.ConcreteE), "(前提) 製品の値");
+
+            var cp = new CapringPile(22669.0) { PileBodyType = PileDesign.Constants.PileTypeNames.PrecastConcrete };
+            var ring = cp.PCRings.First(r => r.Name == "600N");
+            cp.PCRing = ring; cp.D = ring.D;
+            cp.Update();
+            double keBefore = cp.Ke;
+            Assert.AreEqual(22669.0, cp.Ep, 1e-9, "(前提) 杭断面が配られる前はパイルキャップの Ec");
+
+            PileDesign.Models.InputData.PileBodyInput.ApplyTopSectionToCapring(cp, section, PileDesign.Constants.PileTypeNames.PrecastConcrete);
+            Assert.AreEqual(40000.0, cp.Ep, 1e-9, "Ep は杭体コンクリートの Ec");
+            Assert.AreEqual(section.EI * 1e9, cp.Ep * cp.Ip, section.EI * 1e9 * 1e-12, "Ep·Ip は解析が使う断面の EI (中空の環・PC 鋼材の換算)");
+            Assert.AreEqual(section.EI * 1e9 / 70.0, cp.ComputeKp(), cp.ComputeKp() * 1e-12);
+            Assert.IsTrue(cp.Ke > keBefore, $"杭体の剛性が上がるので Ke も上がる ({keBefore} → {cp.Ke})");
+
+            Assert.IsFalse(cp.SetPileBodyFromSection(section.ConcreteE, section.EI * 1e9),
+                "同じ値なら組み直さない (解析中は軸力ごとに通る)");
+        }
+
+        /// <summary>
+        /// 鋼管杭から杭種を変えたら、合成 EpIp (鋼管 + 中詰め) を Kp に使わない。
+        /// 以前は合成の値が残り、存在しない鋼管の剛性で Kp を求めていた。
+        /// </summary>
+        [TestMethod]
+        public void CompositeEpIp_IsDropped_WhenThePileIsNoLongerASteelPipe()
+        {
+            var cp = CreateBasic700();
+            cp.SetSteelPipeFromSection(isConcreteFilled: true, wallThickness: 12.0);
+            Assert.IsTrue(cp.CompositeEpIp > 0, "(前提) 鋼管杭は合成");
+
+            cp.SetSteelPipeFromSection(isConcreteFilled: false, wallThickness: 0.0);
+            Assert.AreEqual(0.0, cp.CompositeEpIp, "合成でなくなったら 0");
+            Assert.AreEqual(cp.Ep * cp.Ip / cp.Hp, cp.ComputeKp(), cp.ComputeKp() * 1e-12);
+        }
+
+        /// <summary>
+        /// Ep・Ip・Hp・Hc・CompositeEpIp は派生値なので保存しない。以前のファイルに入っている値
+        /// (リング高さの半分など) は読まず、開き直すと求め直した値になる。
+        /// </summary>
+        [TestMethod]
+        public void DerivedStiffnessValues_AreNotSaved_AndOldValuesAreIgnored()
+        {
+            var cp = CreateBasic700();
+            // 保存 (InputModel.SaveToFile) と同じ参照の扱い
+            var opts = new System.Text.Json.JsonSerializerOptions
+            {
+                ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.Preserve,
+                NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.AllowNamedFloatingPointLiterals,
+            };
+            string json = System.Text.Json.JsonSerializer.Serialize(cp, opts);
+            foreach (var key in new[] { "Ep", "Ip", "Hp", "Hc", "CompositeEpIp" })
+                Assert.IsFalse(json.Contains($"\"{key}\":"), $"{key} は保存しない: {json}");
+
+            // 以前のファイルの形: Hp・Hc がリング高さの半分、Ep がパイルキャップの Ec で書かれている
+            string old = json.TrimEnd('}') + ",\"Hp\":75.0,\"Hc\":75.0,\"Ep\":22669.0,\"Ip\":1.0}";
+            var loaded = System.Text.Json.JsonSerializer.Deserialize<CapringPile>(old, opts)!;
+            loaded.SetPileCapConcrete(24.0, 22669.0);   // 読込の仕上げ (PileTop.ApplyPileCapConcrete) と同じ
+            Assert.AreEqual((70.0, 80.0), (loaded.Hp, loaded.Hc), "以前のファイルの Hp・Hc は使わない");
+            Assert.AreEqual(cp.Ke, loaded.Ke, cp.Ke * 1e-12, "開き直しても同じ Ke");
+        }
+
+        /// <summary>
+        /// パイルキャップの Ec が配られる前 (読込直後など) に組み直しても落ちない。
+        /// Ke が 0 のままだと Update → 曲線群 → GetMThetaRelationship → Update と再帰し、スタックが溢れてプロセスごと落ちていた。
+        /// </summary>
+        [TestMethod]
+        public void Update_WithoutPileCapEc_DoesNotRecurse()
+        {
+            var cp = new CapringPile(22669.0);
+            var ring = cp.PCRings.First(r => r.Name == "700N");
+            cp.PCRing = ring; cp.D = ring.D;
+            cp.PileCapEc = 0.0;
+            cp.Update();
+            Assert.AreEqual(0.0, cp.Ke, "(前提) Ec が無いので Kc = Kb = 0");
+            var (thetas, _) = cp.GetMThetaRelationship(1e6);
+            Assert.AreEqual(3, thetas.Count);
+        }
+
+        // ============================================================
         // 11. M-θ 曲線描画用: GetNMThetaRelationship が複数曲線を返す
         // ============================================================
         [TestMethod]

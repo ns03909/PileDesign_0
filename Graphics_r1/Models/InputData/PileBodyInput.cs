@@ -871,6 +871,25 @@ namespace PileDesign.Models.InputData
             if (topSection == null || PileTop == null) return;
             PileTop.FTPile?.SetDimensionsFromSection(topSection.PileDiameter, topSection.ConcreteThickness);
             PileTop.CaptainPile?.SetPileBodyConcrete(topSection.ConcreteFc, topSection.ConcreteE);
+            if (PileTop.CapringPile is { } capring) ApplyTopSectionToCapring(capring, topSection, PileBodyType);
+        }
+
+        /// <summary>
+        /// キャプリングパイル工法の杭頭モデルへ、最上段の杭断面の値を配る。変わっていなければ何もしない。
+        /// <list type="bullet">
+        /// <item>鋼管杭かどうかと管厚 … 合成 EI (Es·I_pipe + Ec·I_fill) に効く</item>
+        /// <item>杭体の Ep と EI … Kp = Ep·Ip/Hp。以前は渡っておらず、パイルキャップの Ec と杭径の中実円を使っていた (2026-11-25)</item>
+        /// </list>
+        /// 杭頭部ウィンドウも同じものを呼ぶ。
+        /// </summary>
+        internal static void ApplyTopSectionToCapring(CapringPile capring, PileSection? topSection, string? pileBodyType)
+        {
+            bool isSteelPipe = (pileBodyType ?? "").Contains(PileTypeNames.SteelPipe);
+            capring.SetSteelPipeFromSection(isSteelPipe, topSection?.PipeTs ?? 0.0);
+            if (topSection == null) return;
+            // EI は kN·m² (解析が使う値。鋼管は腐食後)。N·mm² に直す
+            double ep = isSteelPipe ? topSection.PipeEs : topSection.ConcreteE;
+            capring.SetPileBodyFromSection(ep, topSection.EI * 1e9);
         }
 
         /// <summary>
@@ -1020,12 +1039,9 @@ namespace PileDesign.Models.InputData
                 var caprObj = PileTop?.CapringPile;
                 if (caprObj is CapringPile cpr)
                 {
-                    // 鋼管厚は杭断面が持つ。合成 EI に効くのに PC リングの自動選定でしか
-                    // 入らず、あとから断面を変えても届かなかった。ここで揃える。
-                    var topSec = PileBodySegments?.FirstOrDefault()?.PileSection;
-                    cpr.SetSteelPipeFromSection(
-                        pileBodyType.Contains(PileTypeNames.SteelPipe),
-                        topSec?.PipeTs ?? 0.0);
+                    // 鋼管厚・杭体の Ep と EI は杭断面が持つ。PC リングの自動選定でしか入らなかったり
+                    // (鋼管厚)、まったく渡っていなかったり (Ep・EI) した。ここで揃える (上で自動初期化した場合も)。
+                    ApplyTopSectionToCapring(cpr, PileBodySegments?.FirstOrDefault()?.PileSection, pileBodyType);
 
                     try
                     {

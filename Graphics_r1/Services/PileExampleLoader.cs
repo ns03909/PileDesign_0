@@ -679,6 +679,8 @@ namespace PileDesign.Services
 
                 cp.Update();
                 pileTop.CapringPile = cp;
+                // 杭体の Ep・EI (と鋼管厚) を最上段の断面から配る。変われば組み直す
+                PileBodyInput.ApplyTopSectionToCapring(cp, topSec, pileBody.PileBodyType);
                 if (cp.PCRing != null)
                     pileTop.SelectedPileTopSpecification = cp.GetCombinedSpecs();
             }

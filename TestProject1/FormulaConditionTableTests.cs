@@ -1320,6 +1320,40 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// キャプリングパイル工法の計算例 (マニュアル 3.5 の設計例: 800N・PHC 800・4-D25) が、実装 (CapringPile) と一致する。
+        /// 設計例の Ke (1.04×10⁶)・Mu (625・192) にも合うことを見る。
+        /// </summary>
+        [TestMethod]
+        public void TheCapringPileExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-capring-pile"];
+            var cp = new PileDesign.Models.CapringPile(25_700.0) { PileBodyType = PileDesign.Constants.PileTypeNames.PrecastConcrete };
+            var ring = cp.PCRings.First(r => r.Name == "800N");
+            Assert.AreEqual((800.0, 820.0, 150.0), (ring.D, ring.RD1, ring.Hr), "(前提) 800N の寸法");
+            cp.PCRing = ring; cp.D = ring.D;
+            cp.Update();
+            Assert.IsTrue(cp.SetPileBodyFromSection(39_200.0, 39_200.0 * 1.46e10), "(前提) 杭体の Ep・EI を受け取る");
+            Assert.AreEqual((70.0, 80.0), (cp.Hp, cp.Hc), "設計例: Hp = 0.07 m、Hc = 0.15 − 0.07 = 0.08 m");
+
+            StringAssert.Contains(table, $"$K_p = {N0(cp.ComputeKp() / 1e6)}$・$K_c = {N0(cp.ComputeKc() / 1e6)}$・$K_b = {N0(cp.ComputeKb() / 1e6)}$ で $K_e = {N0(cp.Ke / 1e6)}$ kN·m/rad");
+            Assert.AreEqual(1.04e6, cp.Ke / 1e6, 0.005e6, "設計例の Ke = 1.04×10⁶ kN·m/rad");
+
+            cp.HasTensionBars = true;
+            cp.TensionBar = cp.TensionBars.First(b => b.Name == "4-D25");
+            cp.TensionBarGrade = "SD345";
+            cp.Update();
+            Assert.AreEqual(230.0, cp.EffectiveDc, "(前提) 4-D25 の配置径");
+            StringAssert.Contains(table, $"$N_y = {N1(cp.GetNy() / 1e3)}$ kN・$N_{{ty}} = {N1(cp.GetNty() / 1e3)}$ kN・$K_{{ty}} = {N0(cp.GetKty() / 1e6)}$ kN·m/rad・$M_r = {N1(cp.GetMr() / 1e6)}$ kN·m");
+
+            var (_, muComp) = cp.GetKiMu(950e3);
+            StringAssert.Contains(table, $"$N = 950$ kN で $M_u = {N1(muComp / 1e6)}$ kN·m");
+            Assert.AreEqual(625.0, muComp / 1e6, 1.0, "設計例 表 3-15 (杭 2・X 方向)");
+            var (kiTen, muTen) = cp.GetKiMu(-150e3);
+            StringAssert.Contains(table, $"$N = -150$ kN で $M_u = {N1(muTen / 1e6)}$ kN·m (同 192)・$K_i = {N0(kiTen / 1e6)}$ kN·m/rad");
+            Assert.AreEqual(192.0, muTen / 1e6, 1.0, "設計例 表 3-15 (杭 2・Y 方向)");
+        }
+
+        /// <summary>
         /// F.T.Pile 構法の計算例 (φ600・Fc 24・N = 1,000 kN) が、実装 (FTPile) と一致する。
         /// 支承面積 Ac は未入力 ((2Φ)² の仮定) と 1.0 m² の入力の両方を見る。
         /// </summary>

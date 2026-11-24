@@ -444,13 +444,14 @@ namespace PileDesign.Output
             AddEq(body, @"K_{p} = \dfrac{E_{p}\cdot I_{p}}{H_{p}}, \quad K_{c} = \dfrac{E_{c}\cdot I_{c}}{H_{c}}, \quad K_{b} = \dfrac{E_{b}\cdot I_{b}}{H_{b}}");
             AddInlineMathParagraph(body, ["ここに、"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{p}"), ": 杭体部分の回転剛性[kN·m/rad]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{p}"), ": 杭体のヤング係数[kN/m<^2>]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{p}"), ": 杭体の断面二次モーメント[m<^4>]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{p}"), ": 杭体と PC リングとの重なり長さ[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{p}"), ": 杭体のヤング係数[kN/m<^2>] (最上段の杭断面の値)"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{p}"), ": 杭体の断面二次モーメント[m<^4>] (最上段の杭断面の ", Tex(@"EI/E_{p}"),
+                "。鋼管杭は ", Tex(@"E_{p}I_{p} = E_{s}I_{pipe} + E_{c}I_{fill}"), " とする)"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{p}"), ": 杭体と PC リングとの重なり長さ[m]、", Tex(@"H_{p} = 0.07"), " とする"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{c}"), ": PC リング内コンクリート部分の回転剛性[kN·m/rad]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{c}"), ": PC リング内コンクリートのヤング係数[kN/m<^2>]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{c}"), ": PC リング内側コンクリートの断面二次モーメント[m<^4>]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{c}"), ": 杭頭接合面から PC リング上端までの長さ[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{c}"), ": 杭頭接合面から PC リング上端までの長さ[m]、", Tex(@"H_{c} = h_{r} - H_{p}"), " (", Tex(@"h_{r}"), ": PC リング高さ)"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{b}"), ": パイルキャップ部分仮想円柱の回転剛性[kN·m/rad]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{b}"), ": パイルキャップコンクリートのヤング係数[kN/m<^2>]、", Tex(@"E_{b} = E_{c}"), " とする"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{b}"), ": 仮想円柱の断面二次モーメント[m<^4>]、", Tex(@"I_{b} = I_{c}"), " とする"]);

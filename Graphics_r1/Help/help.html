@@ -15542,13 +15542,14 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
         <ul class="symbol-list">
             <li class="symbol-intro">ここに、</li>
             <li><span class="symbol-label">$K_p$</span>杭体部分の回転剛性 (kN·m/rad)</li>
-            <li><span class="symbol-label">$E_p$</span>杭体のヤング係数 (kN/m²)</li>
-            <li><span class="symbol-label">$I_p$</span>杭体の断面二次モーメント (m⁴)</li>
-            <li><span class="symbol-label">$H_p$</span>杭体と PC リングとの重なり長さ (m)</li>
+            <li><span class="symbol-label">$E_p$</span>杭体のヤング係数 (kN/m²)。最上段の杭断面の値 (既製コンクリート杭は杭体コンクリートの $E_c$、鋼管杭は鋼材の $E_s$)</li>
+            <li><span class="symbol-label">$I_p$</span>杭体の断面二次モーメント (m⁴)。最上段の杭断面の $EI$ を $E_p$ で割った値 (中空の環、PRC・SC 杭の鋼材の換算を含む)。
+                鋼管杭は杭頭を中詰コンクリートを充填した鋼管とみて、$E_p I_p = E_s I_{pipe} + E_c I_{fill}$ ($E_c$ はパイルキャップの値) とします</li>
+            <li><span class="symbol-label">$H_p$</span>杭体と PC リングとの重なり長さ (m)。$H_p = 0.07$ m (設計例 3.5・Q&amp;A「PC リングと杭頭との重なり 70mm」)</li>
             <li><span class="symbol-label">$K_c$</span>PC リング内コンクリート部分の回転剛性 (kN·m/rad)</li>
             <li><span class="symbol-label">$E_c$</span>PC リングに囲まれたパイルキャップコンクリートのヤング係数 (kN/m²)</li>
             <li><span class="symbol-label">$I_c$</span>PC リング内側コンクリートの断面二次モーメント (m⁴)</li>
-            <li><span class="symbol-label">$H_c$</span>杭頭接合面から PC リング上端までの長さ (m)</li>
+            <li><span class="symbol-label">$H_c$</span>杭頭接合面から PC リング上端までの長さ (m)。$H_c = h_r - H_p$ ($h_r$: PC リング高さ)</li>
             <li><span class="symbol-label">$K_b$</span>パイルキャップ部分で杭頭回転に寄与する仮想円柱の回転剛性 (kN·m/rad)</li>
             <li><span class="symbol-label">$E_b$</span>パイルキャップコンクリートのヤング係数 (kN/m²)、$E_b = E_c$ とします。</li>
             <li><span class="symbol-label">$I_b$</span>仮想円柱の断面二次モーメント (m⁴)、$I_b = I_c$ とします。</li>
@@ -15607,6 +15608,23 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
             <li><span class="symbol-label">$M_{ty}$</span>引張定着筋降伏時曲げモーメント (kN·m)</li>
             <li><span class="symbol-label">$M_r$</span>引張定着筋による最大抵抗モーメント寄与 (kN·m)、応力中心距離係数 $\jmath = 7/8$、内部偶力アーム $D/2$</li>
         </ul>
+
+        <table class="formula-conditions" id="cond-capring-pile">
+            <tr><th>適用対象</th><td>杭頭接合が「キャプリングパイル工法」の既製杭 (PHC・PRC・SC・鋼管杭) の、杭頭接合部の M-θ 関係 (水平解析の杭頭の回転ばね) と限界回転角 $\theta_u$ (杭頭回転角の検定)</td></tr>
+            <tr><th>入力</th><td>杭頭ウィンドウの PC リング (杭径 $D$・内径 $r_{D1}$・高さ $h_r$)・引張定着筋の有無と配筋 (本数 $n_s$・径・配置径 $D_c$)・鋼種 (SD345 / SD390)、パイルキャップの $F_c$・単位体積重量 ($E_c = E_b$)、杭体の最上段の断面 ($E_p$ と $EI$、鋼管杭は管厚)、杭の軸力 $N$</td></tr>
+            <tr><th>採用値</th><td>$K_e = 1/(1/K_p + 1/K_c + 1/K_b)$、$K_p = E_p I_p/H_p$ ($E_p I_p$ は最上段の断面の $EI$。鋼管杭は $E_s I_{pipe} + E_c I_{fill}$)、$H_p$ = 70 mm、$K_c = E_c I_c/H_c$ ($I_c$ は PC リング内径 $r_{D1}$ の円、$H_c = h_r - H_p$)、$K_b = E_b I_b/H_b$ ($I_b = I_c$、$H_b = D/2$)。
+                圧縮は $K_i = K_e$、$M_u = (D/2) N$ (引張定着筋ありは $+ M_r$)。引張 (引張定着筋あり) は $|N| \le N_{ty}$ で $((|N| - N_{ty})/N_{ty})^2 + ((K_e - K_i)/(K_e - K_{ty}))^2 = 1$、それより大きければ $K_i = K_{ty}$、$M_u = M_r (1 - |N|/N_y)$ (0 未満は 0)。
+                $M_r = n_s a_s \sigma_y \cdot 7/8 \cdot D/2$、$N_y = n_s a_s \sigma_y$、$N_{ty} = N_y D/(D + D_c)$、$K_{ty} = D_c Z E_s/(2D)$ ($E_s$ = 205,000 N/mm²)。$a_s$ は JIS の公称断面積。
+                M-θ は (0, 0)・($M_u/K_i$, $M_u$)・(0.03, $M_u$) ($M_u/K_i$ は 0.03 rad で頭打ち)</td></tr>
+            <tr><th>適用外</th><td>引張定着筋なしで引張なら $M_u = 0$ (ピン。杭頭の軸方向の拘束も解く)。鋼管杭の $E_p I_p$ の算定式はマニュアルに無く、中詰コンクリートとの合成は本プログラムの仮定。
+                マニュアルの設計フローにある PC リングのせん断の検定・パイルキャップのパンチングの検討は行わない。杭体の最上段の断面が無いときだけ、$E_p$ にパイルキャップの $E_c$ (鋼管杭は $E_s$)、$I_p$ に杭径の中実円を使う</td></tr>
+            <tr><th>参照箇所</th><td>一般社団法人キャプリングパイル工法協会「キャプリングパイル工法 設計マニュアル」(2023 年 4 月版) 3.4 杭頭接合部の回転ばね評価法 式 (3-1)〜(3-18)・表 3-1、$H_p$・$H_c$ は 3.5 設計例 (5)、鋼管杭の中詰めは 5. Q&amp;A</td></tr>
+            <tr><th>計算例</th><td>マニュアル 3.5 の設計例 (PC リング 800N: $r_{D1}$ = 820・$h_r$ = 150 mm、杭体 $E_p$ = 39,200 N/mm²・$I_p = 1.46 \times 10^{-2}$ m⁴、パイルキャップ $E_c$ = 25,700 N/mm²):
+                $K_p = 8{,}176{,}000$・$K_c = 7{,}129{,}654$・$K_b = 1{,}425{,}931$ で $K_e = 1{,}037{,}490$ kN·m/rad (マニュアル $1.04 \times 10^6$)。
+                引張定着筋 4-D25 (SD345・$D_c$ = 230 mm): $N_y = 699.2$ kN・$N_{ty} = 543.1$ kN・$K_{ty} = 3{,}351$ kN·m/rad・$M_r = 244.7$ kN·m。
+                $N = 950$ kN で $M_u = 624.7$ kN·m (マニュアル表 3-15 は 625)。$N = -150$ kN で $M_u = 192.2$ kN·m (同 192)・$K_i = 323{,}934$ kN·m/rad
+                (マニュアルの表 3-12 は $2.97 \times 10^5$ だが、同じ入力を式 (3-11) に入れると $3.24 \times 10^5$ になり再現できない。本プログラムは式に従う)</td></tr>
+        </table>
 
         <h4>PC リング標準仕様</h4>
         <p>

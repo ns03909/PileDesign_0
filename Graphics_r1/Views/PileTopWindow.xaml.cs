@@ -90,6 +90,8 @@ namespace PileDesign.Views
                 }
                 // PileBodyType を伝える (鋼管杭判定で合成EI に切替)
                 viewModel.PileTop.CapringPile.PileBodyType = pileBodyType;
+                // 杭体の Ep・EI (Kp に使う) と鋼管厚は最上段の断面から。解析の入口と同じもの
+                PileBodyInput.ApplyTopSectionToCapring(viewModel.PileTop.CapringPile, viewModel.PileSection, pileBodyType);
             }
             else if (pileTopType == "鉄筋定着工法")
             {
