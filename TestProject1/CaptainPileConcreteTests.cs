@@ -304,5 +304,58 @@ namespace TestProject1
             var copy = cp.DeepCopy();
             Assert.AreEqual(21.0, copy.DesignFc, 0.0, "Undo の写しで残る");
         }
+
+        /// <summary>
+        /// 例題 (ExampleCPT2018) を解いて、杭頭接合部の短期許容曲げモーメント Ma の検定がキャプテンパイルの杭ごとに
+        /// レベル1 だけで出て、限界はその項目の軸力での Ma、応答は杭頭の要素の i 端の |M| であること。
+        /// この例題は 2026-11-25 まで地盤の Es が 0 で水平解析が通らず、例題を通した検定の試験が無かった。
+        /// 杭体 1・5 は引張定着筋あり、2〜4 はなし。
+        /// </summary>
+        [TestMethod]
+        [Timeout(600000)]
+        public void TheExampleChecksTheJointMomentOfEveryCaptainPileAtLevel1()
+        {
+            MainWindowViewModel vm;
+            try
+            {
+                vm = TestProject1.ConvergenceRegression.HeadlessHorizontalRunner.RunExampleForViewModel("ExampleCPT2018", "PileExampleCPT2018",
+                    new TestProject1.ConvergenceRegression.HeadlessHorizontalRunner.RunOptions { Level1Steps = 4, Level2Steps = 8, Parallelism = 1 });
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("例題ロード失敗"))
+            {
+                Assert.Inconclusive(ex.Message);
+                return;
+            }
+            vm.ApplyConcreteModelOptions();
+            var result = EvaluationService.BuildEvaluationResult(vm, factored: true);
+            var input = vm.ResultInputModel!;
+            var joints = result.Items.Where(i => i.Kind == PileDesign.Models.Results.EvaluationKind.PileHeadJointMoment).ToList();
+            Assert.IsFalse(joints.Any(i => i.IsUnavailable), string.Join("\n", joints.Where(i => i.IsUnavailable).Select(i => i.UnavailableReason)));
+            Assert.IsTrue(joints.All(i => i.Level == 1), "レベル2 には出さない");
+
+            var piles = input.PileLayoutItems.ToList();
+            TestSource.AssertScanned(piles.Count, 10, "キャプテンパイルの杭");
+            foreach (var p in piles)
+            {
+                var mine = joints.Where(i => i.PileNo == p.PileNo).ToList();
+                Assert.IsTrue(mine.Count > 0, $"杭 No.{p.PileNo} に項目がありません");
+                var cp = p.SoilPileAt(input)!.PileBodyInput.PileTop.CaptainPile!;
+                foreach (var item in mine)
+                {
+                    Assert.IsTrue(item.Limit > 0, $"杭 No.{p.PileNo} {item.LoadCaseName}: Ma = {item.Limit}");
+                    Assert.AreEqual(cp.GetShortTermAllowableMoment(item.AxialForce!.Value * 1000.0) * 1e-6, item.Limit, 1e-9,
+                        $"杭 No.{p.PileNo} {item.LoadCaseName}");
+                }
+            }
+
+            var any = joints.First();
+            var head = EvaluationService.PileHeadBeam(input.PileLayoutItems.Single(p => p.PileNo == any.PileNo))!;
+            var step = vm.CurrentModel!.AnalysisStepResults
+                .Where(s => s.LoadCase?.No == any.LoadCaseNo && s.LoadCombination?.No == any.LoadCombinationNo
+                            && s.IsLiquefaction == any.IsLiquefaction && s.LoadCase?.Level == 1)
+                .OrderByDescending(s => s.Step).First();
+            var f = head.ResultLookup.AtStepOf(step)!.CumulativeForce!;
+            Assert.AreEqual(Math.Sqrt(f.Myi * f.Myi + f.Mzi * f.Mzi), any.Response, 1e-6);
+        }
     }
 }

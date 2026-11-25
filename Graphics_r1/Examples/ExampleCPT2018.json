@@ -20,7 +20,7 @@
       "nValue": 1.0,
       "cohesive": 40.0,
       "vs": 111.0,
-      "es": 0.0,
+      "es": 700.0,
       "isPositiveCircumResistance": true,
       "isNegativeCircumResistance": true
     },
@@ -38,7 +38,7 @@
       "nValue": 45.0,
       "cohesive": 0.0,
       "vs": 368.0,
-      "es": 0.0,
+      "es": 31500.0,
       "isPositiveCircumResistance": true,
       "isNegativeCircumResistance": true
     },
@@ -56,7 +56,7 @@
       "nValue": 60.0,
       "cohesive": 0.0,
       "vs": 429.0,
-      "es": 0.0,
+      "es": 42000.0,
       "isPositiveCircumResistance": true,
       "isNegativeCircumResistance": true
     }

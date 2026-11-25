@@ -89,8 +89,7 @@ namespace TestProject1
         [TestMethod]
         [Timeout(600000)]
         [DataRow("ExampleCAP3_7", "PileExampleCAP3_7", "キャプリングパイル工法")]
-        // キャプテンパイルの例題 (ExampleCPT2018) は 2026-11-25 時点で水平解析が止まる (地盤側の節点が拘束されず剛性行列が特異) ので
-        // 通しでは見ない。検定の処理は工法で同じで、違うのは表 (上のテストで照合) だけ
+        [DataRow("ExampleCPT2018", "PileExampleCPT2018", "キャプテンパイル工法")]
         public void TheExampleChecksThePCRingShearOfEveryPile(string ground, string pile, string method)
         {
             MainWindowViewModel vm;

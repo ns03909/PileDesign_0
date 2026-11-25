@@ -25,6 +25,29 @@ namespace TestProject1
             return model!;
         }
 
+        /// <summary>
+        /// 同梱の杭の例題はどれも、kh0 が 0 の土層が杭にかかっていない (解析の入口で止まらない)。
+        /// ExampleCPT2018 は 2026-11-25 まで全層 Es = 0 で、ここに引っかかっていた。
+        /// </summary>
+        [TestMethod]
+        public void NoShippedExampleHasAZeroSubgradeReaction()
+        {
+            var files = System.IO.Directory.GetFiles(TestSource.ExamplesDir(), "PileExample*.json");
+            TestSource.AssertScanned(files.Length, 10, "杭の例題");
+            var bad = new List<string>();
+            foreach (var f in files)
+            {
+                string pile = System.IO.Path.GetFileNameWithoutExtension(f);
+                using var doc = System.Text.Json.JsonDocument.Parse(System.IO.File.ReadAllText(f),
+                    new System.Text.Json.JsonDocumentOptions { CommentHandling = System.Text.Json.JsonCommentHandling.Skip, AllowTrailingCommas = true });
+                string ground = doc.RootElement.GetProperty("groundExampleName").GetString()!;
+                var (model, error) = IntegrationTests.BuildExampleInputModel(ground, pile);
+                Assert.IsNotNull(model, $"{ground}+{pile} を組めません: {error}");
+                bad.AddRange(CheckInputData.CollectZeroSubgradeReactionProblems(model!).Select(p => $"{ground}+{pile}: {p.Message}"));
+            }
+            Assert.AreEqual(0, bad.Count, string.Join("\n", bad));
+        }
+
         /// <summary>(前提) 例題のままでは何も出さない。</summary>
         [TestMethod]
         public void TheExampleAsShippedHasNoZeroSubgradeReaction()
