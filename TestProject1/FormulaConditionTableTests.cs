@@ -1354,6 +1354,47 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 鋼管杭 + 鉄筋定着工法の計算例 (D = 800・Fc 24・定着筋 16-D25 SD390・重心かぶり厚 230) が、
+        /// 実装 (PileTop.GetSteelPilePileHeadJointInfo) と一致する。Kθ は軸力ごとに求める (N = 0 と 1,000 kN)。
+        /// </summary>
+        [TestMethod]
+        public void TheSteelPipeRebarAnchorageExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-steel-pipe-rebar-anchorage"];
+            static string F2(double v) => v.ToString("0.00", CultureInfo.InvariantCulture);
+            static string F3(double v) => v.ToString("0.000", CultureInfo.InvariantCulture);
+
+            var top = new PileTop();
+            Assert.AreEqual(1100.0, top.SteelPipePileLowerRcDiameter(800.0), "D ≤ 1200: 1.25D + 100");
+            Assert.AreEqual(1500.0, top.SteelPipePileLowerRcDiameter(1300.0), "D > 1200: D + 200");
+            Assert.AreEqual(1600.0, top.SteelPipePileLowerRcDiameter(1200.0), "境界の D = 1200 は 1.25D + 100 の側");
+            StringAssert.Contains(table, $"$D = 800$ mm で $D_c = {N0(top.SteelPipePileLowerRcDiameter(800.0))}$ mm ($D = 1{{,}}300$ mm なら ${N0(top.SteelPipePileLowerRcDiameter(1300.0))}$ mm)");
+
+            top.ConcreteOutDia = top.SteelPipePileLowerRcDiameter(800.0);
+            top.PileCapFc = 24.0;
+            top.MainBarNum1 = 16; top.MainBarSize1 = "D25"; top.MainBarSpec1 = "SD390"; top.MainBarCenterCover1 = 230.0;
+            Assert.AreEqual(640.0, top.MainBarDr1, "(前提) 配置径 = 1100 − 2 × 230");
+
+            var c = top.GetSteelPilePileHeadJointConstants()!;
+            Assert.AreEqual(0.86 * 1.0 * 1.0 * 390.0 * 25.0 / 10.0 / (24.0 / 40.0 + 0.9), c.Ld, 1e-9, "Ld の式");
+            StringAssert.Contains(table, $"$f_b = {F2(c.Fb)}$ N/mm²、$L_d = {N1(c.Ld)}$ mm");
+
+            var i0 = top.GetSteelPilePileHeadJointInfo(0.0)!;
+            double phi0 = i0.PtThetaY / c.Ld;
+            StringAssert.Contains(table, $"$N = 0$ で ${{}}_rM_{{ty}} = {N1(i0.RMtyKNm)}$ kN·m・${{}}_r\\phi_{{ty}} = {F3(phi0 * 1e6)} \\times 10^{{-6}}$ 1/mm・"
+                + $"${{}}_{{pc}}\\theta_y = {F3(i0.PtThetaY * 1e3)} \\times 10^{{-3}}$ rad、$K_\\theta = {N0(i0.Ktheta)}$ kN·m/rad");
+            Assert.AreEqual(i0.RMtyKNm / i0.PtThetaY, i0.Ktheta, 1e-9, "Kθ = rMty / pcθy");
+
+            var i1 = top.GetSteelPilePileHeadJointInfo(1000.0)!;
+            StringAssert.Contains(table, $"$N = 1{{,}}000$ kN (圧縮) で ${{}}_rM_{{ty}} = {N1(i1.RMtyKNm)}$ kN·m・$K_\\theta = {N0(i1.Ktheta)}$ kN·m/rad");
+            Assert.IsTrue(i1.Ktheta > i0.Ktheta, "圧縮で Kθ が上がる (軸力ごとに求めている)");
+
+            // パイルキャップの Fc か定着筋が無ければ求めない (解析は剛として解く)
+            top.PileCapFc = 0.0;
+            Assert.IsNull(top.GetSteelPilePileHeadJointInfo(0.0));
+        }
+
+        /// <summary>
         /// F.T.Pile 構法の計算例 (φ600・Fc 24・N = 1,000 kN) が、実装 (FTPile) と一致する。
         /// 支承面積 Ac は未入力 ((2Φ)² の仮定) と 1.0 m² の入力の両方を見る。
         /// </summary>
