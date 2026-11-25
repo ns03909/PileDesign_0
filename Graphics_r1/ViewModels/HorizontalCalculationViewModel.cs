@@ -1840,6 +1840,17 @@ namespace PileDesign.ViewModels
             if (!EnsureFTCapsMatchPileDiameter())
                 return;
 
+            // 水平地盤反力係数 kh0 が 0 の土層 (変形係数 Es = 0 など) があれば止める。
+            // 解析に入ると「杭地盤節点の対角成分が 0」としか出ず、原因が読み取れない
+            var zeroKhProblems = PileDesign.Services.CheckInputData.CollectZeroSubgradeReactionProblems(
+                _mainWindowViewModel.CurrentInputModel);
+            if (zeroKhProblems.Count > 0)
+            {
+                PileDesign.Services.CheckInputData.ShowBlockers(_mainWindowViewModel.CurrentInputModel, zeroKhProblems,
+                    "水平解析", "水平地盤反力係数");
+                return;
+            }
+
             // 任意入力の地盤変位: これから解く荷重レベル・液状化の別の曲線が空・並びの誤りなら止める
             // (空だと地盤変位 0 として黙って解けてしまう)
             var customDispProblems = PileDesign.Services.CheckInputData.CollectCustomDisplacementProblems(

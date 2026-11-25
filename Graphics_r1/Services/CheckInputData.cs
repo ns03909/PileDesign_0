@@ -285,6 +285,63 @@ namespace PileDesign.Services
         private static string Lines(IEnumerable<Diagnostic> problems) => string.Concat(problems.Select(p => p.Message + "\n"));
 
         /// <summary>
+        /// 水平地盤反力係数 kh0 が 0 (以下) になる杭の要素の検査。水平解析の前に見る。
+        ///
+        /// <para>kh0 は土層の変形係数 Es から求め (手入力があればその値)、Es が 0 だと 0 になる。地盤側の節点は
+        /// 水平地盤ばね 1 本だけで支えているので、ばねが 0 だとその節点の水平の剛性が無く、剛性行列が特異になって
+        /// 最初の反復で止まる。そのときの知らせは「杭地盤節点-1-1:Ux の対角値が 0」で、Es が原因とは読み取れなかった
+        /// (同梱の例題 ExampleCPT2018 は全層 Es = 0 のまま、追加した 2026-05-29 から一度も解けていなかった)。</para>
+        ///
+        /// <para>Es = 0 は、その層の kh0 を手入力していれば正しい入力なので、地盤の検査 (<see cref="GroundInput.ValidateForAnalysis"/>)
+        /// では注意に留め、ここで<b>解析に使う kh0</b> を見る。単杭沈下などは水平地盤ばねを使わないので、水平解析だけで止める。
+        /// 層の内側に節点が無い (要素分割前で層の境だけに節点がある) と隣の層のばねで支えられて解けることもあるが、
+        /// その層の水平抵抗を 0 として解くことになり、意図した入力とは考えにくいので止める。</para>
+        /// </summary>
+        internal static List<Diagnostic> CollectZeroSubgradeReactionProblems(InputModel inputModel)
+        {
+            var problems = new List<Diagnostic>();
+            if (inputModel == null) return problems;
+
+            // (地盤, 土層名, 手入力か) ごとに、かかる杭体を集めて 1 行にする
+            var found = new Dictionary<(int Ground, string Layer, bool Manual), (double Kh0, double E0, SortedSet<int> Bodies)>();
+            foreach (var pile in inputModel.PileLayoutItems ?? [])
+            {
+                var soilPile = pile?.SoilPileAt(inputModel);
+                if (soilPile == null) continue;
+                foreach (var r in soilPile.HorizontalSoilReactions ?? [])
+                {
+                    if (r == null || (double.IsFinite(r.Kh0) && r.Kh0 > 0)) continue;
+                    var key = (soilPile.GroundNo, r.Name ?? "", r.IsKh0Manual);
+                    if (!found.TryGetValue(key, out var entry))
+                        found[key] = entry = (r.Kh0, r.E0, new SortedSet<int>());
+                    entry.Bodies.Add(soilPile.PileBodyNo);
+                }
+            }
+
+            foreach (var ((groundNo, layer, manual), (kh0, e0, bodies)) in found.OrderBy(f => f.Key.Ground))
+            {
+                string bodyList = string.Join("・", bodies.Select(b => $"杭体{b}"));
+                var layers = inputModel.GroundAt(groundNo)?.GroundLayers;
+                int layerIndex = layers?.ToList().FindIndex(l => l?.Name == layer) ?? -1;
+                var target = layerIndex >= 0 ? DiagnosticTarget.GroundLayer(groundNo, layerIndex + 1) : DiagnosticTarget.Ground(groundNo);
+                problems.Add(manual
+                    ? Diagnostic.Input(target,
+                        $"地盤 {groundNo} の土層「{layer}」の水平地盤反力係数 kh0 が手入力で {kh0:0.###} になっていて ({bodyList})、"
+                        + "この層の水平地盤ばねが 0 になります。地盤側の節点が支えられず、水平解析が解けません。") with
+                    {
+                        Remedy = "杭要素分割の画面で、この土層の kh0 の手入力を正の値にするか、自動計算に戻す",
+                    }
+                    : Diagnostic.Input(target,
+                        $"地盤 {groundNo} の土層「{layer}」の変形係数 Es が {e0:0.###} kN/m² のため、水平地盤反力係数 kh0 が 0 になり "
+                        + $"({bodyList})、この層の水平地盤ばねが 0 になります。地盤側の節点が支えられず、水平解析が解けません。") with
+                    {
+                        Remedy = "地盤の画面で変形係数 Es を入力する (目安は E0 = 700N kN/m²)。または杭要素分割の画面で、この土層の kh0 を手入力する",
+                    });
+            }
+            return problems;
+        }
+
+        /// <summary>
         /// 任意入力の地盤変位の検査。水平解析の前に、これから解く荷重レベル・液状化の別について見る。
         ///
         /// <para>任意入力が有効な地盤で、そのケースの点が 1 つも無いと、補間は 0 mm を返し、地盤変位を
