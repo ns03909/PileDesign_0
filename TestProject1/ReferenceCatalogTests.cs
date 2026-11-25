@@ -38,6 +38,7 @@ namespace TestProject1
                 ("キャプテンパイル工法 (場所打ち杭用杭頭半固定構法) 設計・施工マニュアル", "キャプテンパイル工法"),
                 ("F.T.Pile構法既製コンクリート杭　設計・施工指針【暫定版】", "F.T.Pile構法"),
                 ("キャプリングパイル工法 設計マニュアル", "キャプリングパイル工法"),
+                ("開先付き異形棒鋼 NewJ-BAR WSD390 WSD490 設計マニュアル (杭頭補強編)", "NewJ-BAR"),
             };
 
             var catalogTitles = ReferenceCatalog.All().Select(r => r.Title).ToList();

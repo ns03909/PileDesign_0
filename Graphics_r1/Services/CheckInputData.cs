@@ -70,6 +70,9 @@ namespace PileDesign.Services
             // キャプテンパイル工法で、マニュアルが求めるのに本プログラムが行わない照査 (解析は止めない。結果に影響しうる)
             warnings.AddRange(CollectCaptainPileUncheckedNotices(inputModel));
 
+            // NewJ-BAR の適用範囲 (杭径・Fc・本数・鋼管の板厚・埋込み深さ・定着長さ・心心間隔)。検定は続ける
+            warnings.AddRange(CollectNewJBarNotices(inputModel));
+
             // 各杭の ΔZc (接合点 − 杭頭オフセット)
             if (inputModel.PileLayoutItems != null)
             {
@@ -726,6 +729,37 @@ namespace PileDesign.Services
             return notices;
         }
 
+        /// <summary>
+        /// NewJ-BAR の杭頭補強で、断面を組めない・マニュアルの適用範囲の外にある杭体。
+        /// 断面を組めなければ杭頭接合部の検定は「検定不能」になる。範囲の外は検定の値は出すが、マニュアルの前提から外れることを知らせる。
+        /// </summary>
+        internal static List<Diagnostic> CollectNewJBarNotices(InputModel inputModel)
+        {
+            var notices = new List<Diagnostic>();
+            if (inputModel?.PileBodies == null) return notices;
+            for (int i = 0; i < inputModel.PileBodies.Count; i++)
+            {
+                var pb = inputModel.PileBodies[i];
+                if (pb?.PileTop == null || pb.PileTopType != Models.NewJBar.PileTopTypeName) continue;
+                // 検査は入力を書き換えない。解析の入口と同じ形に導いた写しで見る
+                var jbar = pb.PileTop.NewJBarFor(pb.PileTopType, pb.PileBodySegments?.FirstOrDefault()?.PileSection);
+                if (jbar == null) continue;
+                if (!jbar.IsComputable)
+                {
+                    notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, DiagnosticTarget.PileBody(i + 1),
+                        $"杭体 {i + 1}: NewJ-BAR の仮想円形断面を組めないため、杭頭接合部の曲げの検定ができません。"
+                        + "鋼管の外径、パイルキャップの Fc、補強筋の本数・呼び名・種類を確かめてください。",
+                        "杭頭部の画面で NewJ-BAR とパイルキャップの入力を確かめる"));
+                    continue;
+                }
+                foreach (var problem in jbar.GetApplicabilityProblems())
+                    notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, DiagnosticTarget.PileBody(i + 1),
+                        $"杭体 {i + 1}: NewJ-BAR の設計マニュアルの適用範囲の外です。{problem}。",
+                        "杭頭部の画面で NewJ-BAR の入力を見直す"));
+            }
+            return notices;
+        }
+
         internal static List<Diagnostic> CollectSteelPileHeadJointNotices(InputModel inputModel)
         {
             var notices = new List<Diagnostic>();
@@ -740,7 +774,7 @@ namespace PileDesign.Services
                 PileTop.SteelPilePileHeadJointInfo? info = null;
                 // 解析の入口で杭断面から導き直すので、同じ形に導いた写しで判定する (検査は入力を書き換えない)
                 var top = pb.PileTop.DeepCopy();
-                top.SyncFromTopSection(pb.PileBodyType, pb.PileBodySegments?.FirstOrDefault()?.PileSection);
+                top.SyncFromTopSection(pb.PileBodyType, pb.PileTopType, pb.PileBodySegments?.FirstOrDefault()?.PileSection);
                 try { info = top.GetSteelPilePileHeadJointInfo(0.0); }
                 catch (Exception ex) when (ex is ArgumentException or ArithmeticException or InvalidOperationException) { }
                 if (info != null && double.IsFinite(info.Ktheta) && info.Ktheta > 0) continue;

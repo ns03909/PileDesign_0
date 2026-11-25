@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Win32;
 using PileDesign.Common;
 using PileDesign.Common.Undo;
+using PileDesign.Models;
 using PileDesign.Models.InputData;
 using PileDesign.Views;
 using ScottPlot.Plottables;
@@ -65,6 +66,7 @@ namespace PileDesign.ViewModels
 
                 // 初期表示用更新
                 RefreshTopSectionDisplayFromProvidedSection();
+                AttachNewJBar();
 
                 // Canvas が既にセットされていれば描画
                 Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
@@ -80,6 +82,10 @@ namespace PileDesign.ViewModels
         private void PileTop_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             if (e == null) return;
+
+            // NewJ-BAR の入力の実体が差し替わったら購読し直す (元に戻す・キャンセルは中身を写して "" を通知する)
+            if (string.IsNullOrEmpty(e.PropertyName) || e.PropertyName == nameof(PileTop.NewJBar))
+                AttachNewJBar();
 
             // 上面図・諸元を更新したいプロパティ名のリスト
             var watched = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -158,6 +164,57 @@ namespace PileDesign.ViewModels
 
         /// <summary>RingDiameterWarning の再評価を XAML に通知する。Recalculate() 等から呼ぶ。</summary>
         public void RaiseRingDiameterWarningChanged() => OnPropertyChanged(nameof(RingDiameterWarning));
+
+        /// <summary>NewJ-BAR の設計マニュアルの適用範囲から外れている点 (改行区切り)。範囲内・ほかの杭頭なら空文字。</summary>
+        public string NewJBarWarning
+        {
+            get
+            {
+                var jbar = PileTopType == NewJBar.PileTopTypeName ? PileTop?.NewJBar : null;
+                if (jbar == null) return string.Empty;
+                if (!jbar.IsComputable)
+                    return "⚠ 仮想円形断面を組めません (鋼管の外径・パイルキャップの Fc・補強筋の本数を確かめてください)";
+                var problems = jbar.GetApplicabilityProblems();
+                return problems.Count == 0 ? string.Empty : string.Join("\n", problems.Select(p => "⚠ " + p));
+            }
+        }
+
+        private NewJBar? _attachedNewJBar;
+
+        /// <summary>NewJ-BAR の入力の変更を購読する (諸元・上面図・N-M 曲線を描き直す)。実体が変わっていれば付け替える。</summary>
+        private void AttachNewJBar()
+        {
+            var current = PileTop?.NewJBar;
+            if (ReferenceEquals(current, _attachedNewJBar)) return;
+            if (_attachedNewJBar != null) _attachedNewJBar.PropertyChanged -= NewJBar_PropertyChanged;
+            _attachedNewJBar = current;
+            if (_attachedNewJBar != null) _attachedNewJBar.PropertyChanged += NewJBar_PropertyChanged;
+        }
+
+        private bool _newJBarRefreshPending;
+
+        private void NewJBar_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+        {
+            // 1 回の入力で通知が続けて来るので、まとめて 1 回だけ描き直す
+            if (_newJBarRefreshPending) return;
+            _newJBarRefreshPending = true;
+            Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+            {
+                _newJBarRefreshPending = false;
+                try
+                {
+                    if (PileTopType == NewJBar.PileTopTypeName && PileTop?.NewJBar != null)
+                        PileTop.SelectedPileTopSpecification = PileTop.NewJBar.GetSpecs();
+                    OnPropertyChanged(nameof(NewJBarWarning));
+                    RedrawShapes();
+                    ChartUpdate();
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "NewJBar_PropertyChanged redraw failed");
+                }
+            }), System.Windows.Threading.DispatcherPriority.Background);
+        }
 
         // Viewを閉じるためのイベント
         public event EventHandler RequestClose;
@@ -248,7 +305,7 @@ namespace PileDesign.ViewModels
                 // 導き方はモデル側 (PileTop.SyncFromTopSection) に置き、解析の入口と読み込みの仕上げからも同じものを呼ぶ。
                 // 以前はここにだけあり、この画面を開くまで値が入らなかった (鋼管杭 + 鉄筋定着工法は開くまで剛接合、
                 // 杭断面の径を変えても開き直すまで杭頭部は古い径のまま)。
-                PileTop.SyncFromTopSection(PileBodyType, PileSection);
+                PileTop.SyncFromTopSection(PileBodyType, PileTopType, PileSection);
 
                 // 鋼管の表示 (表示だけの値)
                 bool showsPipe = PileSection != null
@@ -262,6 +319,14 @@ namespace PileDesign.ViewModels
                 {
                     try { PileTop.UpdateRebarAnchorageSpecs(PileBodyType, PileSection); }
                     catch (Exception exSpec) { Log.Warning(exSpec, "UpdateRebarAnchorageSpecs failed"); }
+                }
+                // NewJ-BAR は入力 (SyncFromTopSection で作られ、鋼管とパイルキャップの値にそろう) から諸元を作る
+                else if (PileTopType == NewJBar.PileTopTypeName && PileTop.NewJBar != null)
+                {
+                    try { PileTop.SelectedPileTopSpecification = PileTop.NewJBar.GetSpecs(); }
+                    catch (Exception exSpec) { Log.Warning(exSpec, "NewJBar.GetSpecs failed"); }
+                    AttachNewJBar();
+                    OnPropertyChanged(nameof(NewJBarWarning));
                 }
             }
             catch (Exception ex)
@@ -355,6 +420,11 @@ namespace PileDesign.ViewModels
                 // MN: Mu(N) 折れ線
                 try { DrawCapringPile_MN(); }
                 catch (Exception ex) { Log.Warning(ex, "ChartUpdate: DrawCapringPile_MN failed"); }
+            }
+            else if (PileTopType == NewJBar.PileTopTypeName)
+            {
+                try { DrawNewJBar_MN(); }
+                catch (Exception ex) { Log.Warning(ex, "ChartUpdate: DrawNewJBar_MN failed"); }
             }
             else if (PileTopType == "鉄筋定着工法")
             {
@@ -452,6 +522,50 @@ namespace PileDesign.ViewModels
             wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_MN", "N(kN)", "M(kNm)", 1, 1);
         }
 
+
+        /// <summary>
+        /// NewJ-BAR の仮想円形断面の N-M 曲線 (短期許容と終局) を MN タブに描く。
+        /// </summary>
+        private void DrawNewJBar_MN()
+        {
+            var jbar = PileTop?.NewJBar;
+            if (jbar == null || PileTopWindowInstance == null) return;
+            var wpf = PileTopWindowInstance.wpfPlotMN;
+            if (wpf == null) return;
+
+            wpf.Plot.Clear();
+            string title = "軸力と曲げモーメントの関係 (NewJ-BAR の仮想円形断面)";
+            wpf.Plot.Axes.Title.Label.Text = title;
+            wpf.Plot.Axes.Title.Label.FontName = Fonts.Detect(title);
+            wpf.Plot.Axes.Bottom.Label.Text = "N (kN)";
+            wpf.Plot.Axes.Bottom.Label.FontName = Fonts.Detect("N (kN)");
+            wpf.Plot.Axes.Left.Label.Text = "M (kNm)";
+            wpf.Plot.Axes.Left.Label.FontName = Fonts.Detect("M (kNm)");
+            wpf.Plot.Legend.FontName = Fonts.Detect("短期許容");
+
+            foreach (var (ultimate, legend) in new[] { (false, "短期許容"), (true, "終局") })
+            {
+                var (ns, ms) = jbar.GetInteraction(ultimate, points: 40);
+                if (ns.Count == 0) continue;
+                var scatter = wpf.Plot.Add.Scatter(ns.ToArray(), ms.ToArray());
+                scatter.LineWidth = 1.5f;
+                scatter.MarkerSize = 0;
+                scatter.LegendText = legend;
+            }
+
+            var black = new ScottPlot.Color(0, 0, 0);
+            wpf.Plot.Add.VerticalLine(0, 1, black);
+            wpf.Plot.Add.HorizontalLine(0, 1, black);
+            wpf.Plot.Legend.IsVisible = true;
+            wpf.Plot.Axes.AutoScale();
+            wpf.Plot.Axes.AutoScaleExpandX();
+            wpf.Plot.Axes.AutoScaleExpandY();
+            wpf.Plot.Axes.Left.Min = 0.0;
+            wpf.Refresh();
+
+            MyCrosshair_MN = PlotHelper.InitCrosshair(wpf, ScottPlot.Color.FromSKColor(NikkenSKColor.SkyBlue));
+            wpf.MouseMove += (s, e) => PlotHelper.WpfPlot_MouseMove(s, e, "CrosshairPositionText_MN", "N(kN)", "M(kNm)", 1, 1);
+        }
 
         /// <summary>
         /// キャプリングパイル工法の MN 相互作用 (Mu(N) 折れ線) を MN タブに描画。
@@ -864,6 +978,10 @@ namespace PileDesign.ViewModels
             {
                 baseDimension = Math.Max(PileTop.ConcreteOutDia, 1200.0);
             }
+            else if (PileTopType == NewJBar.PileTopTypeName && PileTop.NewJBar != null)
+            {
+                baseDimension = Math.Max(PileTop.NewJBar.VirtualDiameter + 150.0, 1200.0);
+            }
 
             return Math.Min(canvasWidth, canvasHeight) / baseDimension;
         }
@@ -1026,6 +1144,19 @@ namespace PileDesign.ViewModels
                 }
             }
 
+            else if (PileTopType == NewJBar.PileTopTypeName && PileTop.NewJBar is NewJBar jbar && jbar.PileOuterDiameter > 0)
+            {
+                // 仮想円形断面 (青)
+                if (jbar.VirtualDiameter > 0)
+                    DrawDonut("concrete", jbar.VirtualDiameter, 0.0, NikkenBrush.SkyBlue);
+                // 鋼管 (灰) と中詰めコンクリート
+                double outdia = jbar.PileOuterDiameter;
+                double india = Math.Max(0.0, outdia - 2 * jbar.PipeThickness);
+                DrawDonut("steelPipe", outdia, india, Brushes.Gray);
+                // NewJ-BAR (鋼管の外面に溶接。配置径 = 2·r')
+                if (jbar.Count > 0 && jbar.NominalDiameter > 0)
+                    DrawMainBars(jbar.Count, jbar.NominalDiameter, 2.0 * jbar.BarRadius, Brushes.SkyBlue);
+            }
             else if (PileTopType == "鉄筋定着工法")
             {
                 if (string.Equals(PileBodyType, PileTypeNames.InsituSteelPipeConcrete, StringComparison.Ordinal)

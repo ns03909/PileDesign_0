@@ -391,6 +391,9 @@ namespace PileDesign.ViewModels
                 // PC リングのせん断 (キャプテンパイル・キャプリング): 曲げ・せん断と同じ限界状態
                 items.AddRange(CheckPCRingShear(stepResult, limit, lcName, combName));
 
+                // NewJ-BAR の杭頭接合部 (長期許容曲げ。せん断は長期の値が無いので照査しない)
+                items.AddRange(CheckNewJBarJoint(stepResult, limit, lcName, combName));
+
                 // 杭頭 2 点間の変形角: 使用限界
                 items.AddRange(CheckPileHeadDeformationAngle(
                     stepResult, angleLimit, lcName, combName));
@@ -437,6 +440,9 @@ namespace PileDesign.ViewModels
 
                 // PC リングのせん断 (キャプテンパイル・キャプリング): 曲げ・せん断と同じ限界状態
                 items.AddRange(CheckPCRingShear(stepResult, limit, lcName, combName));
+
+                // NewJ-BAR の杭頭接合部の曲げ・せん断: 曲げ・せん断と同じ限界状態
+                items.AddRange(CheckNewJBarJoint(stepResult, limit, lcName, combName));
 
                 // 杭頭 2 点間の変形角: 損傷限界
                 items.AddRange(CheckPileHeadDeformationAngle(
@@ -489,6 +495,9 @@ namespace PileDesign.ViewModels
 
                 // PC リングのせん断 (キャプテンパイル・キャプリング): 曲げ・せん断と同じ限界状態
                 items.AddRange(CheckPCRingShear(stepResult, limit, lcName, combName));
+
+                // NewJ-BAR の杭頭接合部の曲げ・せん断: 曲げ・せん断と同じ限界状態
+                items.AddRange(CheckNewJBarJoint(stepResult, limit, lcName, combName));
 
                 // 杭頭 2 点間の変形角も同じ限界状態に揃える
                 items.AddRange(CheckPileHeadDeformationAngle(
@@ -1437,6 +1446,166 @@ namespace PileDesign.ViewModels
                         new("限界値", "短期許容曲げモーメント Ma: 最外縁の引張定着筋が降伏するときと、圧縮縁が (2/3)·Fc/ν² に達するときの小さい方 (マニュアル第 6 版 3.4(2))"),
                         new("軸力 N", $"{axialN:N1} kN ({axialSource})"),
                         new("応答", "杭頭の要素の i 端の曲げモーメント |M| = √(My² + Mz²)"),
+                    ],
+                });
+            }
+            return items;
+        }
+
+        /// <summary>
+        /// NewJ-BAR の杭頭接合部の曲げとせん断を照査する (設計マニュアル (杭頭補強編) 4.3・4.4)。
+        /// <list type="bullet">
+        /// <item>曲げ: 仮想 RC 断面で軸力ごとに求めた限界値と比べる。使用限界は長期許容 (コンクリート Fc/3・補強筋 195 N/mm²)、
+        ///   損傷限界は短期許容 (2Fc/3・F)、安全限界は終局曲げモーメント Mu。軸力が断面の範囲を超えていれば NG (限界値 0)。</item>
+        /// <item>せん断: 埋込み部側面の支圧。損傷限界は Qa = D·L·fcc、安全限界は Qu = 1.5·Qa。マニュアルに長期の値が無いので使用限界は照査しない。</item>
+        /// </list>
+        /// 応答は杭頭の要素の i 端 (|M| = √(My² + Mz²)、|Q| = √(Fy² + Fz²))、軸力は曲げ・せん断と同じ規則 (<see cref="ResolveCheckAxialForce"/>)。
+        /// 限界状態は曲げ・せん断と同じもの (耐震グレード S のレベル2 は損傷限界 = 短期許容)。
+        /// </summary>
+        private List<EvaluationItem> CheckNewJBarJoint(AnalysisStepResult stepResult, LimitState limit, string lcName, string combName)
+        {
+            var items = new List<EvaluationItem>();
+            var input = _mainVm.ResultInputModel;
+            if (input?.PileLayoutItems == null) return items;
+            int level = stepResult.LoadCase?.Level ?? 0;
+            (string limitName, string momentDescription) = limit switch
+            {
+                LimitState.Service => ("長期許容", "長期許容曲げモーメント (コンクリート Fc/3・補強筋 195 N/mm²。引張側のコンクリートを無視し、圧縮側の補強筋は n 倍)"),
+                LimitState.Damage => ("短期許容", "短期許容曲げモーメント (コンクリート 2Fc/3・補強筋 F。引張側のコンクリートを無視し、圧縮側の補強筋は n 倍)"),
+                _ => ("終局", "終局曲げモーメント Mu (圧縮縁のひずみ 0.003・層分割法。補強筋の終局強度は WSD490 で 490、WSD390 で 1.1×390)"),
+            };
+            bool checksShear = limit != LimitState.Service;
+            var jbarByBody = new Dictionary<int, NewJBar?>();
+            const string source = "開先付き異形棒鋼 NewJ-BAR 設計マニュアル (杭頭補強編) 2026 年 9 月改訂";
+
+            foreach (var pile in input.PileLayoutItems)
+            {
+                int pb = pile.PileBodyNo;
+                var inputBody = pb >= 1 && pb <= (input.PileBodies?.Count ?? 0) ? input.PileBodies![pb - 1] : null;
+                if (inputBody?.PileTopType != NewJBar.PileTopTypeName) continue;
+                var head = PileHeadBeam(pile);
+                string target = head?.Name ?? $"杭 No.{pile.PileNo}";
+                string momentCategory = $"杭頭接合部の曲げ (NewJ-BAR・{limitName})";
+                string shearCategory = $"杭頭接合部のせん断 (NewJ-BAR・{limitName})";
+
+                void Unavailable(string reason, DiagnosticTarget? fix = null)
+                {
+                    items.Add(UnavailableItem(EvaluationKind.PileHeadJointMoment, momentCategory, limitName, target, pb, pile, null,
+                        stepResult, lcName, combName, "kN·m", reason, fix));
+                    if (checksShear)
+                        items.Add(UnavailableItem(EvaluationKind.PileHeadJointShear, shearCategory, limitName, target, pb, pile, null,
+                            stepResult, lcName, combName, "kN", reason, fix));
+                }
+
+                // 杭頭モデルは解析に使った土層-杭セットの杭体から (PC リングのせん断と同じ)
+                var body = pile.SoilPileAt(input)?.PileBodyInput;
+                if (body == null) { Unavailable(MissingSoilPileReason(pile.PileNo)); continue; }
+                if (!jbarByBody.TryGetValue(pb, out var jbar))
+                {
+                    jbar = body.PileTop?.NewJBarFor(body.PileTopType, body.PileBodySegments?.FirstOrDefault()?.PileSection);
+                    jbarByBody[pb] = jbar;
+                }
+                if (jbar == null || !jbar.IsComputable)
+                {
+                    Unavailable("NewJ-BAR の仮想円形断面を組めません (杭頭部の画面で補強筋の本数・呼び名・種類とパイルキャップの Fc を確かめてください)",
+                        DiagnosticTarget.PileBody(pb));
+                    continue;
+                }
+
+                var r = head?.ResultLookup.AtStepOf(stepResult);
+                if (r?.CumulativeForce == null) { Unavailable(NoResultReason); continue; }
+                double? headFxi = r.CumulativeForce.Fxi;
+                if (LacksHeadAxialForce(input, level, headFxi)) { Unavailable(MissingHeadAxialForceReason); continue; }
+                var (axialN, axialSource) = ResolveCheckAxialForce(input, pile, stepResult.LoadCase?.No ?? 0, level, stepResult.LoadCombination, headFxi);
+
+                string section = $"{jbar.Count}-{jbar.Size} ({jbar.Grade})・仮想円形断面 Dc = {jbar.VirtualDiameter:N1} mm・Fc = {jbar.Fc:0.#} N/mm²"
+                    + (jbar.UsesRing ? "・補強筋は円環に置き換え" : "・補強筋 8 本未満なので配置を考えた弱軸方向");
+
+                // ── 曲げ ──
+                double mLimit;
+                try
+                {
+                    mLimit = limit switch
+                    {
+                        LimitState.Service => jbar.GetAllowableMoment(axialN * 1000.0, shortTerm: false),
+                        LimitState.Damage => jbar.GetAllowableMoment(axialN * 1000.0, shortTerm: true),
+                        _ => jbar.GetUltimateMoment(axialN * 1000.0),
+                    } * 1e-6;
+                }
+                catch (Exception ex) when (ex is ArgumentException or ArithmeticException or InvalidOperationException) { mLimit = double.NaN; }
+                bool outOfRange = !double.IsFinite(mLimit);
+                double m = PileDesign.Common.StableNumerics.Norm(r.CumulativeForce.Myi, r.CumulativeForce.Mzi);
+                items.Add(new EvaluationItem
+                {
+                    Kind = EvaluationKind.PileHeadJointMoment,
+                    Level = level,
+                    Category = momentCategory,
+                    LimitName = limitName,
+                    TargetName = target,
+                    EndLabel = "i端",
+                    PileBodyNo = pb,
+                    PileNo = pile.PileNo,
+                    LoadCaseName = lcName,
+                    LoadCombinationName = combName,
+                    IsLiquefaction = stepResult.IsLiquefaction,
+                    LoadCaseNo = stepResult.LoadCase?.No,
+                    LoadCombinationNo = stepResult.LoadCombination?.No,
+                    Response = m,
+                    Limit = outOfRange ? 0.0 : mLimit,
+                    Unit = "kN·m",
+                    AxialForce = axialN,
+                    IsOk = !outOfRange && !(m > mLimit),
+                    Basis =
+                    [
+                        new("限界値", outOfRange
+                            ? $"軸力 N = {axialN:N1} kN が仮想円形断面の{(limit == LimitState.Ultimate ? "終局" : "許容")}軸力の範囲を超えているため、曲げに耐えられない (限界値 0)"
+                            : momentDescription),
+                        new("断面", section),
+                        new("出典", source + " 4.3・4.4"),
+                        new("軸力 N", $"{axialN:N1} kN ({axialSource})"),
+                        new("応答", "杭頭の要素の i 端の曲げモーメント |M| = √(My² + Mz²)"),
+                    ],
+                });
+
+                // ── せん断 (支圧) ──
+                if (!checksShear) continue;
+                double qa = jbar.ShortTermAllowableShear * 1e-3;
+                double qLimit = limit == LimitState.Ultimate ? jbar.UltimateShear * 1e-3 : qa;
+                if (!(qLimit > 0))
+                {
+                    items.Add(UnavailableItem(EvaluationKind.PileHeadJointShear, shearCategory, limitName, target, pb, pile, null,
+                        stepResult, lcName, combName, "kN", "埋込み深さが決まらないため、支圧によるせん断の限界値を求められません (杭頭部の画面で埋込み深さを確かめてください)",
+                        DiagnosticTarget.PileBody(pb)));
+                    continue;
+                }
+                double q = PileDesign.Common.StableNumerics.Norm(r.CumulativeForce.Fyi, r.CumulativeForce.Fzi);
+                string embed = jbar.EmbedmentLength > 0 ? $"{jbar.EmbedmentLength:N0} mm" : $"{jbar.StandardEmbedmentLength:N0} mm (標準埋込み深さ 表 4.3)";
+                string qDescription = $"Qa = D·L·fcc = {jbar.PileOuterDiameter:N0} mm × {embed} × {jbar.ShortTermBearingStress:N1} N/mm² (fcc = 2×(2/3)·Fc) = {qa:N1} kN"
+                    + (limit == LimitState.Ultimate ? $"、Qu = 1.5·Qa = {qLimit:N1} kN" : "");
+                items.Add(new EvaluationItem
+                {
+                    Kind = EvaluationKind.PileHeadJointShear,
+                    Level = level,
+                    Category = shearCategory,
+                    LimitName = limitName,
+                    TargetName = target,
+                    EndLabel = "i端",
+                    PileBodyNo = pb,
+                    PileNo = pile.PileNo,
+                    LoadCaseName = lcName,
+                    LoadCombinationName = combName,
+                    IsLiquefaction = stepResult.IsLiquefaction,
+                    LoadCaseNo = stepResult.LoadCase?.No,
+                    LoadCombinationNo = stepResult.LoadCombination?.No,
+                    Response = q,
+                    Limit = qLimit,
+                    Unit = "kN",
+                    IsOk = !(q > qLimit),
+                    Basis =
+                    [
+                        new("限界値", "杭頭の埋込み部側面のフーチングコンクリートの支圧: " + qDescription),
+                        new("出典", source + " 4.3.1 2)・(4.7) 式"),
+                        new("応答", "杭頭の要素の i 端のせん断力 |Q| = √(Fy² + Fz²) (割増ししない)"),
                     ],
                 });
             }

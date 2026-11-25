@@ -89,6 +89,12 @@ namespace PileDesign.Models
                     "2023年4月版",
                     "杭頭半固定接合の回転剛性と許容値",
                     ReferenceKind.Method),
+                [NewJBar.PileTopTypeName] = new(
+                    "株式会社ブレイブ・株式会社クラウン",
+                    "開先付き異形棒鋼 NewJ-BAR WSD390 WSD490 設計マニュアル (杭頭補強編)",
+                    "2026年9月改訂",
+                    "鋼管杭の杭頭補強筋 (NewJ-BAR) による仮想 RC 断面の許容・終局曲げモーメント、支圧によるせん断、定着長さと適用範囲",
+                    ReferenceKind.Method),
                 ["KCTB"] = new(
                     "日本建築センター",
                     "KCTB 場所打ち鋼管コンクリート杭 (TB工法) 建設技術審査証明",

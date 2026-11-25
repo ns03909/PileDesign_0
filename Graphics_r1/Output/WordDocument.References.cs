@@ -151,6 +151,9 @@ namespace PileDesign.Output
                 yield return ft;
             if (HasCapringPile() && methods.TryGetValue("キャプリングパイル工法", out var capring))
                 yield return capring;
+            if (inputModel.PileBodies.Any(pb => pb?.PileTopType == Models.NewJBar.PileTopTypeName)
+                && methods.TryGetValue(Models.NewJBar.PileTopTypeName, out var jbar))
+                yield return jbar;
             if (ConcreteModelOptions.FollowsKctbEvaluation && methods.TryGetValue("KCTB", out var kctb))
                 yield return kctb;
         }

@@ -28,10 +28,17 @@ namespace PileDesign.Models.Results
         PCRingShear,
 
         /// <summary>
-        /// 杭頭接合部の短期の曲げ (キャプテンパイル工法)。応答 = 杭頭の要素の i 端の |M|、
-        /// 限界 = 短期許容曲げモーメント Ma (軸力で変わる。マニュアル第 6 版 3.4(2))。レベル1 だけ。
+        /// 杭頭接合部の曲げ。応答 = 杭頭の要素の i 端の |M|。限界は工法で決まり、どれも軸力で変わる。
+        /// キャプテンパイル工法は短期許容曲げモーメント Ma (マニュアル第 6 版 3.4(2)。レベル1 だけ)、
+        /// NewJ-BAR は仮想 RC 断面の長期・短期許容曲げモーメントと終局曲げモーメント Mu (限界状態で選ぶ)。
         /// </summary>
         PileHeadJointMoment,
+
+        /// <summary>
+        /// 杭頭接合部のせん断 (NewJ-BAR)。応答 = 杭頭の要素の i 端の |Q|、
+        /// 限界 = 埋込み部側面の短期許容支圧 Qa = D·L·fcc、終局は 1.5·Qa (マニュアル (4.7) 式)。
+        /// </summary>
+        PileHeadJointShear,
 
         /// <summary>
         /// 杭頭 2 点間の変形角。すべての杭頭の組について
@@ -238,6 +245,7 @@ namespace PileDesign.Models.Results
             EvaluationKind.PileHeadRotation => "N3",
             EvaluationKind.PCRingShear => "N1",
             EvaluationKind.PileHeadJointMoment => "N1",
+            EvaluationKind.PileHeadJointShear => "N1",
             EvaluationKind.PileHeadDeformationAngle => "N5",
             EvaluationKind.FoundationBeamInclination => "N5",
             EvaluationKind.PileBearingCompression => "N1",

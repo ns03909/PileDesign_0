@@ -1395,6 +1395,30 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// NewJ-BAR の計算例 (設計マニュアル図 4.22 の出力例: Φ600・WSD390 10-WD32J・Fc 24) が、実装 (NewJBar) と一致する。
+        /// </summary>
+        [TestMethod]
+        public void TheNewJBarExampleMatchesTheImplementation()
+        {
+            string table = Tables()["cond-newjbar"];
+            static string F2(double v) => v.ToString("0.00", CultureInfo.InvariantCulture);
+            var j = new PileDesign.Models.NewJBar { Grade = "WSD390", Size = "WD32J", Count = 10 };
+            j.SetPile(600, 9, "SKK490");
+            j.SetPileCapConcrete(24, 23);
+
+            StringAssert.Contains(table, $"仮想円形断面の外径 {j.VirtualDiameter:0} mm (= 600 + 2×32 + 200)、$r' = {j.BarRadius:0.0}$ mm");
+            var s = j.GetElasticStresses(589e3, 670e6);
+            StringAssert.Contains(table, $"コンクリート ${F2(s.Concrete)}$ N/mm²");
+            StringAssert.Contains(table, $"引張側の補強筋 ${F2(s.BarTension)}$ N/mm²");
+            StringAssert.Contains(table, $"圧縮側 ${F2(s.BarCompression)}$ N/mm²");
+            StringAssert.Contains(table, $"短期許容曲げモーメント ${N1(j.GetAllowableMoment(589e3) * 1e-6)}$ kN·m");
+            StringAssert.Contains(table, $"$N = 0$ で ${N1(j.GetUltimateMoment(0) * 1e-6)}$ kN·m");
+            StringAssert.Contains(table, $"$N = 2{{,}}356$ kN で ${N1(j.GetUltimateMoment(2356e3) * 1e-6)}$ kN·m");
+            StringAssert.Contains(table, $"$Q_a = 600 \\times 220 \\times 32 = {N0(j.ShortTermAllowableShear * 1e-3)}$ kN、$Q_u = {N0(j.UltimateShear * 1e-3)}$ kN");
+            StringAssert.Contains(table, $"= {N0(j.RequiredAnchorageLength)}$ mm ≦ 標準品 $35d = {N0(j.AnchorageLength)}$ mm");
+        }
+
+        /// <summary>
         /// F.T.Pile 構法の計算例 (φ600・Fc 24・N = 1,000 kN) が、実装 (FTPile) と一致する。
         /// 支承面積 Ac は未入力 ((2Φ)² の仮定) と 1.0 m² の入力の両方を見る。
         /// </summary>

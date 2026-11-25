@@ -36,6 +36,9 @@ namespace PileDesign.Models.Results
                 case EvaluationKind.PileHeadJointMoment:
                     AppendJointMoment(sb, item);
                     break;
+                case EvaluationKind.PileHeadJointShear:
+                    AppendJointShear(sb, item);
+                    break;
                 case EvaluationKind.PileHeadDeformationAngle:
                     AppendDeformationAngle(sb, item);
                     break;
@@ -112,9 +115,33 @@ namespace PileDesign.Models.Results
             AppendCondition(sb, item);
 
             string op = item.IsOk ? "≤" : ">";
-            sb.AppendLine($"       M={item.Response:F1} kNm {op} Ma={item.Limit:F1} kNm (N={item.AxialForce:F1} kN)");
+            sb.AppendLine($"       M={item.Response:F1} kNm {op} {JointSymbol(item, "M")}={item.Limit:F1} kNm (N={item.AxialForce:F1} kN)");
             sb.AppendLine();
         }
+
+        /// <summary>杭頭接合部のせん断 (NewJ-BAR の支圧)。</summary>
+        private static void AppendJointShear(StringBuilder sb, EvaluationItem item)
+        {
+            string over = OverSuffix(item).Length > 0 ? " 超過" : "";
+            sb.AppendLine($"  [{Verdict(item)}] {item.Category}{over}: {item.TargetName}  {PileLabel(item)}");
+
+            AppendCondition(sb, item);
+
+            string op = item.IsOk ? "≤" : ">";
+            sb.AppendLine($"       Q={item.Response:F1} kN {op} {JointSymbol(item, "Q")}={item.Limit:F1} kN");
+            sb.AppendLine();
+        }
+
+        /// <summary>
+        /// 杭頭接合部の限界値の記号。短期許容は Ma・Qa、終局は Mu・Qu、長期許容は LMa。
+        /// (キャプテンパイル工法の曲げは短期許容だけで、以前から「Ma」と書いていた)
+        /// </summary>
+        private static string JointSymbol(EvaluationItem item, string quantity) => item.LimitName switch
+        {
+            "終局" => quantity + "u",
+            "長期許容" => "L" + quantity + "a",
+            _ => quantity + "a",
+        };
 
         /// <summary>
         /// PC リングのせん断。杭頭回転角と同じく工法名と限界状態を見出し (Category) に出す。

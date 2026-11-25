@@ -36,6 +36,10 @@ namespace PileDesign.ViewModels
             {
                 baseDimension = Math.Max(ViewModel.PileTop.CapringPile.PCRing.RD2 + 150.0, 1200.0);
             }
+            else if (ViewModel.PileTopType == Models.NewJBar.PileTopTypeName && ViewModel.PileTop.NewJBar != null)
+            {
+                baseDimension = Math.Max(ViewModel.PileTop.NewJBar.VirtualDiameter + 150.0, 1200.0);
+            }
             return Math.Min(canvasWidth, canvasHeight) / baseDimension;
         }
 
@@ -182,6 +186,18 @@ namespace PileDesign.ViewModels
                         if (tPcd > 0 && tNum > 0 && tDia > 0)
                             DrawMainBars(tNum, tDia, tPcd);
                     }
+                }
+
+                // NewJ-BAR: 仮想円形断面・鋼管・鋼管の外面に溶接した補強筋 (画面の上面図と同じ)
+                else if (ViewModel.PileTopType == Models.NewJBar.PileTopTypeName
+                         && ViewModel.PileTop.NewJBar is { PileOuterDiameter: > 0 } jbar)
+                {
+                    if (jbar.VirtualDiameter > 0)
+                        DrawDonut("concrete", jbar.VirtualDiameter, 0.0);
+                    double outdia = jbar.PileOuterDiameter;
+                    DrawDonut("steelPipe", outdia, Math.Max(0.0, outdia - 2 * jbar.PipeThickness));
+                    if (jbar.Count > 0 && jbar.NominalDiameter > 0)
+                        DrawMainBars(jbar.Count, jbar.NominalDiameter, 2.0 * jbar.BarRadius);
                 }
 
                 Path path = new()

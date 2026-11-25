@@ -84,6 +84,46 @@ namespace PileDesign.Models.InputData
             CaptainPile?.SetPileCapConcrete(fc, ec);
             FTPile?.SetPileCapConcrete(fc, ec);
             CapringPile?.SetPileCapConcrete(fc, ec);
+            NewJBar?.SetPileCapConcrete(fc, PileCapGamma);
+        }
+
+        // その工法を選ぶまでは null
+        private NewJBar? _newJBar;
+        /// <summary>NewJ-BAR (開先付き異形棒鋼を鋼管に溶接する杭頭補強) の入力。杭頭タイプが NewJ-BAR のときに作る。</summary>
+        public NewJBar? NewJBar
+        {
+            get => _newJBar;
+            set => SetProperty(ref _newJBar, value);
+        }
+
+        /// <summary>
+        /// 杭頭タイプが NewJ-BAR なら入力を (無ければ作って) 杭とパイルキャップの値にそろえて返す。ほかの杭頭なら null。
+        /// 画面・解析の入口・検定から同じものを呼ぶ (一度も杭頭部の画面を開いていない杭体でも値が入るように)。
+        /// 杭頭タイプは杭体の入力 (<see cref="PileBodyInput.PileTopType"/>) を渡す。この <see cref="PileTopType"/> は
+        /// 杭頭タイプを選び直したときにしか入らず、例題や保存ファイルの読込では古いままのことがある。
+        /// </summary>
+        internal NewJBar? EnsureNewJBar(string? pileTopType, PileSection? topSection)
+        {
+            if (pileTopType != Models.NewJBar.PileTopTypeName) return null;
+            NewJBar ??= new NewJBar();
+            if (topSection != null)
+                NewJBar.SetPile(topSection.PipeDia, topSection.PipeTs, topSection.PipeGrade);
+            NewJBar.SetPileCapConcrete(PileCapFc, PileCapGamma);
+            return NewJBar;
+        }
+
+        /// <summary>
+        /// <see cref="EnsureNewJBar"/> と同じ値にそろえた<b>写し</b>を返す (入力は書き換えない)。検定・解析前の確認が使う。
+        /// 杭とパイルキャップから受け取る値は保存しないので、保存ファイルや解析時の控えから読んだものにも必ず入れ直す。
+        /// </summary>
+        internal NewJBar? NewJBarFor(string? pileTopType, PileSection? topSection)
+        {
+            if (pileTopType != Models.NewJBar.PileTopTypeName) return null;
+            var copy = NewJBar?.DeepCopy() ?? new NewJBar();
+            if (topSection != null)
+                copy.SetPile(topSection.PipeDia, topSection.PipeTs, topSection.PipeGrade);
+            copy.SetPileCapConcrete(PileCapFc, PileCapGamma);
+            return copy;
         }
 
         private double _pileCapEc;
@@ -726,7 +766,7 @@ namespace PileDesign.Models.InputData
         /// 画面・解析の入口 (<see cref="Services.CheckInputData.ValidateForAnalysis"/>)・読み込みの仕上げから同じものを呼ぶ。
         /// 導き方は画面にあったものと同じ (画面を開けば以前から必ずこの値になっていた)。
         /// </summary>
-        internal void SyncFromTopSection(string? pileBodyType, PileSection? section)
+        internal void SyncFromTopSection(string? pileBodyType, string? pileTopType, PileSection? section)
         {
             if (section == null) return;
             double baseDia = section.PileDiameter;
@@ -766,6 +806,8 @@ namespace PileDesign.Models.InputData
                     }
                     break;
             }
+            // NewJ-BAR は鋼管の公称外径・板厚・規格を使う (腐食代を見込まない。補強筋は鋼管の外面に溶接する)
+            EnsureNewJBar(pileTopType, section);
         }
 
         /// <summary>
@@ -800,6 +842,7 @@ namespace PileDesign.Models.InputData
             copy.CaptainPile = this.CaptainPile?.DeepCopy()!;
             copy.FTPile = this.FTPile?.DeepCopy();
             copy.CapringPile = this.CapringPile?.DeepCopy();
+            copy.NewJBar = this.NewJBar?.DeepCopy();
             copy.SelectedPileTopSpecification = this.SelectedPileTopSpecification == null
                 ? null : [.. this.SelectedPileTopSpecification];
             return copy;

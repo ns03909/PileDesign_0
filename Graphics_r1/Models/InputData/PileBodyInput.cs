@@ -465,7 +465,8 @@ namespace PileDesign.Models.InputData
         public static ObservableCollection<string> SteelPileTopTypeOption { get; } =
         [
             "鉄筋定着工法",
-            "キャプリングパイル工法"
+            "キャプリングパイル工法",
+            NewJBar.PileTopTypeName
         ];
 
         // 杭頭タイプオプション
@@ -768,7 +769,7 @@ namespace PileDesign.Models.InputData
 
         /// <summary>杭頭部の、最上段の杭断面から導く値を入れ直す (<see cref="PileTop.SyncFromTopSection"/>)。</summary>
         internal void SyncPileTopFromTopSection()
-            => PileTop?.SyncFromTopSection(PileBodyType, PileBodySegments?.FirstOrDefault()?.PileSection);
+            => PileTop?.SyncFromTopSection(PileBodyType, PileTopType, PileBodySegments?.FirstOrDefault()?.PileSection);
 
         //public string PileBodyType { get; set; }
         private string _pileBodyType = null!;   // コンストラクタで既定値が入る
@@ -1166,6 +1167,13 @@ namespace PileDesign.Models.InputData
                 }
 
                 // 場所打ち鉄筋コンクリート杭以外の鉄筋定着工法も剛結とする
+                return PileHeadRotationDef.Rigid();
+            }
+
+            // 5) NewJ-BAR → 剛接合。マニュアルは杭頭応力を求めてから仮想 RC 断面で照査する手順で、
+            //    杭頭の回転剛性を定めていない (出典の無い式を混ぜない。2026-11-26 利用者の指示)
+            if (pileTopType == NewJBar.PileTopTypeName)
+            {
                 return PileHeadRotationDef.Rigid();
             }
 

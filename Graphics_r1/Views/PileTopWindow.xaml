@@ -6,6 +6,7 @@
         xmlns:local="clr-namespace:PileDesign.ViewModels"
         xmlns:conv="clr-namespace:PileDesign.Converters"
         xmlns:common="clr-namespace:PileDesign.Common"
+        xmlns:models="clr-namespace:PileDesign.Models"
         xmlns:ScottPlot="clr-namespace:ScottPlot.WPF;assembly=ScottPlot.WPF"
         mc:Ignorable="d"
         xmlns:avalonDock="https://github.com/Dirkster99/AvalonDock"
@@ -242,6 +243,10 @@
                                                         <DataTrigger Binding="{Binding PileTopType}" Value="キャプリングパイル工法">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                         </DataTrigger>
+                                                        <!-- NewJ-BAR は仮想円形断面の径を NewJ-BAR の欄に出す -->
+                                                        <DataTrigger Binding="{Binding PileTopType}" Value="NewJ-BAR">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
                                             </StackPanel.Style>
@@ -266,6 +271,9 @@
                                                     <Setter Property="Visibility" Value="Visible"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding PileTopType}" Value="キャプリングパイル工法">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding PileTopType}" Value="NewJ-BAR">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -313,6 +321,10 @@
                                                         </DataTrigger>
                                                         <!-- 杭頭タイプがキャプリングパイル工法のときは非表示 (キャプリング側で独自の引張定着筋 UI を持つ) -->
                                                         <DataTrigger Binding="{Binding PileTopType}" Value="キャプリングパイル工法">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                        <!-- NewJ-BAR は NewJ-BAR の欄で補強筋を入れる -->
+                                                        <DataTrigger Binding="{Binding PileTopType}" Value="NewJ-BAR">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
@@ -572,6 +584,81 @@
                                                     </StackPanel>
                                                 </StackPanel>
                                             </GroupBox>
+                                        </StackPanel>
+                                    </GroupBox>
+
+                                    <!-- NewJ-BAR (開先付き異形棒鋼を鋼管の外面に溶接する杭頭補強)。設計マニュアル (杭頭補強編) 2026 年 9 月改訂 -->
+                                    <GroupBox Header="NewJ-BAR" Visibility="{Binding PileTopType,
+                                                Converter={StaticResource VisibilityConverter},
+                                                ConverterParameter='NewJ-BAR'}">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="種類の記号" Width="100" HorizontalAlignment="Right"/>
+                                                <ComboBox x:Name="ComboBoxNewJBarGrade" Width="100"
+                                                          ItemsSource="{x:Static models:NewJBar.GradeOptions}"
+                                                          SelectedItem="{Binding PileTop.NewJBar.Grade, UpdateSourceTrigger=PropertyChanged}"
+                                                          DropDownOpened="ComboBox_DropDownOpened"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="本数-呼び名" Width="100" HorizontalAlignment="Right"/>
+                                                <TextBox x:Name="TextBoxNewJBarCount" Width="50"
+                                                         Text="{Binding PileTop.NewJBar.Count, UpdateSourceTrigger=LostFocus}"
+                                                         Style="{StaticResource IntegerTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="200"
+                                                         GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                                 PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                                 PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                <TextBlock Text="-" Width="20" HorizontalAlignment="Center"/>
+                                                <ComboBox x:Name="ComboBoxNewJBarSize" Width="80"
+                                                          ItemsSource="{x:Static models:NewJBar.SizeOptions}"
+                                                          SelectedItem="{Binding PileTop.NewJBar.Size, UpdateSourceTrigger=PropertyChanged}"
+                                                          DropDownOpened="ComboBox_DropDownOpened"
+                                                          ToolTip="WD41J は WSD490 だけ"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="埋込み深さ (mm)" Width="100" HorizontalAlignment="Right"/>
+                                                <TextBox x:Name="TextBoxNewJBarEmbedment" Width="50"
+                                                         Text="{Binding PileTop.NewJBar.EmbedmentLength, UpdateSourceTrigger=LostFocus}"
+                                                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="5000"
+                                                         ToolTip="杭のフーチングへの埋込み深さ L0。せん断 (支圧) Qa = D·L·fcc の L に使う。0 なら表 4.3 の標準埋込み深さ"
+                                                         GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                                 PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                                 PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                <TextBlock Text="定着長さ (d の倍数)" Width="120" HorizontalAlignment="Right"/>
+                                                <TextBox x:Name="TextBoxNewJBarAnchorage" Width="50"
+                                                         Text="{Binding PileTop.NewJBar.AnchorageLengthInD, UpdateSourceTrigger=LostFocus}"
+                                                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="200"
+                                                         ToolTip="0 なら標準品 (WSD390 は 35d、WSD490 は 42d)。必要定着長さ Lab = α·S·σ1·d/(10·fb) と比べる"
+                                                         GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                                 PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                                 PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                            </StackPanel>
+                                            <CheckBox x:Name="CheckBoxNewJBarConfined" Margin="0,2,0,2"
+                                                      Content="横補強筋で拘束されたコア内に定着する (α = 1.0。外すと 1.25)"
+                                                      IsChecked="{Binding PileTop.NewJBar.IsConfined, UpdateSourceTrigger=PropertyChanged}"
+                                                      ToolTip="必要定着長さ Lab = α·S·σ1·d/(10·fb) の α (設計マニュアル (4.6) 式)"/>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="仮想円形断面の外径 (mm)" Width="150" HorizontalAlignment="Right"/>
+                                                <TextBox Width="60" Text="{Binding PileTop.NewJBar.VirtualDiameter, Mode=OneWay, StringFormat=N1}"
+                                                         IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}" HorizontalContentAlignment="Right"
+                                                         ToolTip="杭径 250〜500 mm 未満は D + 200、500 mm 以上は D + 2·d + 200 (d は呼び名の数値)"/>
+                                            </StackPanel>
+                                            <!-- 適用範囲の外 (空のときは非表示) -->
+                                            <TextBlock Text="{Binding NewJBarWarning}"
+                                                       Foreground="Red" FontWeight="Bold" TextWrapping="Wrap"
+                                                       Margin="20,2,0,2">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding NewJBarWarning}" Value="">
+                                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="{StaticResource ReadOnlyBrush}"
+                                                       Text="水平解析では杭頭を剛接合として解きます (マニュアルに回転剛性の規定がないため)。溶接は標準溶接長で施工するものとします。"/>
                                         </StackPanel>
                                     </GroupBox>
 

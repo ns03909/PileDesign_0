@@ -149,6 +149,11 @@ namespace PileDesign.Views
                 {
                     MNInteractionPane.Hide();
                 }
+                // NewJ-BAR は杭頭を剛接合として解くので、回転角と曲げモーメントの関係は無い
+                if (vm.PileTopType == PileDesign.Models.NewJBar.PileTopTypeName)
+                {
+                    ThetaMInteractionTab.Hide();
+                }
 
                 // Canvas が準備できたので描画を実行
                 vm.RedrawShapes();

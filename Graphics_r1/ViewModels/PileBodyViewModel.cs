@@ -1135,6 +1135,12 @@ namespace PileDesign.ViewModels
                 }
                 AutoSelectFTCap(pileBodyNo);
             }
+            // NewJ-BAR 選択時に入力を作り、鋼管の寸法とパイルキャップの値をそろえる
+            else if (selectedTopType == PileDesign.Models.NewJBar.PileTopTypeName)
+            {
+                var body = BodyAt(pileBodyNo)!;
+                body.PileTop.EnsureNewJBar(selectedTopType, body.PileBodySegments?.FirstOrDefault()?.PileSection);
+            }
         }
 
         /// <summary>

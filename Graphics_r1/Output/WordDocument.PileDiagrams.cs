@@ -246,10 +246,11 @@ namespace PileDesign.Output
                 var pileBody = inputModel.PileBodies[pbIdx];
                 if (pileBody?.PileTop == null) continue;
 
-                // 杭頭上面図はキャプテンパイル工法 / FT-Pile 構法 / キャプリングパイル工法 で意味を持つ
+                // 杭頭上面図はキャプテンパイル工法 / FT-Pile 構法 / キャプリングパイル工法 / NewJ-BAR で意味を持つ
                 bool isTargetType = pileBody.PileTopType == "キャプテンパイル工法"
                                  || pileBody.PileTopType == "FT-Pile構法"
-                                 || pileBody.PileTopType == "キャプリングパイル工法";
+                                 || pileBody.PileTopType == "キャプリングパイル工法"
+                                 || pileBody.PileTopType == Models.NewJBar.PileTopTypeName;
                 if (!isTargetType) continue;
 
                 var firstSection = pileBody.PileBodySegments?.FirstOrDefault()?.PileSection;
@@ -340,7 +341,14 @@ namespace PileDesign.Output
                 // SelectedPileTopSpecification が空 (PileTopWindow を開かずに F9→計算書出力した等) の場合、
                 // 工法別ライブラリから動的に諸元を生成する。
                 var specs = pileTop.SelectedPileTopSpecification;
-                if (specs == null || specs.Count == 0)
+                // NewJ-BAR は画面で作った諸元を使わず、検定と同じ値にそろえた写しから作る
+                // (杭とパイルキャップから受け取る値は保存しないので、画面を開いていないと古い・空のことがある)
+                if (pileBody.PileTopType == Models.NewJBar.PileTopTypeName)
+                {
+                    var jbar = pileTop.NewJBarFor(pileBody.PileTopType, pileBody.PileBodySegments?.FirstOrDefault()?.PileSection);
+                    specs = jbar == null ? null : [.. pileTop.GetPileCapConcreteSpecs(), .. jbar.GetSpecs()];
+                }
+                else if (specs == null || specs.Count == 0)
                 {
                     if (pileBody.PileTopType == "キャプリングパイル工法" && pileTop.CapringPile?.PCRing != null)
                     {
