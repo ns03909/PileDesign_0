@@ -1507,7 +1507,8 @@ namespace PileDesign.ViewModels
                 }
                 if (jbar == null || !jbar.IsComputable)
                 {
-                    Unavailable("NewJ-BAR の仮想円形断面を組めません (杭頭部の画面で補強筋の本数・呼び名・種類とパイルキャップの Fc を確かめてください)",
+                    Unavailable(jbar?.NotComputableReason is { Length: > 0 } why ? why
+                        : "NewJ-BAR の仮想円形断面を組めません (杭頭部の画面で補強筋の本数・呼び名・種類とパイルキャップの Fc を確かめてください)",
                         DiagnosticTarget.PileBody(pb));
                     continue;
                 }

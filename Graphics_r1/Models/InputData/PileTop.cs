@@ -106,10 +106,22 @@ namespace PileDesign.Models.InputData
         {
             if (pileTopType != Models.NewJBar.PileTopTypeName) return null;
             NewJBar ??= new NewJBar();
-            if (topSection != null)
-                NewJBar.SetPile(topSection.PipeDia, topSection.PipeTs, topSection.PipeGrade);
+            ApplyTopSectionToNewJBar(NewJBar, topSection);
             NewJBar.SetPileCapConcrete(PileCapFc, PileCapGamma);
             return NewJBar;
+        }
+
+        /// <summary>
+        /// 最上段の杭区間の鋼管 (公称外径・板厚・規格。腐食代を見込まない。補強筋は鋼管の外面に溶接する) を渡す。
+        /// 鋼管杭・SC 杭・場所打ち鋼管コンクリート杭の鋼管コンクリート部で同じ取り方 (どれも PipeDia が鋼管の外径)。
+        /// 外面に鋼管の無い断面 (PHC 杭など・鉄筋コンクリート部) は鋼管を 0 にして断面を組めないようにする
+        /// (既製杭は PHC 杭でも PipeDia に杭径が入っているので、断面タイプで見分ける)。
+        /// </summary>
+        private static void ApplyTopSectionToNewJBar(NewJBar jbar, PileSection? topSection)
+        {
+            if (topSection == null) return;
+            jbar.SetTopSection(topSection.PileBodyType, topSection.PileSectionType,
+                topSection.PipeDia, topSection.PipeTs, topSection.PipeGrade);
         }
 
         /// <summary>
@@ -120,8 +132,7 @@ namespace PileDesign.Models.InputData
         {
             if (pileTopType != Models.NewJBar.PileTopTypeName) return null;
             var copy = NewJBar?.DeepCopy() ?? new NewJBar();
-            if (topSection != null)
-                copy.SetPile(topSection.PipeDia, topSection.PipeTs, topSection.PipeGrade);
+            ApplyTopSectionToNewJBar(copy, topSection);
             copy.SetPileCapConcrete(PileCapFc, PileCapGamma);
             return copy;
         }

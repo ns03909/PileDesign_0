@@ -222,6 +222,122 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// SC 杭・場所打ち鋼管コンクリート杭 (外殻鋼管) の杭頭タイプにも出し、どれも剛接合で解く (マニュアル 1.2 1) の対象杭種)。
+        /// </summary>
+        [TestMethod]
+        public void ItIsAlsoOfferedForScAndInsituSteelPipePiles()
+        {
+            Assert.IsTrue(PileBodyInput.PrecastConcretePileTopTypeOption.Contains(NewJBar.PileTopTypeName));
+            Assert.IsTrue(PileBodyInput.InsituSteelPipedConcretePileTopTypeOption.Contains(NewJBar.PileTopTypeName));
+            Assert.IsFalse(PileBodyInput.InsituReinforcedConcretePileTopTypeOption.Contains(NewJBar.PileTopTypeName),
+                "場所打ち RC 杭には鋼管が無い");
+            foreach (var type in new[] { PileDesign.Constants.PileTypeNames.PrecastConcrete, PileDesign.Constants.PileTypeNames.InsituSteelPipeConcrete })
+            {
+                var body = new PileBodyInput { PileBodyType = type };
+                body.PileTopType = NewJBar.PileTopTypeName;
+                Assert.IsFalse(body.HasSelectablePileHeadRotation(), type);
+                Assert.AreEqual(PileDesign.FEM.PileHeadRotationMode.Rigid, body.GetMThetaRelationship(1000.0).Mode, type);
+            }
+        }
+
+        private static PileSection ScSection(string productName)
+        {
+            var s = new PileSection
+            {
+                PileBodyType = PileDesign.Constants.PileTypeNames.PrecastConcrete,
+                PileSectionType = PileDesign.Constants.PileTypeNames.Sc,
+                PipeGrade = "SKK490",
+            };
+            s.SelectedPrecastPile.Name = productName;
+            s.RecalculateSelectedPrecastPile();
+            return s;
+        }
+
+        /// <summary>
+        /// SC 杭はカタログの鋼管 (外径・板厚) に溶接する。SC-600 t9 (SKK490) は図 4.22 の出力例と同じ鋼管なので、同じ値になる
+        /// (マニュアル 4.2 解説: SC 杭も中詰めの有無に関わらず充実の円形断面として計算する)。
+        /// </summary>
+        [TestMethod]
+        public void AnScPileUsesItsSteelPipe()
+        {
+            var top = new PileTop { PileCapFc = 24, PileCapGamma = 23 };
+            var j = top.NewJBarFor(NewJBar.PileTopTypeName, ScSection("SC-600-標準-80-9"))!;
+            j.Grade = "WSD390"; j.Size = "WD32J"; j.Count = 10;
+            Assert.IsTrue(j.HasSteelPipe);
+            Assert.AreEqual((600.0, 9.0, "SKK490"), (j.PileOuterDiameter, j.PipeThickness, j.PipeGrade));
+            Assert.AreEqual(PileDesign.Constants.PileTypeNames.Sc, j.TopSectionType);
+            var manual = ManualExample();
+            Assert.AreEqual(manual.VirtualDiameter, j.VirtualDiameter);
+            Assert.AreEqual(manual.GetUltimateMoment(0), j.GetUltimateMoment(0), 1e-6);
+            Assert.AreEqual(manual.GetAllowableMoment(589e3), j.GetAllowableMoment(589e3), 1e-6);
+            Assert.AreEqual(0, j.GetApplicabilityProblems().Count, string.Join(" / ", j.GetApplicabilityProblems()));
+        }
+
+        /// <summary>
+        /// 外面に鋼管の無い最上段 (PHC 杭・場所打ち鋼管コンクリート杭の鉄筋コンクリート部) では断面を組まず、理由を名指す。
+        /// 既製杭は PHC 杭でも PipeDia に杭径が入っているので、径だけを見ると鋼管杭として組んでしまう。
+        /// </summary>
+        [TestMethod]
+        public void ATopSectionWithoutASteelPipeIsNamed()
+        {
+            var phc = new PileSection
+            {
+                PileBodyType = PileDesign.Constants.PileTypeNames.PrecastConcrete,
+                PileSectionType = PileDesign.Constants.PileTypeNames.Phc,
+            };
+            phc.SelectedPrecastPile.Name = PileSection.PHCOption.First();
+            phc.RecalculateSelectedPrecastPile();
+            var top = new PileTop { PileCapFc = 24, PileCapGamma = 23 };
+            var j = top.NewJBarFor(NewJBar.PileTopTypeName, phc)!;
+            Assert.IsFalse(j.HasSteelPipe);
+            Assert.IsFalse(j.IsComputable);
+            StringAssert.Contains(j.NotComputableReason, "PHC杭");
+            StringAssert.Contains(j.NotComputableReason, "鋼管を持たない");
+
+            var rc = new PileSection { PileBodyType = PileDesign.Constants.PileTypeNames.InsituSteelPipeConcrete };
+            rc.PileSectionType = PileDesign.Constants.PileTypeNames.RcSection;
+            j = top.NewJBarFor(NewJBar.PileTopTypeName, rc)!;
+            Assert.IsFalse(j.IsComputable);
+            StringAssert.Contains(j.NotComputableReason, PileDesign.Constants.PileTypeNames.RcSection);
+
+            // 解析前の確認も同じ理由で知らせる
+            var input = new InputModel();
+            var body = new PileBodyInput { PileBodyType = PileDesign.Constants.PileTypeNames.PrecastConcrete };
+            body.PileTopType = NewJBar.PileTopTypeName;
+            body.PileBodySegments = [new PileBodySegment { No = 1, SegmentLength = 10, SegmentDepth = 10, PileSection = phc }];
+            body.PileTop ??= new PileTop { PileCapFc = 24, PileCapGamma = 23 };
+            input.PileBodies = [body];
+            var notices = PileDesign.Services.CheckInputData.CollectNewJBarNotices(input);
+            Assert.IsTrue(notices.Any(n => n.Message.Contains("鋼管を持たない")), string.Join(" / ", notices.Select(n => n.Message)));
+        }
+
+        /// <summary>
+        /// 外殻鋼管 (場所打ち鋼管コンクリート杭の鋼管コンクリート部) は鋼管の公称外径・板厚に溶接する。
+        /// 杭径 1,500 mm 以上は、フーチングを杭と基礎梁の接合部として検討するよう知らせる (4.2.4。範囲外ではない)。
+        /// </summary>
+        [TestMethod]
+        public void AnInsituSteelPipePileUsesItsOuterPipe()
+        {
+            var s = new PileSection { PileBodyType = PileDesign.Constants.PileTypeNames.InsituSteelPipeConcrete };
+            s.PileSectionType = PileDesign.Constants.PileTypeNames.SteelPipeConcreteSection;
+            s.PipeDia = 1600; s.PipeTs = 22; s.PipeGrade = "SKK490";
+            var top = new PileTop { PileCapFc = 30, PileCapGamma = 23 };
+            var j = top.NewJBarFor(NewJBar.PileTopTypeName, s)!;
+            j.Grade = "WSD490"; j.Size = "WD41J"; j.Count = 24;
+            Assert.IsTrue(j.IsComputable);
+            Assert.AreEqual(1600.0, j.PileOuterDiameter, "腐食代を差し引かない公称外径");
+            Assert.AreEqual(1600.0 + 2 * 41 + 200, j.VirtualDiameter);
+            Assert.AreEqual(0, j.GetApplicabilityProblems().Count, string.Join(" / ", j.GetApplicabilityProblems()));
+            var notes = j.GetDesignNotes();
+            Assert.AreEqual(1, notes.Count);
+            StringAssert.Contains(notes[0], "4.2.4");
+
+            s.PipeDia = 1400;
+            j = top.NewJBarFor(NewJBar.PileTopTypeName, s)!;
+            Assert.AreEqual(0, j.GetDesignNotes().Count, "1,500 mm 未満は知らせない");
+        }
+
+        /// <summary>
         /// 例題「設計例集3.5」(鋼管杭 Φ800) の杭頭を NewJ-BAR にして解き、検定に杭頭接合部の曲げ・せん断が
         /// レベル1 (短期許容) とレベル2 (終局) で出ること、限界値が計算クラスの値と一致することを見る。
         /// </summary>

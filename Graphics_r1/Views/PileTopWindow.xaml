@@ -164,10 +164,21 @@
                                                      Converter={StaticResource VisibilityConverter},
                                                      ConverterParameter='場所打ち鋼管コンクリート杭'}">
                                         <StackPanel Orientation="Horizontal">
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <!-- NewJ-BAR は仮想円形断面の径を NewJ-BAR の欄に出す -->
+                                                        <DataTrigger Binding="{Binding PileTopType}" Value="NewJ-BAR">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
                                             <TextBlock Text="杭径(mm)：" HorizontalAlignment="Right" Width="100"/>
                                             <TextBox Text="{Binding PileTop.ConcreteOutDia, StringFormat=N0}" HorizontalContentAlignment="Right" Width="50" IsReadOnly="True" Foreground="{StaticResource ReadOnlyBrush}"/>
                                         </StackPanel>
-                                        
+
                                         <GroupBox Header="鋼管（最上部杭区間）">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="鋼管外径(mm)×鋼管厚(mm)：" VerticalAlignment="Center"/>
@@ -178,6 +189,16 @@
                                         </GroupBox>
 
                                         <GroupBox Header="鉄筋（最上部杭区間）">
+                                            <GroupBox.Style>
+                                                <Style TargetType="GroupBox">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding PileTopType}" Value="NewJ-BAR">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </GroupBox.Style>
                                             <StackPanel>
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Text ="本数-呼び径" Width="100" HorizontalAlignment="Right"/>
@@ -215,6 +236,10 @@
                                                     <Setter Property="Visibility" Value="Visible"/>
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding PileTopType}" Value="キャプリングパイル工法">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                        <!-- NewJ-BAR は鋼管の外径・板厚を NewJ-BAR の諸元に出す -->
+                                                        <DataTrigger Binding="{Binding PileTopType}" Value="NewJ-BAR">
                                                             <Setter Property="Visibility" Value="Collapsed"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>

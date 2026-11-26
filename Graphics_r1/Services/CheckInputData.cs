@@ -747,15 +747,19 @@ namespace PileDesign.Services
                 if (!jbar.IsComputable)
                 {
                     notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, DiagnosticTarget.PileBody(i + 1),
-                        $"杭体 {i + 1}: NewJ-BAR の仮想円形断面を組めないため、杭頭接合部の曲げの検定ができません。"
-                        + "鋼管の外径、パイルキャップの Fc、補強筋の本数・呼び名・種類を確かめてください。",
-                        "杭頭部の画面で NewJ-BAR とパイルキャップの入力を確かめる"));
+                        $"杭体 {i + 1}: {jbar.NotComputableReason}。杭頭接合部の曲げ・せん断の検定ができません。",
+                        jbar.HasSteelPipe
+                            ? "杭頭部の画面で NewJ-BAR とパイルキャップの入力を確かめる"
+                            : "杭体の画面で最上部の杭区間を鋼管のある断面にするか、杭頭タイプを選び直す"));
                     continue;
                 }
                 foreach (var problem in jbar.GetApplicabilityProblems())
                     notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, DiagnosticTarget.PileBody(i + 1),
                         $"杭体 {i + 1}: NewJ-BAR の設計マニュアルの適用範囲の外です。{problem}。",
                         "杭頭部の画面で NewJ-BAR の入力を見直す"));
+                foreach (var note in jbar.GetDesignNotes())
+                    notices.Add(Diagnostic.Notice(DiagnosticSeverity.Info, DiagnosticTarget.PileBody(i + 1),
+                        $"杭体 {i + 1}: {note}。", "基礎の検討で確かめる"));
             }
             return notices;
         }

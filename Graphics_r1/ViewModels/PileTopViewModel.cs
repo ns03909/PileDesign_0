@@ -173,9 +173,10 @@ namespace PileDesign.ViewModels
                 var jbar = PileTopType == NewJBar.PileTopTypeName ? PileTop?.NewJBar : null;
                 if (jbar == null) return string.Empty;
                 if (!jbar.IsComputable)
-                    return "⚠ 仮想円形断面を組めません (鋼管の外径・パイルキャップの Fc・補強筋の本数を確かめてください)";
-                var problems = jbar.GetApplicabilityProblems();
-                return problems.Count == 0 ? string.Empty : string.Join("\n", problems.Select(p => "⚠ " + p));
+                    return "⚠ " + jbar.NotComputableReason;
+                var lines = jbar.GetApplicabilityProblems().Select(p => "⚠ " + p)
+                    .Concat(jbar.GetDesignNotes().Select(n => "ℹ " + n)).ToList();
+                return lines.Count == 0 ? string.Empty : string.Join("\n", lines);
             }
         }
 

@@ -448,17 +448,20 @@ namespace PileDesign.Models.InputData
             ];
 
         // 鋼管コンクリート場所打ち杭　杭頭タイプオプション
+        // NewJ-BAR は外殻鋼管 (最上段が鋼管コンクリート部) に溶接する
         public static ObservableCollection<string> InsituSteelPipedConcretePileTopTypeOption { get; } =
-        ["鉄筋定着工法"];
+        ["鉄筋定着工法", NewJBar.PileTopTypeName];
 
         // 既製コンクリート杭　杭頭タイプオプション
+        // NewJ-BAR は SC 杭の鋼管にだけ溶接できる (PHC 杭などを最上段にしたときは解析前の確認で止めずに知らせ、検定は「検定不能」)
         public static ObservableCollection<string> PrecastConcretePileTopTypeOption { get; } =
         [
             "鉄筋定着工法",
             "定着筋方式",
             "埋込み方式",
             "FT-Pile構法",
-            "キャプリングパイル工法"
+            "キャプリングパイル工法",
+            NewJBar.PileTopTypeName
         ];
 
         // 鋼管杭　杭頭タイプオプション

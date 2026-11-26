@@ -1,3 +1,4 @@
+using PileDesign.Constants;
 using PileDesign.Models.PileLibrary;
 using System;
 using System.Collections.Generic;
@@ -164,6 +165,36 @@ namespace PileDesign.Models
             private set => SetProperty(ref _gamma, value);
         }
 
+        private string _pileBodyType = string.Empty;
+        /// <summary>杭体のタイプ (鋼管杭・既製コンクリート杭・場所打ち鋼管コンクリート杭)。適用範囲の確かめにだけ使う。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string PileBodyType
+        {
+            get => _pileBodyType;
+            private set => SetProperty(ref _pileBodyType, value ?? string.Empty);
+        }
+
+        private string _topSectionType = string.Empty;
+        /// <summary>最上段の杭区間の断面タイプ (鋼管杭・SC杭・鋼管コンクリート部など)。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string TopSectionType
+        {
+            get => _topSectionType;
+            private set => SetProperty(ref _topSectionType, value ?? string.Empty);
+        }
+
+        private bool _hasSteelPipe = true;
+        /// <summary>
+        /// 最上段の杭区間が外面に鋼管を持つか。NewJ-BAR は鋼管杭・SC 杭・外殻鋼管場所打ちコンクリート杭の杭頭の鋼管に溶接する (マニュアル 1.2 1))。
+        /// PHC 杭や場所打ち鋼管コンクリート杭の鉄筋コンクリート部には溶接できない。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool HasSteelPipe
+        {
+            get => _hasSteelPipe;
+            private set => SetProperty(ref _hasSteelPipe, value);
+        }
+
         /// <summary>杭 (最上段の鋼管) の寸法と規格を受け取る。</summary>
         public void SetPile(double outerDiameter, double thickness, string? pipeGrade)
         {
@@ -172,6 +203,46 @@ namespace PileDesign.Models
             if (PipeThickness != thickness) { PipeThickness = thickness; changed = true; }
             if (PipeGrade != (pipeGrade ?? string.Empty)) { PipeGrade = pipeGrade ?? string.Empty; changed = true; }
             if (changed) OnDerivedChanged();
+        }
+
+        /// <summary>
+        /// 最上段の杭区間を受け取る。外面に鋼管が無ければ (PHC 杭・鉄筋コンクリート部) 鋼管の寸法を 0 にして、断面を組めないようにする。
+        /// </summary>
+        public void SetTopSection(string? pileBodyType, string? sectionType, double pipeOuterDiameter, double pipeThickness, string? pipeGrade)
+        {
+            bool hasPipe = HasOuterSteelPipe(sectionType) && pipeOuterDiameter > 0 && pipeThickness > 0;
+            bool changed = false;
+            if (PileBodyType != (pileBodyType ?? string.Empty)) { PileBodyType = pileBodyType ?? string.Empty; changed = true; }
+            if (TopSectionType != (sectionType ?? string.Empty)) { TopSectionType = sectionType ?? string.Empty; changed = true; }
+            if (HasSteelPipe != hasPipe) { HasSteelPipe = hasPipe; changed = true; }
+            if (changed) OnDerivedChanged();
+            SetPile(hasPipe ? pipeOuterDiameter : 0.0, hasPipe ? pipeThickness : 0.0, pipeGrade);
+        }
+
+        /// <summary>
+        /// 外面に鋼管を持つ断面タイプか。鋼管杭 (鋼管・コンクリート充填鋼管部)、SC 杭、場所打ち鋼管コンクリート杭の鋼管コンクリート部。
+        /// </summary>
+        public static bool HasOuterSteelPipe(string? sectionType) => sectionType is
+            PileTypeNames.SteelPipeSection or PileTypeNames.CftSection or PileTypeNames.SteelPipe
+            or PileTypeNames.Sc or PileTypeNames.SteelPipeConcreteSection;
+
+        /// <summary>杭径がこれ以上の外殻鋼管場所打ちコンクリート杭は、フーチングを杭と基礎梁の接合部として配慮する (マニュアル 4.2.4)。</summary>
+        public const double LargeInsituDiameter = 1500.0;
+
+        /// <summary>
+        /// 断面を組めない理由 (組めるなら空文字)。画面・解析前の確認・検定で同じ文を出す。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public string NotComputableReason
+        {
+            get
+            {
+                if (IsComputable) return string.Empty;
+                if (!HasSteelPipe)
+                    return $"最上部の杭区間 ({(TopSectionType.Length > 0 ? TopSectionType : "断面タイプ未設定")}) は外面に鋼管を持たないので、NewJ-BAR を溶接できません"
+                        + " (NewJ-BAR は鋼管杭・SC杭・外殻鋼管場所打ちコンクリート杭の杭頭の鋼管に溶接します)";
+                return "NewJ-BAR の仮想円形断面を組めません (鋼管の外径、パイルキャップの Fc、補強筋の本数・呼び名・種類を確かめてください)";
+            }
         }
 
         /// <summary>パイルキャップのコンクリートを受け取る。</summary>
@@ -410,6 +481,19 @@ namespace PileDesign.Models
                 list.Add($"定着長さ {AnchorageLength:N0} mm が必要定着長さ Lab = {lab:N0} mm を下回っています");
             if (Count > 0 && BarRadius > 0 && BarSpacing < MinimumBarSpacing)
                 list.Add($"心心間隔 {BarSpacing:N0} mm が限界心心間隔 2.7d + 20 = {MinimumBarSpacing:N0} mm を下回っています");
+            return list;
+        }
+
+        /// <summary>
+        /// 適用範囲の内でも、マニュアルが設計者に別の検討を求めている点 (空なら無し)。
+        /// 杭径 1,500 mm 以上の外殻鋼管場所打ちコンクリート杭は、フーチングが杭と基礎梁の接合部の役割を担う (4.2.4)。
+        /// </summary>
+        public List<string> GetDesignNotes()
+        {
+            var list = new List<string>();
+            if (PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileOuterDiameter >= LargeInsituDiameter)
+                list.Add($"杭径 {PileOuterDiameter:N0} mm (1,500 mm 以上) の外殻鋼管場所打ちコンクリート杭です。フーチングが杭と基礎梁の接合部となるので、"
+                    + "フーチングのせん断と補強筋の長さ (フーチング上端付近まで延ばす) を別に検討してください (マニュアル 4.2.4)");
             return list;
         }
 
@@ -693,7 +777,9 @@ namespace PileDesign.Models
                 new("補強筋 断面積 (1 本)", "ar", $"{BarArea:N1}", "mm2"),
                 new("補強筋 短期許容応力度", "ft", $"{F:N0}", "N/mm2"),
                 new("補強筋 終局強度", "rσu", $"{UltimateStrength:N0}", "N/mm2"),
+                new("杭種 (最上部の杭区間)", "", TopSectionType.Length > 0 ? TopSectionType : "-", ""),
                 new("杭径 (鋼管外径)", "D", $"{PileOuterDiameter:N0}", "mm"),
+                new("鋼管の板厚・規格", "t", PipeThickness > 0 ? $"{PipeThickness:0.#} ({PipeGrade})" : "-", "mm"),
                 new("仮想円形断面の外径", "Dc", $"{VirtualDiameter:N1}", "mm"),
                 new("補強筋の配置半径", "r'", $"{BarRadius:N1}", "mm"),
                 new("補強筋の扱い", "", UsesRing ? "円環に置き換え (8 本以上)" : "配置を考えた弱軸方向 (8 本未満)", ""),
