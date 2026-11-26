@@ -120,8 +120,12 @@ namespace PileDesign.Models.InputData
         private static void ApplyTopSectionToNewJBar(NewJBar jbar, PileSection? topSection)
         {
             if (topSection == null) return;
+            // 中詰めの外径: SC 杭は中空部 (鋼管とコンクリートの内側)、鋼管杭・外殻鋼管は鋼管の内径 (0 を渡すと SetPile の鋼管の内径のまま)
+            double infillD = topSection.PileSectionType == PileTypeNames.Sc
+                ? Math.Max(topSection.PipeDia - 2.0 * (topSection.PipeTs + topSection.ConcreteThickness), 1e-6)   // 中空が無ければ中詰補強筋は置けない
+                : 0.0;
             jbar.SetTopSection(topSection.PileBodyType, topSection.PileSectionType,
-                topSection.PipeDia, topSection.PipeTs, topSection.PipeGrade);
+                topSection.PipeDia, topSection.PipeTs, topSection.PipeGrade, infillD);
         }
 
         /// <summary>

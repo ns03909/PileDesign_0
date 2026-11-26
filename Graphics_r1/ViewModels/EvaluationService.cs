@@ -1520,7 +1520,8 @@ namespace PileDesign.ViewModels
                 var (axialN, axialSource) = ResolveCheckAxialForce(input, pile, stepResult.LoadCase?.No ?? 0, level, stepResult.LoadCombination, headFxi);
 
                 string section = $"{jbar.Count}-{jbar.Size} ({jbar.Grade})・仮想円形断面 Dc = {jbar.VirtualDiameter:N1} mm・Fc = {jbar.Fc:0.#} N/mm²"
-                    + (jbar.UsesRing ? "・補強筋は円環に置き換え" : "・補強筋 8 本未満なので配置を考えた弱軸方向");
+                    + (jbar.UsesRing ? "・補強筋は円環に置き換え" : "・補強筋 8 本未満なので配置を考えた弱軸方向")
+                    + (jbar.HasInfill ? $"・中詰補強筋 {jbar.InfillBarCount}-{jbar.InfillBarSize} ({jbar.InfillBarGrade}) を半径 {jbar.InfillRadius:N1} mm の円環として算入" : "");
 
                 // ── 曲げ ──
                 double mLimit;

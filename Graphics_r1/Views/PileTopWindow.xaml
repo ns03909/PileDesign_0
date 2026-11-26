@@ -661,6 +661,44 @@
                                                       Content="横補強筋で拘束されたコア内に定着する (α = 1.0。外すと 1.25)"
                                                       IsChecked="{Binding PileTop.NewJBar.IsConfined, UpdateSourceTrigger=PropertyChanged}"
                                                       ToolTip="必要定着長さ Lab = α·S·σ1·d/(10·fb) の α (設計マニュアル (4.6) 式)"/>
+                                            <!-- 中詰補強筋 (任意)。NewJ-BAR とは別の円環として、それぞれの材料で計算する -->
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="中詰補強筋" Width="100" HorizontalAlignment="Right"/>
+                                                <TextBox x:Name="TextBoxNewJBarInfillCount" Width="50"
+                                                         Text="{Binding PileTop.NewJBar.InfillBarCount, UpdateSourceTrigger=LostFocus}"
+                                                         Style="{StaticResource IntegerTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="200"
+                                                         ToolTip="中詰めコンクリートの中に置く補強筋の本数。0 なら無し。本数によらず円環に置き換える"
+                                                         GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                                 PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                                 PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                <TextBlock Text="-" Width="20" HorizontalAlignment="Center"/>
+                                                <ComboBox x:Name="ComboBoxNewJBarInfillSize" Width="60"
+                                                          ItemsSource="{x:Static models:NewJBar.InfillBarSizeOptions}"
+                                                          SelectedItem="{Binding PileTop.NewJBar.InfillBarSize, UpdateSourceTrigger=PropertyChanged}"
+                                                          DropDownOpened="ComboBox_DropDownOpened"/>
+                                                <ComboBox x:Name="ComboBoxNewJBarInfillGrade" Width="80" Margin="4,0,0,0"
+                                                          ItemsSource="{x:Static models:NewJBar.InfillBarGradeOptions}"
+                                                          SelectedItem="{Binding PileTop.NewJBar.InfillBarGrade, UpdateSourceTrigger=PropertyChanged}"
+                                                          DropDownOpened="ComboBox_DropDownOpened"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="重心かぶり (mm)" Width="100" HorizontalAlignment="Right"/>
+                                                <TextBox x:Name="TextBoxNewJBarInfillCover" Width="50"
+                                                         Text="{Binding PileTop.NewJBar.InfillBarCover, UpdateSourceTrigger=LostFocus}"
+                                                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="2000"
+                                                         ToolTip="中詰めの外周 (鋼管杭・外殻鋼管は鋼管の内面、SC 杭は中空部の内面) から中詰補強筋の中心まで"
+                                                         GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                                 PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                                 PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                                <TextBlock Text="中詰めの深さ (mm)" Width="120" HorizontalAlignment="Right"/>
+                                                <TextBox x:Name="TextBoxNewJBarInfillDepth" Width="50"
+                                                         Text="{Binding PileTop.NewJBar.InfillDepth, UpdateSourceTrigger=LostFocus}"
+                                                         Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="20000"
+                                                         ToolTip="杭頂部からの中詰めコンクリートの深さ。中詰補強筋の定着長さ (SD490 は 42d、それ以外は 35d) + 200 mm 以上 (マニュアル 4.2.1)。0 なら確かめない"
+                                                         GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
+                                                                 PreviewKeyDown="TextBox_PreviewKeyDown"
+                                                                 PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
+                                            </StackPanel>
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="仮想円形断面の外径 (mm)" Width="150" HorizontalAlignment="Right"/>
                                                 <TextBox Width="60" Text="{Binding PileTop.NewJBar.VirtualDiameter, Mode=OneWay, StringFormat=N1}"

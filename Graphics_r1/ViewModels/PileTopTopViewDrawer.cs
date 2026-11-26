@@ -198,6 +198,8 @@ namespace PileDesign.ViewModels
                     DrawDonut("steelPipe", outdia, Math.Max(0.0, outdia - 2 * jbar.PipeThickness));
                     if (jbar.Count > 0 && jbar.NominalDiameter > 0)
                         DrawMainBars(jbar.Count, jbar.NominalDiameter, 2.0 * jbar.BarRadius);
+                    if (jbar.HasInfill && jbar.InfillRadius > 0 && jbar.InfillNominalNumber > 0)
+                        DrawMainBars(jbar.InfillBarCount, jbar.InfillNominalNumber, 2.0 * jbar.InfillRadius);
                 }
 
                 Path path = new()

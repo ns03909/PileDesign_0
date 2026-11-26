@@ -1157,6 +1157,9 @@ namespace PileDesign.ViewModels
                 // NewJ-BAR (鋼管の外面に溶接。配置径 = 2·r')
                 if (jbar.Count > 0 && jbar.NominalDiameter > 0)
                     DrawMainBars(jbar.Count, jbar.NominalDiameter, 2.0 * jbar.BarRadius, Brushes.SkyBlue);
+                // 中詰補強筋 (中詰めの中。配置径 = 2·rn)
+                if (jbar.HasInfill && jbar.InfillRadius > 0 && jbar.InfillNominalNumber > 0)
+                    DrawMainBars(jbar.InfillBarCount, jbar.InfillNominalNumber, 2.0 * jbar.InfillRadius, Brushes.SkyBlue);
             }
             else if (PileTopType == "鉄筋定着工法")
             {

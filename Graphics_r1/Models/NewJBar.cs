@@ -119,7 +119,74 @@ namespace PileDesign.Models
             set { if (SetProperty(ref _isConfined, value)) OnDerivedChanged(); }
         }
 
+        // ───────── 中詰補強筋 (任意。保存する) ─────────
+        // マニュアルは図 4.22 の出力例に中詰補強筋の欄 (本数・半径・かぶり・応力度と許容応力度) を置くだけで、計算法の本文は無い。
+        // 本プログラムは NewJ-BAR と中詰補強筋を半径の違う 2 段の円環として、それぞれの材料で平面保持の仮定 (4.4.3.1・4.4.4) を当てる
+        // (2026-11-26 利用者の判断。出力例の「1 段鉄筋換算半径」は材料の違う 2 種類を 1 つにまとめるので採らない)。
+        // 中詰補強筋がなければ NewJ-BAR だけの計算と同じ。
+
+        private int _infillBarCount;
+        /// <summary>中詰補強筋の本数 (0 なら無し)。本数によらず円環に置き換える (出力例の In = atn·rn²/2 と同じ)。</summary>
+        public int InfillBarCount
+        {
+            get => _infillBarCount;
+            set { if (SetProperty(ref _infillBarCount, Math.Max(0, value))) OnDerivedChanged(); }
+        }
+
+        private string _infillBarSize = "D22";
+        /// <summary>中詰補強筋の呼び名 (D13〜D41)。</summary>
+        public string InfillBarSize
+        {
+            get => _infillBarSize;
+            set { if (SetProperty(ref _infillBarSize, value ?? "D22")) OnDerivedChanged(); }
+        }
+
+        private string _infillBarGrade = "SD345";
+        /// <summary>中詰補強筋の種類の記号 (SD295 / SD345 / SD390 / SD490)。</summary>
+        public string InfillBarGrade
+        {
+            get => _infillBarGrade;
+            set { if (SetProperty(ref _infillBarGrade, value ?? "SD345")) OnDerivedChanged(); }
+        }
+
+        private double _infillBarCover = 100.0;
+        /// <summary>
+        /// 中詰補強筋の重心かぶり (mm)。中詰めの外周 (鋼管杭・外殻鋼管は鋼管の内面、SC 杭は中空部の内面) から補強筋の中心まで。
+        /// </summary>
+        public double InfillBarCover
+        {
+            get => _infillBarCover;
+            set { if (SetProperty(ref _infillBarCover, Math.Max(0.0, value))) OnDerivedChanged(); }
+        }
+
+        private double _infillDepth;
+        /// <summary>
+        /// 中詰めコンクリートの深さ (杭頂部から。mm)。0 なら確かめない。中詰補強筋があれば定着長さ + 200 mm 以上が要る (4.2.1 1))。
+        /// </summary>
+        public double InfillDepth
+        {
+            get => _infillDepth;
+            set { if (SetProperty(ref _infillDepth, Math.Max(0.0, value))) OnDerivedChanged(); }
+        }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public static IReadOnlyList<string> InfillBarSizeOptions { get; } = ["D13", "D16", "D19", "D22", "D25", "D29", "D32", "D35", "D38", "D41"];
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public static IReadOnlyList<string> InfillBarGradeOptions { get; } = ["SD295", "SD345", "SD390", "SD490"];
+
         // ───────── 杭とパイルキャップから受け取る値 (保存しない) ─────────
+        private double _infillOuterDiameter;
+        /// <summary>
+        /// 中詰めの外径 (mm)。鋼管杭・外殻鋼管は鋼管の内径 (D − 2t)、SC 杭は中空部の径 (D − 2×(鋼管厚 + コンクリート厚))。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double InfillOuterDiameter
+        {
+            get => _infillOuterDiameter;
+            private set => SetProperty(ref _infillOuterDiameter, value);
+        }
+
         private double _pileOuterDiameter;
         /// <summary>鋼管の外径 (腐食代を見込まない公称外径) (mm)。NewJ-BAR はここに溶接する。</summary>
         [System.Text.Json.Serialization.JsonIgnore]
@@ -202,13 +269,17 @@ namespace PileDesign.Models
             if (PileOuterDiameter != outerDiameter) { PileOuterDiameter = outerDiameter; changed = true; }
             if (PipeThickness != thickness) { PipeThickness = thickness; changed = true; }
             if (PipeGrade != (pipeGrade ?? string.Empty)) { PipeGrade = pipeGrade ?? string.Empty; changed = true; }
+            // 中詰めの外径は鋼管の内径とする (SC 杭は SetTopSection が中空部の径で上書きする)
+            double infillD = Math.Max(0.0, outerDiameter - 2.0 * thickness);
+            if (InfillOuterDiameter != infillD) { InfillOuterDiameter = infillD; changed = true; }
             if (changed) OnDerivedChanged();
         }
 
         /// <summary>
         /// 最上段の杭区間を受け取る。外面に鋼管が無ければ (PHC 杭・鉄筋コンクリート部) 鋼管の寸法を 0 にして、断面を組めないようにする。
         /// </summary>
-        public void SetTopSection(string? pileBodyType, string? sectionType, double pipeOuterDiameter, double pipeThickness, string? pipeGrade)
+        public void SetTopSection(string? pileBodyType, string? sectionType, double pipeOuterDiameter, double pipeThickness, string? pipeGrade,
+            double infillOuterDiameter = 0.0)
         {
             bool hasPipe = HasOuterSteelPipe(sectionType) && pipeOuterDiameter > 0 && pipeThickness > 0;
             bool changed = false;
@@ -217,6 +288,12 @@ namespace PileDesign.Models
             if (HasSteelPipe != hasPipe) { HasSteelPipe = hasPipe; changed = true; }
             if (changed) OnDerivedChanged();
             SetPile(hasPipe ? pipeOuterDiameter : 0.0, hasPipe ? pipeThickness : 0.0, pipeGrade);
+            // 中詰めの外径: 指定があればそれ (SC 杭の中空部)、無ければ SetPile が入れた鋼管の内径のまま
+            if (hasPipe && infillOuterDiameter > 0 && InfillOuterDiameter != infillOuterDiameter)
+            {
+                InfillOuterDiameter = infillOuterDiameter;
+                OnDerivedChanged();
+            }
         }
 
         /// <summary>
@@ -241,6 +318,10 @@ namespace PileDesign.Models
                 if (!HasSteelPipe)
                     return $"最上部の杭区間 ({(TopSectionType.Length > 0 ? TopSectionType : "断面タイプ未設定")}) は外面に鋼管を持たないので、NewJ-BAR を溶接できません"
                         + " (NewJ-BAR は鋼管杭・SC杭・外殻鋼管場所打ちコンクリート杭の杭頭の鋼管に溶接します)";
+                if (HasInfill && PileOuterDiameter > 0 && InfillBarArea <= 0)
+                    return $"中詰補強筋の呼び名 {InfillBarSize} が分かりません";
+                if (HasInfill && PileOuterDiameter > 0 && InfillRadius <= 0)
+                    return $"中詰補強筋の配置半径が 0 以下です (中詰めの外径 {InfillOuterDiameter:N0} mm、重心かぶり {InfillBarCover:N0} mm)";
                 return "NewJ-BAR の仮想円形断面を組めません (鋼管の外径、パイルキャップの Fc、補強筋の本数・呼び名・種類を確かめてください)";
             }
         }
@@ -345,7 +426,47 @@ namespace PileDesign.Models
 
         /// <summary>断面を組めるか (杭径・Fc・本数・呼び名がそろっている)。</summary>
         [System.Text.Json.Serialization.JsonIgnore]
-        public bool IsComputable => PileOuterDiameter > 0 && Fc > 0 && Count > 0 && BarArea > 0 && IsAvailable(Grade, Size);
+        public bool IsComputable => PileOuterDiameter > 0 && Fc > 0 && Count > 0 && BarArea > 0 && IsAvailable(Grade, Size)
+            && (!HasInfill || (InfillRadius > 0 && InfillBarArea > 0));
+
+        // ───────── 中詰補強筋の派生値 ─────────
+        /// <summary>中詰補強筋があるか。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public bool HasInfill => InfillBarCount > 0;
+
+        /// <summary>中詰補強筋の公称断面積 (mm²) 1 本あたり。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double InfillBarArea => PileDesign.Constants.RebarAreas.Of(InfillBarSize);
+
+        /// <summary>中詰補強筋の全断面積 (mm²)。無ければ 0。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double InfillTotalArea => HasInfill ? InfillBarArea * InfillBarCount : 0.0;
+
+        /// <summary>中詰補強筋の呼び名の数値 (mm)。D22 → 22。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double InfillNominalNumber
+            => InfillBarSize is { Length: > 1 } s && double.TryParse(s.AsSpan(1), System.Globalization.NumberStyles.Float,
+                   System.Globalization.CultureInfo.InvariantCulture, out double d) ? d : 0.0;
+
+        /// <summary>中詰補強筋の配置半径 rn (mm) = 中詰めの外径/2 − 重心かぶり。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double InfillRadius => InfillOuterDiameter > 0 ? InfillOuterDiameter / 2.0 - InfillBarCover : 0.0;
+
+        /// <summary>中詰補強筋の基準強度 F = 短期の許容引張・圧縮応力度 (N/mm²)。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double InfillF => InputData.MainBars.GradeYieldStrength(InfillBarGrade);
+
+        /// <summary>中詰補強筋の長期の許容応力度 (N/mm²)。RC 規準: min(F/1.5, 径 25 以下 215・それより太い 195)。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double InfillLongTermAllowableStress => Math.Min(InfillF / 1.5, InfillNominalNumber > 25.0 ? 195.0 : 215.0);
+
+        /// <summary>中詰補強筋の終局強度 (N/mm²)。1.1F (SD490 は F)。NewJ-BAR の WSD390 の 1.1F・WSD490 の 490 と同じ考え方。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double InfillUltimateStrength => InfillBarGrade == "SD490" ? InfillF : 1.1 * InfillF;
+
+        /// <summary>中詰めの深さの下限 (mm): 定着長さ (SD490 は 42d、それ以外は 35d) + 200 (4.2.1 1))。</summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double InfillRequiredDepth => HasInfill ? (InfillBarGrade == "SD490" ? 42.0 : 35.0) * InfillNominalNumber + 200.0 : 0.0;
 
         // ───────── せん断 (支圧) ─────────
         /// <summary>標準埋込み深さ L0 (mm)。表 4.3。鋼種 1 (400 N 級) と鋼種 2 以上で違う。</summary>
@@ -481,6 +602,8 @@ namespace PileDesign.Models
                 list.Add($"定着長さ {AnchorageLength:N0} mm が必要定着長さ Lab = {lab:N0} mm を下回っています");
             if (Count > 0 && BarRadius > 0 && BarSpacing < MinimumBarSpacing)
                 list.Add($"心心間隔 {BarSpacing:N0} mm が限界心心間隔 2.7d + 20 = {MinimumBarSpacing:N0} mm を下回っています");
+            if (HasInfill && InfillDepth > 0 && InfillDepth < InfillRequiredDepth)
+                list.Add($"中詰めコンクリートの深さ {InfillDepth:N0} mm が、中詰補強筋の定着長さ + 200 = {InfillRequiredDepth:N0} mm を下回っています (マニュアル 4.2.1 1))");
             return list;
         }
 
@@ -494,25 +617,43 @@ namespace PileDesign.Models
             if (PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileOuterDiameter >= LargeInsituDiameter)
                 list.Add($"杭径 {PileOuterDiameter:N0} mm (1,500 mm 以上) の外殻鋼管場所打ちコンクリート杭です。フーチングが杭と基礎梁の接合部となるので、"
                     + "フーチングのせん断と補強筋の長さ (フーチング上端付近まで延ばす) を別に検討してください (マニュアル 4.2.4)");
+            if (HasInfill && InfillDepth <= 0)
+                list.Add($"中詰めコンクリートの深さは、杭頂部から中詰補強筋の定着長さ + 200 = {InfillRequiredDepth:N0} mm 以上にしてください"
+                    + " (マニュアル 4.2.1 1)。深さを入れると確かめます)");
             return list;
         }
 
         // ───────── 断面の幾何 ─────────
-        /// <summary>主筋の位置 (曲げの方向の座標 y、圧縮縁が +) と 1 点あたりの面積。円環なら等間隔の 360 点。</summary>
-        private List<(double Y, double Area)> BarPoints(double alpha)
+        /// <summary>鉄筋の点。Y は曲げの方向の座標 (圧縮縁が +)、Area は 1 点あたりの面積、Group は 0 = NewJ-BAR・1 = 中詰補強筋。</summary>
+        private readonly record struct Bar(double Y, double Area, int Group);
+
+        private const int GroupJBar = 0;
+        private const int GroupInfill = 1;
+
+        /// <summary>
+        /// 鉄筋の位置と 1 点あたりの面積。NewJ-BAR は 8 本以上なら円環 (等間隔の 360 点)、8 本未満は配置角度 alpha の実際の位置。
+        /// 中詰補強筋は本数によらず円環 (出力例の In = atn·rn²/2 と同じ置き換え)。
+        /// </summary>
+        private List<Bar> BarPoints(double alpha)
         {
-            var pts = new List<(double, double)>();
+            var pts = new List<Bar>();
             double r = BarRadius;
             if (UsesRing)
             {
                 double a = TotalBarArea / RingPoints;
                 for (int i = 0; i < RingPoints; i++)
-                    pts.Add((r * Math.Cos(2.0 * Math.PI * (i + 0.5) / RingPoints), a));
+                    pts.Add(new(r * Math.Cos(2.0 * Math.PI * (i + 0.5) / RingPoints), a, GroupJBar));
             }
             else
             {
                 for (int i = 0; i < Count; i++)
-                    pts.Add((r * Math.Cos(alpha + 2.0 * Math.PI * i / Count), BarArea));
+                    pts.Add(new(r * Math.Cos(alpha + 2.0 * Math.PI * i / Count), BarArea, GroupJBar));
+            }
+            if (HasInfill && InfillRadius > 0)
+            {
+                double a = InfillTotalArea / RingPoints;
+                for (int i = 0; i < RingPoints; i++)
+                    pts.Add(new(InfillRadius * Math.Cos(2.0 * Math.PI * (i + 0.5) / RingPoints), a, GroupInfill));
             }
             return pts;
         }
@@ -549,12 +690,14 @@ namespace PileDesign.Models
         }
 
         // ───────── 許容曲げモーメント (短期・長期) ─────────
+        /// <summary>単位の応力状態。Tension・Compression は鉄筋の組 (0 = NewJ-BAR、1 = 中詰補強筋) ごとの最大の応力度。</summary>
+        private readonly record struct UnitState(double N, double M, double ConcreteEdge, double[] Tension, double[] Compression);
+
         /// <summary>
         /// 中立軸を決めたときの単位の応力状態。圧縮縁を y = R、中立軸を y = R − xn に置き、
-        /// コンクリートの応力度 = (y − yn)⁺、主筋 = n·(y − yn) として軸力と中心まわりのモーメント、各縁の応力度を返す。
+        /// コンクリートの応力度 = (y − yn)⁺、鉄筋 = n·(y − yn) として軸力と中心まわりのモーメント、各縁の応力度を返す。
         /// </summary>
-        private (double N, double M, double ConcreteEdge, double BarTension, double BarCompression) UnitElasticState(
-            double xn, List<(double Y, double Area)> strips, List<(double Y, double Area)> bars)
+        private UnitState UnitElasticState(double xn, List<(double Y, double Area)> strips, List<Bar> bars)
         {
             double R = VirtualDiameter / 2.0;
             double yn = R - xn;
@@ -565,32 +708,38 @@ namespace PileDesign.Models
                 double s = y - yn;
                 if (s > 0) { N += s * a; M += s * a * y; }
             }
-            double tMax = 0, cMax = 0;
-            foreach (var (y, a) in bars)
+            var tMax = new double[2];
+            var cMax = new double[2];
+            foreach (var b in bars)
             {
-                double s = n * (y - yn);
-                N += s * a; M += s * a * y;
-                if (s < 0) tMax = Math.Max(tMax, -s);
-                else cMax = Math.Max(cMax, s);
+                double s = n * (b.Y - yn);
+                N += s * b.Area; M += s * b.Area * b.Y;
+                if (s < 0) tMax[b.Group] = Math.Max(tMax[b.Group], -s);
+                else cMax[b.Group] = Math.Max(cMax[b.Group], s);
             }
             double edge = Math.Max(0.0, xn);
-            return (N, M, edge, tMax, cMax);
+            return new UnitState(N, M, edge, tMax, cMax);
         }
 
-        /// <summary>許容応力度 (コンクリートの圧縮・主筋の引張・主筋の圧縮)。</summary>
-        private (double Fc, double Ft, double Fcr) AllowableStresses(bool shortTerm)
-            => shortTerm ? (2.0 / 3.0 * Fc, F, F) : (Fc / 3.0, LongTermAllowableStress, LongTermAllowableStress);
+        /// <summary>コンクリートの許容圧縮応力度と、鉄筋の組ごとの許容応力度 (引張・圧縮とも同じ)。</summary>
+        private (double Fc, double[] Bar) AllowableStresses(bool shortTerm)
+            => shortTerm
+                ? (2.0 / 3.0 * Fc, new[] { F, InfillF })
+                : (Fc / 3.0, new[] { LongTermAllowableStress, InfillLongTermAllowableStress });
 
         /// <summary>中立軸 xn で、どれかの応力度がちょうど許容値に達するときの (N, M) (N, N·mm)。</summary>
         private (double N, double M) AllowableStateAt(double xn, bool shortTerm,
-            List<(double Y, double Area)> strips, List<(double Y, double Area)> bars)
+            List<(double Y, double Area)> strips, List<Bar> bars)
         {
             var u = UnitElasticState(xn, strips, bars);
-            var (fc, ft, fcr) = AllowableStresses(shortTerm);
+            var (fc, fBar) = AllowableStresses(shortTerm);
             double k = double.PositiveInfinity;
             if (u.ConcreteEdge > 0) k = Math.Min(k, fc / u.ConcreteEdge);
-            if (u.BarTension > 0) k = Math.Min(k, ft / u.BarTension);
-            if (u.BarCompression > 0) k = Math.Min(k, fcr / u.BarCompression);
+            for (int g = 0; g < 2; g++)
+            {
+                if (u.Tension[g] > 0) k = Math.Min(k, fBar[g] / u.Tension[g]);
+                if (u.Compression[g] > 0) k = Math.Min(k, fBar[g] / u.Compression[g]);
+            }
             if (!double.IsFinite(k)) return (double.NaN, double.NaN);
             return (k * u.N, k * u.M);
         }
@@ -614,7 +763,7 @@ namespace PileDesign.Models
         }
 
         private double AllowableMomentFor(double axialN, bool shortTerm,
-            List<(double Y, double Area)> strips, List<(double Y, double Area)> bars)
+            List<(double Y, double Area)> strips, List<Bar> bars)
         {
             // 中立軸の深さ xn を t ∈ (0, 1) で表し、t → 0 が全断面引張 (xn → −∞)、t → 1 が全断面圧縮 (xn → +∞)。
             // N(xn) は xn に対して増える。
@@ -635,13 +784,10 @@ namespace PileDesign.Models
             return Math.Abs(At(0.5 * (lo + hi)).M);
         }
 
-        /// <summary>
-        /// 軸力 N (N) と曲げモーメント M (N·mm) を受けるときの、コンクリートの圧縮縁・引張側主筋・圧縮側主筋の応力度 (N/mm²)。
-        /// 主筋 8 本以上 (円環) のとき。図 4.22 の出力例 (応力度の検討) と突き合わせる。
-        /// </summary>
-        public (double Concrete, double BarTension, double BarCompression) GetElasticStresses(double axialN, double moment)
+        /// <summary>軸力 N (N) と曲げモーメント M (N·mm) を受けるときの応力状態 (主筋 8 本以上の円環のとき)。</summary>
+        private (UnitState State, double Scale)? ElasticStateFor(double axialN, double moment)
         {
-            if (!IsComputable) return (double.NaN, double.NaN, double.NaN);
+            if (!IsComputable) return null;
             var strips = ConcreteStrips();
             var bars = BarPoints(0.0);
             double D = VirtualDiameter;
@@ -657,8 +803,24 @@ namespace PileDesign.Models
                 if (hi / lo < 1 + 1e-12) break;
             }
             var s = UnitElasticState(Math.Sqrt(lo * hi), strips, bars);
-            double k = axialN / s.N;
-            return (k * s.ConcreteEdge, k * s.BarTension, k * s.BarCompression);
+            return (s, axialN / s.N);
+        }
+
+        /// <summary>
+        /// 軸力 N (N) と曲げモーメント M (N·mm) を受けるときの、コンクリートの圧縮縁・引張側 NewJ-BAR・圧縮側 NewJ-BAR の応力度 (N/mm²)。
+        /// 主筋 8 本以上 (円環) のとき。図 4.22 の出力例 (応力度の検討) と突き合わせる。
+        /// </summary>
+        public (double Concrete, double BarTension, double BarCompression) GetElasticStresses(double axialN, double moment)
+        {
+            if (ElasticStateFor(axialN, moment) is not { } r) return (double.NaN, double.NaN, double.NaN);
+            return (r.Scale * r.State.ConcreteEdge, r.Scale * r.State.Tension[GroupJBar], r.Scale * r.State.Compression[GroupJBar]);
+        }
+
+        /// <summary>同じ条件の、中詰補強筋の引張側・圧縮側の応力度 (N/mm²)。中詰補強筋が無ければ 0。</summary>
+        public (double Tension, double Compression) GetInfillElasticStresses(double axialN, double moment)
+        {
+            if (ElasticStateFor(axialN, moment) is not { } r) return (double.NaN, double.NaN);
+            return (r.Scale * r.State.Tension[GroupInfill], r.Scale * r.State.Compression[GroupInfill]);
         }
 
         // ───────── 終局曲げモーメント ─────────
@@ -666,11 +828,11 @@ namespace PileDesign.Models
         /// ひずみ分布 (圧縮縁 y = R のひずみ εtop、最も引張側の主筋 y = yb のひずみ εbot) のときの (N, M) (N, N·mm)。
         /// </summary>
         private (double N, double M) UltimateStateAt(double epsTop, double epsBot, double yBot,
-            List<(double Y, double Area)> strips, List<(double Y, double Area)> bars)
+            List<(double Y, double Area)> strips, List<Bar> bars)
         {
             double R = VirtualDiameter / 2.0;
             double ec = Ec;
-            double sigmaU = UltimateStrength;
+            Span<double> sigmaU = [UltimateStrength, InfillUltimateStrength];
             double Strain(double y) => epsBot + (epsTop - epsBot) * (y - yBot) / (R - yBot);
             double ConcreteStress(double eps) => eps <= 0 ? 0.0 : Math.Min(ec * eps, Fc);
             double N = 0, M = 0;
@@ -679,11 +841,12 @@ namespace PileDesign.Models
                 double s = ConcreteStress(Strain(y));
                 N += s * a; M += s * a * y;
             }
-            foreach (var (y, a) in bars)
+            foreach (var b in bars)
             {
-                double eps = Strain(y);
-                double s = Math.Clamp(Er * eps, -sigmaU, sigmaU) - ConcreteStress(eps);   // 主筋位置のコンクリートを差し引く
-                N += s * a; M += s * a * y;
+                double eps = Strain(b.Y);
+                double su = sigmaU[b.Group];
+                double s = Math.Clamp(Er * eps, -su, su) - ConcreteStress(eps);   // 鉄筋位置のコンクリートを差し引く
+                N += s * b.Area; M += s * b.Area * b.Y;
             }
             return (N, M);
         }
@@ -705,10 +868,11 @@ namespace PileDesign.Models
             return double.IsFinite(min) ? min : double.NaN;
         }
 
-        private double UltimateMomentFor(double axialN, List<(double Y, double Area)> strips, List<(double Y, double Area)> bars)
+        private double UltimateMomentFor(double axialN, List<(double Y, double Area)> strips, List<Bar> bars)
         {
+            // 引張側のひずみ 0.2 の上限は、最も外の NewJ-BAR で見る (中詰補強筋は内側なのでひずみが小さい)
             double yBot = double.PositiveInfinity;
-            foreach (var (y, _) in bars) yBot = Math.Min(yBot, y);
+            foreach (var b in bars) yBot = Math.Min(yBot, b.Y);
             const double ecu = ConcreteUltimateStrain, esu = RebarUltimateStrain;
 
             // 終局の曲面をたどる 1 変数 s ∈ [0, 2]:
@@ -741,18 +905,18 @@ namespace PileDesign.Models
             var ns = new List<double>();
             var ms = new List<double>();
             if (!IsComputable) return (ns, ms);
+            double ac = Math.PI * VirtualDiameter * VirtualDiameter / 4.0;
+            double barArea = TotalBarArea + InfillTotalArea;
             double nMin, nMax;
             if (ultimate)
             {
-                nMin = -TotalBarArea * UltimateStrength;
-                double ac = Math.PI * VirtualDiameter * VirtualDiameter / 4.0;
-                nMax = Fc * (ac - TotalBarArea) + UltimateStrength * TotalBarArea;
+                nMin = -(TotalBarArea * UltimateStrength + InfillTotalArea * InfillUltimateStrength);
+                nMax = Fc * (ac - barArea) + UltimateStrength * TotalBarArea + InfillUltimateStrength * InfillTotalArea;
             }
             else
             {
-                nMin = -TotalBarArea * F;
-                double ac = Math.PI * VirtualDiameter * VirtualDiameter / 4.0;
-                nMax = 2.0 / 3.0 * Fc * (ac + YoungRatio * TotalBarArea);
+                nMin = -(TotalBarArea * F + InfillTotalArea * InfillF);
+                nMax = 2.0 / 3.0 * Fc * (ac + YoungRatio * barArea);
             }
             for (int i = 0; i <= points; i++)
             {
@@ -783,6 +947,11 @@ namespace PileDesign.Models
                 new("仮想円形断面の外径", "Dc", $"{VirtualDiameter:N1}", "mm"),
                 new("補強筋の配置半径", "r'", $"{BarRadius:N1}", "mm"),
                 new("補強筋の扱い", "", UsesRing ? "円環に置き換え (8 本以上)" : "配置を考えた弱軸方向 (8 本未満)", ""),
+                new("中詰補強筋 本数-呼び名", "", HasInfill ? $"{InfillBarCount}-{InfillBarSize} ({InfillBarGrade})" : "なし", ""),
+                new("中詰補強筋の配置半径", "rn", HasInfill ? Fmt(InfillRadius, "N1") : "-", "mm"),
+                new("中詰補強筋 許容応力度 (短期・長期)", "", HasInfill ? $"{InfillF:N0}・{InfillLongTermAllowableStress:N0}" : "-", "N/mm2"),
+                new("中詰補強筋 終局強度", "", HasInfill ? $"{InfillUltimateStrength:N1}" : "-", "N/mm2"),
+                new("中詰めの深さ (下限)", "", HasInfill ? (InfillDepth > 0 ? $"{InfillDepth:N0}" : "未入力") + $" (≧ {InfillRequiredDepth:N0})" : "-", "mm"),
                 new("ヤング係数比", "n", $"{YoungRatio:0}", ""),
                 new("短期許容曲げモーメント (N=0)", "Ma", Fmt(GetAllowableMoment(0.0) * 1e-6, "N1"), "kN·m"),
                 new("終局曲げモーメント (N=0)", "Mu", Fmt(GetUltimateMoment(0.0) * 1e-6, "N1"), "kN·m"),

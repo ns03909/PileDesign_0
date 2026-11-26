@@ -1416,6 +1416,15 @@ namespace TestProject1
             StringAssert.Contains(table, $"$N = 2{{,}}356$ kN で ${N1(j.GetUltimateMoment(2356e3) * 1e-6)}$ kN·m");
             StringAssert.Contains(table, $"$Q_a = 600 \\times 220 \\times 32 = {N0(j.ShortTermAllowableShear * 1e-3)}$ kN、$Q_u = {N0(j.UltimateShear * 1e-3)}$ kN");
             StringAssert.Contains(table, $"= {N0(j.RequiredAnchorageLength)}$ mm ≦ 標準品 $35d = {N0(j.AnchorageLength)}$ mm");
+
+            // 中詰補強筋 8-D22 (SD345、重心かぶり 100) を足した例
+            j.InfillBarCount = 8; j.InfillBarSize = "D22"; j.InfillBarGrade = "SD345"; j.InfillBarCover = 100;
+            StringAssert.Contains(table, $"$r_n = 291 - 100 = {j.InfillRadius:0}$ mm");
+            var sj = j.GetElasticStresses(589e3, 670e6);
+            var si = j.GetInfillElasticStresses(589e3, 670e6);
+            StringAssert.Contains(table, $"引張側の NewJ-BAR ${F2(sj.BarTension)}$ N/mm²・中詰補強筋の引張 ${F2(si.Tension)}$ N/mm²");
+            StringAssert.Contains(table, $"短期許容曲げモーメント ${N1(j.GetAllowableMoment(589e3) * 1e-6)}$ kN·m、");
+            StringAssert.Contains(table, $"$N = 0$ で ${N1(j.GetUltimateMoment(0) * 1e-6)}$ kN·m。中詰めの深さは $35 \\times 22 + 200 = {N0(j.InfillRequiredDepth)}$ mm");
         }
 
         /// <summary>

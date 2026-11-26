@@ -193,12 +193,16 @@ namespace TestProject1
         {
             var j = ManualExample();
             j.EmbedmentLength = 260; j.AnchorageLengthInD = 40; j.IsConfined = false;
+            j.InfillBarCount = 6; j.InfillBarSize = "D25"; j.InfillBarGrade = "SD390"; j.InfillBarCover = 80; j.InfillDepth = 1300;
             string json = System.Text.Json.JsonSerializer.Serialize(j);
-            foreach (var derived in new[] { "VirtualDiameter", "PileOuterDiameter", "Fc", "BarArea", "UltimateStrength" })
+            foreach (var derived in new[] { "VirtualDiameter", "PileOuterDiameter", "Fc", "BarArea", "UltimateStrength",
+                         "InfillOuterDiameter", "InfillRadius", "InfillTotalArea", "HasSteelPipe", "TopSectionType", "PileBodyType" })
                 Assert.IsFalse(json.Contains($"\"{derived}\""), $"{derived} を書き出している: {json}");
             var back = System.Text.Json.JsonSerializer.Deserialize<NewJBar>(json)!;
             Assert.AreEqual(("WSD390", "WD32J", 10, 260.0, 40.0, false),
                 (back.Grade, back.Size, back.Count, back.EmbedmentLength, back.AnchorageLengthInD, back.IsConfined));
+            Assert.AreEqual((6, "D25", "SD390", 80.0, 1300.0),
+                (back.InfillBarCount, back.InfillBarSize, back.InfillBarGrade, back.InfillBarCover, back.InfillDepth));
 
             var top = new PileTop { NewJBar = j };
             var copy = top.DeepCopy();
@@ -335,6 +339,81 @@ namespace TestProject1
             s.PipeDia = 1400;
             j = top.NewJBarFor(NewJBar.PileTopTypeName, s)!;
             Assert.AreEqual(0, j.GetDesignNotes().Count, "1,500 mm 未満は知らせない");
+        }
+
+        /// <summary>
+        /// 中詰補強筋は NewJ-BAR と別の円環として、それぞれの材料で数える。SD390 の D32 を NewJ-BAR と同じ半径に置けば、
+        /// 強度 (短期 390・長期 195・終局 1.1×390) も面積も同じなので、NewJ-BAR を同じ本数だけ増やした円環と一致する。
+        /// </summary>
+        [TestMethod]
+        public void InfillBarsAtTheSameRadiusActLikeMoreJBars()
+        {
+            var j = ManualExample();
+            j.InfillBarCount = 6; j.InfillBarSize = "D32"; j.InfillBarGrade = "SD390"; j.InfillBarCover = 0;
+            // 中詰めの外径を NewJ-BAR の配置径にして、rn = r' にする
+            j.SetTopSection(PileDesign.Constants.PileTypeNames.SteelPipe, PileDesign.Constants.PileTypeNames.SteelPipeSection,
+                600, 9, "SKK490", infillOuterDiameter: 2.0 * j.BarRadius);
+            Assert.AreEqual(j.BarRadius, j.InfillRadius, 1e-9);
+
+            var more = ManualExample();
+            more.Count = 16;
+            foreach (double n in new[] { -1000e3, 0.0, 589e3, 2356e3 })
+            {
+                AreClose(more.GetAllowableMoment(n), j.GetAllowableMoment(n), 1e-9, $"短期 Ma (N = {n * 1e-3} kN)");
+                AreClose(more.GetAllowableMoment(n, shortTerm: false), j.GetAllowableMoment(n, shortTerm: false), 1e-9, $"長期 Ma (N = {n * 1e-3} kN)");
+                AreClose(more.GetUltimateMoment(n), j.GetUltimateMoment(n), 1e-9, $"Mu (N = {n * 1e-3} kN)");
+            }
+        }
+
+        /// <summary>
+        /// 中詰補強筋は内側にあるので、同じ曲げで NewJ-BAR より応力度が小さく、入れれば耐力は上がる。
+        /// 終局強度は 1.1F (SD490 は F)、長期は RC 規準の min(F/1.5, 215 または 195)。
+        /// </summary>
+        [TestMethod]
+        public void InfillBarsAddStrengthWithTheirOwnMaterial()
+        {
+            var plain = ManualExample();
+            var j = ManualExample();
+            j.InfillBarCount = 8; j.InfillBarSize = "D22"; j.InfillBarGrade = "SD345"; j.InfillBarCover = 100;
+            Assert.AreEqual(600 - 2 * 9, j.InfillOuterDiameter, "鋼管杭の中詰めの外径は鋼管の内径");
+            Assert.AreEqual(291.0 - 100.0, j.InfillRadius, 1e-9);
+            Assert.AreEqual((345.0, 215.0, 1.1 * 345.0), (j.InfillF, j.InfillLongTermAllowableStress, j.InfillUltimateStrength));
+            j.InfillBarGrade = "SD490"; j.InfillBarSize = "D29";
+            Assert.AreEqual((490.0, 195.0, 490.0), (j.InfillF, j.InfillLongTermAllowableStress, j.InfillUltimateStrength));
+            j.InfillBarGrade = "SD345"; j.InfillBarSize = "D22";
+
+            Assert.IsTrue(j.GetAllowableMoment(589e3) > plain.GetAllowableMoment(589e3));
+            Assert.IsTrue(j.GetUltimateMoment(0) > plain.GetUltimateMoment(0));
+            var sj = j.GetElasticStresses(589e3, 670e6);
+            var si = j.GetInfillElasticStresses(589e3, 670e6);
+            Assert.IsTrue(si.Tension > 0 && si.Tension < sj.BarTension, $"中詰 {si.Tension} / NewJ-BAR {sj.BarTension}");
+            Assert.IsTrue(sj.BarTension < plain.GetElasticStresses(589e3, 670e6).BarTension, "中詰補強筋が引張を分け持つ");
+            var none = plain.GetInfillElasticStresses(589e3, 670e6);
+            Assert.AreEqual((0.0, 0.0), none, "中詰補強筋が無ければ 0");
+        }
+
+        /// <summary>SC 杭の中詰めは中空部 (SC-600 t90 の中空径 420)。中詰めの深さは定着長さ + 200 以上 (4.2.1)。配置半径が無ければ組まない。</summary>
+        [TestMethod]
+        public void InfillGeometryAndDepthFollowTheManual()
+        {
+            var top = new PileTop { PileCapFc = 24, PileCapGamma = 23 };
+            var j = top.NewJBarFor(NewJBar.PileTopTypeName, ScSection("SC-600-標準-80-9"))!;
+            j.Grade = "WSD390"; j.Size = "WD32J"; j.Count = 10;
+            j.InfillBarCount = 6; j.InfillBarSize = "D22"; j.InfillBarGrade = "SD345"; j.InfillBarCover = 60;
+            Assert.AreEqual(420.0, j.InfillOuterDiameter, 1e-9, "SC 杭は中空部の径 (600 − 2×90)");
+            Assert.AreEqual(150.0, j.InfillRadius, 1e-9);
+            Assert.AreEqual(35 * 22 + 200, j.InfillRequiredDepth);
+            Assert.IsTrue(j.GetDesignNotes().Any(n => n.Contains("970")), "深さが未入力なら下限を知らせる");
+            j.InfillDepth = 900;
+            Assert.IsTrue(j.GetApplicabilityProblems().Any(p => p.Contains("中詰めコンクリートの深さ")));
+            j.InfillDepth = 1000;
+            Assert.IsFalse(j.GetApplicabilityProblems().Any(p => p.Contains("中詰めコンクリートの深さ")));
+            j.InfillBarGrade = "SD490";
+            Assert.AreEqual(42 * 22 + 200, j.InfillRequiredDepth);
+
+            j.InfillBarCover = 300;   // 配置半径 210 − 300 < 0
+            Assert.IsFalse(j.IsComputable);
+            StringAssert.Contains(j.NotComputableReason, "中詰補強筋の配置半径");
         }
 
         /// <summary>
