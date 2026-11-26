@@ -603,7 +603,7 @@ namespace PileDesign.Models
             if (Count > 0 && BarRadius > 0 && BarSpacing < MinimumBarSpacing)
                 list.Add($"心心間隔 {BarSpacing:N0} mm が限界心心間隔 2.7d + 20 = {MinimumBarSpacing:N0} mm を下回っています");
             if (HasInfill && InfillDepth > 0 && InfillDepth < InfillRequiredDepth)
-                list.Add($"中詰めコンクリートの深さ {InfillDepth:N0} mm が、中詰補強筋の定着長さ + 200 = {InfillRequiredDepth:N0} mm を下回っています (マニュアル 4.2.1 1))");
+                list.Add($"中詰めコンクリートの深さ {InfillDepth:N0} mm が、中詰補強筋の定着長さ + 200 = {InfillRequiredDepth:N0} mm を下回っています (「NewJ-BAR 設計マニュアル (杭頭補強編)」4.2.1 1))");
             return list;
         }
 
@@ -616,10 +616,10 @@ namespace PileDesign.Models
             var list = new List<string>();
             if (PileBodyType == PileTypeNames.InsituSteelPipeConcrete && PileOuterDiameter >= LargeInsituDiameter)
                 list.Add($"杭径 {PileOuterDiameter:N0} mm (1,500 mm 以上) の外殻鋼管場所打ちコンクリート杭です。フーチングが杭と基礎梁の接合部となるので、"
-                    + "フーチングのせん断と補強筋の長さ (フーチング上端付近まで延ばす) を別に検討してください (マニュアル 4.2.4)");
+                    + "フーチングのせん断と補強筋の長さ (フーチング上端付近まで延ばす) を別に検討してください (「NewJ-BAR 設計マニュアル (杭頭補強編)」4.2.4)");
             if (HasInfill && InfillDepth <= 0)
                 list.Add($"中詰めコンクリートの深さは、杭頂部から中詰補強筋の定着長さ + 200 = {InfillRequiredDepth:N0} mm 以上にしてください"
-                    + " (マニュアル 4.2.1 1)。深さを入れると確かめます)");
+                    + " (「NewJ-BAR 設計マニュアル (杭頭補強編)」4.2.1 1)。深さを入れると確かめます)");
             return list;
         }
 

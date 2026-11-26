@@ -53,7 +53,7 @@ namespace PileDesign.Output
                     : (false, $"剛接合（{method}。M-θ 関係は杭を非線形とする荷重ケースで用いる）");
             }
             if (top == Models.NewJBar.PileTopTypeName)
-                return (false, "剛接合（NewJ-BAR。設計マニュアルに杭頭の回転剛性の規定がない）");
+                return (false, "剛接合（NewJ-BAR）");
             return (false, "剛接合（回転を固定）");
         }
 

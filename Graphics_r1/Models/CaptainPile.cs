@@ -237,7 +237,7 @@ namespace PileDesign.Models
         [System.Text.Json.Serialization.JsonIgnore]
         [Newtonsoft.Json.JsonIgnore]
         public string UltimateSettingNote => IsUltimateSettingConsistentWithDesignExample
-            ? "✓ マニュアル 3.5 節の設計例 (Q-α 図) と整合する設定です (εcu 0.005・強度倍率 1.1)。"
+            ? "✓ 「キャプテンパイル工法 設計・施工マニュアル」3.5 節の設計例 (Q-α 図) と整合する設定です (εcu 0.005・強度倍率 1.1)。"
             : "設計例と整合する設定 (圧縮縁ひずみ εcu 0.005・強度倍率 1.1) と異なります。"
               + (UseMaximumUltimateMoment ? "全塑性は設計例より Mu が大きく出ます。" : "");
 
@@ -581,7 +581,7 @@ namespace PileDesign.Models
             combined.Add(new PileLibrary.Spec("杭体のヤング係数", "Ep", $"{(PileBodyEc > 0 ? PileBodyEc : FallbackPileEp):N0}", "N/mm²"));
             combined.Add(new PileLibrary.Spec("終局時曲げモーメントの取り方", "Mu",
                 (UseMaximumUltimateMoment ? "最大曲げモーメント (全塑性)" : $"圧縮縁ひずみ {UltimateConcreteStrain:0.####} のとき")
-                + (IsUltimateSettingConsistentWithDesignExample ? " (マニュアル 3.5 設計例と整合)" : " (設計例の設定と異なる)"), ""));
+                + (IsUltimateSettingConsistentWithDesignExample ? " (「キャプテンパイル工法 設計・施工マニュアル」3.5 設計例と整合)" : " (設計例の設定と異なる)"), ""));
             combined.Add(new PileLibrary.Spec("Mu に使う定着筋の強度倍率", "", $"{UltimateRebarStrengthFactor:0.##}", ""));
             if (CTPTensionRebars != null && CTPTensionRebars.HasTensionRebars)
             {

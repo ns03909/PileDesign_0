@@ -1443,7 +1443,7 @@ namespace PileDesign.ViewModels
                     IsOk = !(m > ma),
                     Basis =
                     [
-                        new("限界値", "短期許容曲げモーメント Ma: 最外縁の引張定着筋が降伏するときと、圧縮縁が (2/3)·Fc/ν² に達するときの小さい方 (マニュアル第 6 版 3.4(2))"),
+                        new("限界値", "短期許容曲げモーメント Ma: 最外縁の引張定着筋が降伏するときと、圧縮縁が (2/3)·Fc/ν² に達するときの小さい方 (「キャプテンパイル工法 設計・施工マニュアル」第 6 版 3.4(2))"),
                         new("軸力 N", $"{axialN:N1} kN ({axialSource})"),
                         new("応答", "杭頭の要素の i 端の曲げモーメント |M| = √(My² + Mz²)"),
                     ],
@@ -1476,7 +1476,7 @@ namespace PileDesign.ViewModels
             };
             bool checksShear = limit != LimitState.Service;
             var jbarByBody = new Dictionary<int, NewJBar?>();
-            const string source = "開先付き異形棒鋼 NewJ-BAR 設計マニュアル (杭頭補強編) 2026 年 9 月改訂";
+            const string source = "開先付き異形棒鋼 NewJ-BAR WSD390 WSD490 設計マニュアル (杭頭補強編) 2026 年 9 月改訂";
 
             foreach (var pile in input.PileLayoutItems)
             {

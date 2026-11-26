@@ -702,17 +702,17 @@ namespace PileDesign.Services
                     notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, DiagnosticTarget.PileBody(i + 1),
                         $"杭体{i + 1}: キャプテンパイル工法の杭頭接合部は、レベル2 の限界回転角 (0.04 rad)・PC リングのせん断・"
                         + "レベル1 の短期許容曲げモーメント Ma を検定します。"
-                        + "マニュアルが求める次の照査は行わないので、別途確認してください: "
+                        + "「キャプテンパイル工法 設計・施工マニュアル」が求める次の照査は行わないので、別途確認してください: "
                         + "終局時に杭頭が PC リングと杭体の重なりを超えて浮き上がらないこと (浮き上がり量を算定しません)、"
                         + "パイルキャップのパンチング (設計フロー 図 3.3.1 の 9)。",
-                        "杭頭の浮き上がりをマニュアル (3.2(3)) に従って、パイルキャップのパンチングを RC 規準などで別途確認する"));
+                        "杭頭の浮き上がりを「キャプテンパイル工法 設計・施工マニュアル」3.2(3) に従って、パイルキャップのパンチングを RC 規準などで別途確認する"));
                 }
                 if (top == "キャプリングパイル工法")
                 {
                     notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, DiagnosticTarget.PileBody(i + 1),
                         $"杭体{i + 1}: キャプリングパイル工法の杭頭接合部は、限界回転角 (0.03 rad) と PC リングのせん断を検定します。"
-                        + "マニュアルが求める次の検討は行わないので、別途確認してください: "
-                        + "パイルキャップのパンチング (設計フロー 図 3-2 の 9)・3.6(1)。マニュアルに算定式は無く、部材配置に応じて検討するとしています。",
+                        + "「キャプリングパイル工法 設計マニュアル」が求める次の検討は行わないので、別途確認してください: "
+                        + "パイルキャップのパンチング (設計フロー 図 3-2 の 9)・3.6(1)。同書に算定式は無く、部材配置に応じて検討するとしています。",
                         "パイルキャップのパンチングを RC 規準などで別途確認する"));
                 }
                 if ((top == "キャプテンパイル工法" || top == "キャプリングパイル工法")
@@ -755,7 +755,7 @@ namespace PileDesign.Services
                 }
                 foreach (var problem in jbar.GetApplicabilityProblems())
                     notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, DiagnosticTarget.PileBody(i + 1),
-                        $"杭体 {i + 1}: NewJ-BAR の設計マニュアルの適用範囲の外です。{problem}。",
+                        $"杭体 {i + 1}: 「NewJ-BAR 設計マニュアル (杭頭補強編)」の適用範囲の外です。{problem}。",
                         "杭頭部の画面で NewJ-BAR の入力を見直す"));
                 foreach (var note in jbar.GetDesignNotes())
                     notices.Add(Diagnostic.Notice(DiagnosticSeverity.Info, DiagnosticTarget.PileBody(i + 1),

@@ -183,5 +183,98 @@ namespace TestProject1
             Assert.AreEqual(0, hits.Count,
                 "引退した呼び名がコードの文字列に残っています:\n  " + string.Join("\n  ", hits));
         }
+
+        /// <summary>
+        /// 文献を指す「マニュアル」は、どの文献かわかる名前で書く (利用者の指示 2026-11-27)。
+        ///
+        /// 杭頭の工法はキャプテンパイル・キャプリングパイル・NewJ-BAR とどれも「〇〇マニュアル」が出典で、
+        /// 画面・メッセージ・ヘルプに「マニュアル 4.2.1」「マニュアルに規定がない」と裸で書くと、
+        /// どの文献の話か読み手が決められない。ここに並べた文献名の一部としてだけ許す。
+        /// 文献を足したら、その名前をここに足す。
+        /// </summary>
+        private static readonly string[] LiteratureTitlesWithManual =
+        {
+            // 長い名前を先に消す (短い名前が長い名前の一部のときに取り残しを出さないため)
+            "開先付き異形棒鋼 NewJ-BAR WSD390 WSD490 設計マニュアル (杭頭補強編)",
+            "NewJ-BAR WSD390 WSD490 設計マニュアル (杭頭補強編)",
+            "NewJ-BAR 設計マニュアル (杭頭補強編)",
+            "キャプテンパイル工法 (場所打ち杭用杭頭半固定構法) 設計・施工マニュアル",
+            "キャプテンパイル工法 (場所打ち杭用杭頭半固定工法) 設計・施工マニュアル",
+            "キャプテンパイル工法（場所打ち杭用杭頭半固定構法）設計・施工マニュアル",
+            "キャプテンパイル工法 設計・施工マニュアル",
+            "キャプリングパイル工法 設計マニュアル",
+            "利用マニュアル", // このプログラム自身のヘルプの見出し
+        };
+
+        /// <summary>文献名を除いても「マニュアル」が残るか。title は文献名を見つけた数を足す。</summary>
+        private static bool HasBareManual(string text, ref int titles)
+        {
+            foreach (string t in LiteratureTitlesWithManual)
+            {
+                int n = 0, at = 0;
+                while ((at = text.IndexOf(t, at, StringComparison.Ordinal)) >= 0) { n++; at += t.Length; }
+                if (n == 0) continue;
+                titles += n;
+                text = text.Replace(t, "", StringComparison.Ordinal);
+            }
+            return text.Contains("マニュアル", StringComparison.Ordinal);
+        }
+
+        [TestMethod]
+        public void Manual_IsAlwaysNamedAsLiterature()
+        {
+            string root = FindSolutionRoot();
+            var literal = new Regex("\"([^\"]*)\"", RegexOptions.Compiled);
+            var logCall = new Regex(@"Log\.(Information|Debug|Warning|Error|Verbose|Fatal)", RegexOptions.Compiled);
+            var hits = new List<string>();
+            int xamlTitles = 0, csTitles = 0, helpTitles = 0;
+
+            foreach (string xaml in Directory.EnumerateFiles(
+                         Path.Combine(root, "Graphics_r1", "Views"), "*.xaml", SearchOption.AllDirectories))
+            {
+                int lineNo = 0;
+                foreach (string line in File.ReadLines(xaml))
+                {
+                    lineNo++;
+                    foreach (Match m in DisplayAttribute.Matches(line))
+                        if (HasBareManual(m.Groups[1].Value, ref xamlTitles))
+                            hits.Add($"{Path.GetFileName(xaml)}:{lineNo}  \"{m.Groups[1].Value}\"");
+                }
+            }
+
+            foreach (string cs in Directory.EnumerateFiles(
+                         Path.Combine(root, "Graphics_r1"), "*.cs", SearchOption.AllDirectories))
+            {
+                if (cs.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}")) continue;
+                int lineNo = 0;
+                foreach (string raw in File.ReadLines(cs))
+                {
+                    lineNo++;
+                    int comment = raw.IndexOf("//", StringComparison.Ordinal);
+                    string line = comment >= 0 ? raw[..comment] : raw;
+                    if (logCall.IsMatch(line)) continue;
+                    foreach (Match m in literal.Matches(line))
+                        if (HasBareManual(m.Groups[1].Value, ref csTitles))
+                            hits.Add($"{Path.GetFileName(cs)}:{lineNo}  {m.Groups[1].Value}");
+                }
+            }
+
+            string help = Regex.Replace(
+                File.ReadAllText(Path.Combine(root, "Graphics_r1", "Help", "help.html")), "<!--.*?-->", "", RegexOptions.Singleline);
+            int helpLine = 0;
+            foreach (string line in help.Split('\n'))
+            {
+                helpLine++;
+                if (HasBareManual(line, ref helpTitles))
+                    hits.Add($"help.html (コメントを除いて {helpLine} 行目)  {line.Trim()}");
+            }
+
+            // 見張りが空振りしていないこと (文献名を実際に見つけている)
+            Assert.IsTrue(xamlTitles > 0 && csTitles > 0 && helpTitles > 0,
+                $"文献名が見つかっていません (XAML {xamlTitles}・C# {csTitles}・ヘルプ {helpTitles})。走査先が変わっていないか確認してください");
+            Assert.AreEqual(0, hits.Count,
+                "「マニュアル」を文献名なしで書いています。どの文献か (例: 「NewJ-BAR 設計マニュアル (杭頭補強編)」) を書いてください:\n  "
+                + string.Join("\n  ", hits));
+        }
     }
 }

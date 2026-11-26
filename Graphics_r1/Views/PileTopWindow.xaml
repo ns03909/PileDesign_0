@@ -468,7 +468,7 @@
                                                       Content="PC リングの終局せん断耐力に、圧縮側の杭頭の摩擦 μN を見込む"
                                                       IsChecked="{Binding PileTop.CaptainPile.UltimateShearConsidersFriction, UpdateSourceTrigger=PropertyChanged}"
                                                       Checked="CheckBoxRingShearFriction_Changed" Unchecked="CheckBoxRingShearFriction_Changed"
-                                                      ToolTip="マニュアル第 6 版 3.2(2)②「終局時のみ、圧縮軸力側杭頭では接合面摩擦による伝達も考慮してよい」(μ = 0.1)。 既定は見込みません (マニュアルは通常「摩擦無視」を用いるとしています)。見込むと、安全限界の検定で圧縮軸力 N の 0.1 倍を足し、表の「摩擦考慮上限」で頭打ちにします。"/>
+                                                      ToolTip="「キャプテンパイル工法 設計・施工マニュアル」第 6 版 3.2(2)②「終局時のみ、圧縮軸力側杭頭では接合面摩擦による伝達も考慮してよい」(μ = 0.1)。 既定は見込みません (同書は通常「摩擦無視」を用いるとしています)。見込むと、安全限界の検定で圧縮軸力 N の 0.1 倍を足し、表の「摩擦考慮上限」で頭打ちにします。"/>
 
                                             <!-- 終局時曲げモーメント Mu の取り方 (CaptainPile.UseMaximumUltimateMoment) -->
                                             <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
@@ -487,7 +487,7 @@
                                                 <StackPanel.ToolTip>
                                                     <ToolTip>
                                                         <TextBlock MaxWidth="480" TextWrapping="Wrap">
-                                                            <Run Text="マニュアル 3.4 節 ⑥ は「終局時の曲げモーメント Mu は最大曲げモーメントとする」としていますが、限界ひずみの規定はありません。"/><LineBreak/>
+                                                            <Run Text="「キャプテンパイル工法 設計・施工マニュアル」3.4 節 ⑥ は「終局時の曲げモーメント Mu は最大曲げモーメントとする」としていますが、限界ひずみの規定はありません。"/><LineBreak/>
                                                             <Run Text="コンクリートの応力度は εB = 0.003 を超えても σmax のまま下がらない (式 3.4.9) ので、M は曲率とともに増え続け、最大は全塑性 (圧縮側のコンクリートは一様に σmax、定着筋は ±σy) になります。"/><LineBreak/>
                                                             <Run Text="既定 (εcu = 0.005・定着筋の強度倍率 1.1) は、設計例 (3.5 節) の Q-α 図から逆算した Mu に合う値です。0.003・1.0 にすると以前の値になります。"/>
                                                         </TextBlock>
@@ -660,7 +660,7 @@
                                             <CheckBox x:Name="CheckBoxNewJBarConfined" Margin="0,2,0,2"
                                                       Content="横補強筋で拘束されたコア内に定着する (α = 1.0。外すと 1.25)"
                                                       IsChecked="{Binding PileTop.NewJBar.IsConfined, UpdateSourceTrigger=PropertyChanged}"
-                                                      ToolTip="必要定着長さ Lab = α·S·σ1·d/(10·fb) の α (設計マニュアル (4.6) 式)"/>
+                                                      ToolTip="必要定着長さ Lab = α·S·σ1·d/(10·fb) の α (「NewJ-BAR 設計マニュアル (杭頭補強編)」(4.6) 式)"/>
                                             <!-- 中詰補強筋 (任意)。NewJ-BAR とは別の円環として、それぞれの材料で計算する -->
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="中詰補強筋" Width="100" HorizontalAlignment="Right"/>
@@ -694,7 +694,7 @@
                                                 <TextBox x:Name="TextBoxNewJBarInfillDepth" Width="50"
                                                          Text="{Binding PileTop.NewJBar.InfillDepth, UpdateSourceTrigger=LostFocus}"
                                                          Style="{StaticResource DecimalTextBoxStyle}" common:NumericInput.Min="0" common:NumericInput.Max="20000"
-                                                         ToolTip="杭頂部からの中詰めコンクリートの深さ。中詰補強筋の定着長さ (SD490 は 42d、それ以外は 35d) + 200 mm 以上 (マニュアル 4.2.1)。0 なら確かめない"
+                                                         ToolTip="杭頂部からの中詰めコンクリートの深さ。中詰補強筋の定着長さ (SD490 は 42d、それ以外は 35d) + 200 mm 以上 (「NewJ-BAR 設計マニュアル (杭頭補強編)」4.2.1)。0 なら確かめない"
                                                          GotFocus="TextBox_GotFocus" PreviewMouseLeftButtonDown="TextBox_PreviewMouseLeftButtonDown"
                                                                  PreviewKeyDown="TextBox_PreviewKeyDown"
                                                                  PreviewLostKeyboardFocus="TextBox_PreviewLostKeyboardFocus"/>
@@ -721,7 +721,7 @@
                                                 </TextBlock.Style>
                                             </TextBlock>
                                             <TextBlock TextWrapping="Wrap" Margin="0,4,0,0" Foreground="{StaticResource ReadOnlyBrush}"
-                                                       Text="水平解析では杭頭を剛接合として解きます (マニュアルに回転剛性の規定がないため)。溶接は標準溶接長で施工するものとします。"/>
+                                                       Text="水平解析では杭頭を剛接合として解きます。溶接は標準溶接長で施工するものとします。"/>
                                         </StackPanel>
                                     </GroupBox>
 
@@ -744,7 +744,7 @@
                                                       Content="PC リングの終局せん断耐力に、圧縮側の杭頭の摩擦 μN を見込む"
                                                       IsChecked="{Binding PileTop.CapringPile.UltimateShearConsidersFriction, UpdateSourceTrigger=PropertyChanged}"
                                                       Checked="CheckBoxRingShearFriction_Changed" Unchecked="CheckBoxRingShearFriction_Changed"
-                                                      ToolTip="設計マニュアル 2.2(4)「終局時圧縮軸力を受ける杭頭では (2-9) 式を用い、『摩擦考慮上限』まで使用可能」(μ = 0.1)。 既定は見込みません (マニュアルは通常「摩擦無視」を用いるとしています)。見込むと、安全限界の検定で圧縮軸力 N の 0.1 倍を足し、表の「摩擦考慮上限」で頭打ちにします。"/>
+                                                      ToolTip="「キャプリングパイル工法 設計マニュアル」2.2(4)「終局時圧縮軸力を受ける杭頭では (2-9) 式を用い、『摩擦考慮上限』まで使用可能」(μ = 0.1)。 既定は見込みません (同書は通常「摩擦無視」を用いるとしています)。見込むと、安全限界の検定で圧縮軸力 N の 0.1 倍を足し、表の「摩擦考慮上限」で頭打ちにします。"/>
 
                                             <!-- PC リング径 ≠ 杭径 の警告 (RingDiameterWarning が空のときは非表示) -->
                                             <TextBlock Text="{Binding RingDiameterWarning}"
