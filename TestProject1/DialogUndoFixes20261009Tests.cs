@@ -79,7 +79,7 @@ namespace TestProject1
             Assert.IsNotNull(prepared, "自動保存の中身が取れません");
             var save = (FileOperationService.PreparedSave)prepared!.GetType().GetProperty("Save")!.GetValue(prepared)!;
             Assert.IsNull(save.Error, save.Error?.ToString());
-            return save.Payload!;
+            return save.Payload!.ToArray();
         }
 
         private static PileDesign.Models.ProjectData LoadPayload(MainWindowViewModel vm, byte[] payload)

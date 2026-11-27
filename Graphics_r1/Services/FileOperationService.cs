@@ -83,7 +83,7 @@ namespace PileDesign.Services
             public InputModel? InputToSave { get; init; }
 
             /// <summary>直列化した中身。検査か直列化に失敗したときは null で、理由は <see cref="Error"/>。</summary>
-            public byte[]? Payload { get; init; }
+            public SavePayload? Payload { get; init; }
 
             /// <summary>
             /// 保存を止めない検査で見つかった NaN・無限大の箇所 (最初の 1 か所)。無ければ null。
@@ -198,10 +198,14 @@ namespace PileDesign.Services
             {
                 // string 中間生成を避けて UTF-8 バイトへ直に書く。_jsonOptions の全設定 (WriteIndented /
                 // Encoder 等) を尊重するので、同期・非同期の保存で出力が一致する。
+                // 1 つの配列 (SerializeToUtf8Bytes) には書かない。配列は 2 GB までで、結果の多いモデルは
+                // それを超える (2026-11-27 に 3.27 GB のファイルの報告。SavePayload 参照)。
+                var payload = new SavePayload();
+                JsonSerializer.Serialize(payload, projectData, _jsonOptions);
                 return new PreparedSave
                 {
                     InputToSave = inputToSave,
-                    Payload = JsonSerializer.SerializeToUtf8Bytes(projectData, _jsonOptions),
+                    Payload = payload,
                     NonFiniteLocation = nonFiniteLocation,
                 };
             }
@@ -238,10 +242,90 @@ namespace PileDesign.Services
         internal static bool IsCompressed(ReadOnlySpan<byte> head) => head.Length >= 2 && head[0] == 0x1F && head[1] == 0x8B;
 
         /// <summary>保存の中身 (JSON の UTF-8) を圧縮して書く。</summary>
-        internal static void WriteCompressed(Stream stream, byte[] payload)
+        internal static void WriteCompressed(Stream stream, SavePayload payload)
         {
             using var gzip = new GZipStream(stream, SaveCompressionLevel, leaveOpen: true);
-            gzip.Write(payload);
+            payload.WriteContentTo(gzip);
+        }
+
+        /// <summary>
+        /// 保存ファイルを、JSON の UTF-8 が流れてくる読み取り用の流れとして開く (圧縮していれば展開しながら読む)。
+        /// BOM は残す (<see cref="JsonSerializer"/> は読み飛ばす)。
+        ///
+        /// <para>ファイル全体を 1 つの配列に読まないための入口。配列は 2 GB までで、それを超える保存ファイル
+        /// (2026-10-24 の圧縮より前の版で保存した結果入りのもの。報告は 3.27 GB) は
+        /// <see cref="File.ReadAllBytes(string)"/> の時点で読めなかった。</para>
+        /// </summary>
+        internal static Stream OpenSaveFileStream(string filePath)
+        {
+            var file = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read,
+                bufferSize: 1024 * 1024, FileOptions.SequentialScan);
+            try
+            {
+                Span<byte> magic = stackalloc byte[2];
+                int got = file.ReadAtLeast(magic, magic.Length, throwOnEndOfStream: false);
+                file.Position = 0;
+                return IsCompressed(magic[..got]) ? new GZipStream(file, CompressionMode.Decompress) : file;
+            }
+            catch
+            {
+                file.Dispose();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// 先頭の読み取りの上限。入力の節がこれより長いときは、ここまでで止める
+        /// (版の欄は先頭にあるので読める。読み込みで使わなかった項目の知らせだけが出なくなる)。
+        /// </summary>
+        internal const int SaveFileHeadLimitBytes = 256 * 1024 * 1024;
+
+        /// <summary>
+        /// 保存ファイルの先頭から、入力の節 (InputModel) を読み終えたところまでを返す (BOM は除く)。
+        /// 版の確認 (<see cref="PeekFormatVersion(ReadOnlySpan{byte})"/>) と項目名の収集
+        /// (<see cref="InputSectionDocument"/>) に使う。解析結果の節は読まない。
+        /// </summary>
+        internal static byte[] ReadSaveFileHead(string filePath)
+        {
+            using var stream = OpenSaveFileStream(filePath);
+            var buffer = new byte[1024 * 1024];
+            int length = 0;
+            while (true)
+            {
+                length += stream.ReadAtLeast(buffer.AsSpan(length), buffer.Length - length, throwOnEndOfStream: false);
+                bool atEnd = length < buffer.Length;
+                if (atEnd || buffer.Length >= SaveFileHeadLimitBytes || HeadCoversInputSection(WithoutBom(buffer.AsSpan(0, length))))
+                    break;
+                Array.Resize(ref buffer, buffer.Length * 2);
+            }
+            return WithoutBom(buffer.AsSpan(0, length)).ToArray();
+        }
+
+        private static ReadOnlySpan<byte> WithoutBom(ReadOnlySpan<byte> json)
+            => json.StartsWith((ReadOnlySpan<byte>)[0xEF, 0xBB, 0xBF]) ? json[3..] : json;
+
+        /// <summary>
+        /// 途中までの JSON が、入力の節を最後まで含んでいるか。続きを読んでも変わらないとき
+        /// (JSON でない・入力の節より先に別の形が来る) も true。
+        /// </summary>
+        private static bool HeadCoversInputSection(ReadOnlySpan<byte> head)
+        {
+            var reader = new Utf8JsonReader(head, isFinalBlock: false, new JsonReaderState(
+                new JsonReaderOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip }));
+            try
+            {
+                if (!reader.Read()) return false;
+                if (reader.TokenType != JsonTokenType.StartObject) return true;
+                while (reader.Read())
+                {
+                    if (reader.TokenType != JsonTokenType.PropertyName) return true;
+                    bool isInput = reader.ValueTextEquals("InputModel");
+                    if (!reader.Read() || !reader.TrySkip()) return false;
+                    if (isInput) return true;
+                }
+                return false;
+            }
+            catch (JsonException) { return true; }
         }
 
         /// <summary>
@@ -522,7 +606,7 @@ namespace PileDesign.Services
                         FileOptions.Asynchronous | FileOptions.SequentialScan))
                     {
                         await using (var gzip = new GZipStream(stream, SaveCompressionLevel, leaveOpen: true))
-                            await gzip.WriteAsync(prepared.Payload!);
+                            await prepared.Payload!.WriteContentToAsync(gzip);
                         await stream.FlushAsync();
                         fileSize = stream.Length;
                     }
@@ -689,42 +773,34 @@ namespace PileDesign.Services
             if (!File.Exists(filePath))
                 throw new FileNotFoundException("ファイルが見つかりません。", filePath);
 
-            byte[] json;
-            try
-            {
-                json = ReadSaveFileBytes(filePath);
-            }
-            catch (InvalidDataException ex)
-            {
-                throw new InvalidOperationException(
-                    $"圧縮したファイルを展開できませんでした。ファイルが破損している可能性があります。\n{filePath}", ex);
-            }
-            catch (IOException ex)
-            {
-                throw new IOException($"ファイルの読込に失敗しました。\n別のプロセスで使用中の可能性があります。\n{filePath}", ex);
-            }
+            // ファイル全体を 1 つの配列には読まない (配列は 2 GB まで。OpenSaveFileStream 参照)。
+            // 版の確認と項目名の収集には先頭 (入力の節まで) だけを読み、復元は流し読みで行う。
+            byte[] head = ReadWithFileErrors(filePath, () => ReadSaveFileHead(filePath));
 
             // 版は復元より先に見る。新しい版のファイルは形が変わっていることがあり、先に復元すると
             // 「ファイルが破損している」と出て、プログラムを更新すれば開けることが伝わらなかった。
-            ThrowIfNewerFormat(PeekFormatVersion(json));
+            ThrowIfNewerFormat(PeekFormatVersion(head));
 
-            ProjectData? projectData;
-            try
+            ProjectData? projectData = ReadWithFileErrors(filePath, () =>
             {
-                projectData = JsonSerializer.Deserialize<ProjectData>(json, _jsonOptions);
-            }
-            catch (System.Text.Json.JsonException ex)
-            {
-                throw new InvalidOperationException(
-                    $"ファイルのJSON形式が不正です。ファイルが破損しているか、対応していない形式です。\n{filePath}", ex);
-            }
+                try
+                {
+                    using var stream = OpenSaveFileStream(filePath);
+                    return JsonSerializer.Deserialize<ProjectData>(stream, _jsonOptions);
+                }
+                catch (System.Text.Json.JsonException ex)
+                {
+                    throw new InvalidOperationException(
+                        $"ファイルのJSON形式が不正です。ファイルが破損しているか、対応していない形式です。\n{filePath}", ex);
+                }
+            });
 
             if (projectData == null)
                 throw new InvalidOperationException("ファイル形式が不正です。");
 
             // 今の版で読み込みに使わなかった項目を、あとで見つけるために控える (入力の節だけ)。
             // 文書全体を木にすると解析結果の分まで作るので、入力の節までの頭だけを読む (InputSectionDocument)
-            try { projectData.InputPropertyNamesInFile = LoadCompatibilityReport.CollectPropertyNames(InputSectionDocument(json), "InputModel"); }
+            try { projectData.InputPropertyNamesInFile = LoadCompatibilityReport.CollectPropertyNames(InputSectionDocument(head), "InputModel"); }
             catch (System.Text.Json.JsonException ex) { Serilog.Log.Debug(ex, "[読込] 項目名を集められませんでした"); }
 
             // 先読みで版を読めなかったとき (版の欄が数でないなど) のために、復元したあとにも見る
@@ -732,6 +808,40 @@ namespace PileDesign.Services
 
             return projectData;
         }
+
+        /// <summary>
+        /// 保存ファイルを読む処理を行い、ファイルの読み取りの失敗を利用者向けの理由に置き換える。
+        /// 「別のプロセスで使用中」は共有違反のときだけ言う。以前はどの読み取りの失敗にもそう出していたため、
+        /// 2 GB を超えるファイルが読めなかったときも使用中と案内していた (2026-11-27 の報告)。
+        /// </summary>
+        private static T ReadWithFileErrors<T>(string filePath, Func<T> read)
+        {
+            try
+            {
+                return read();
+            }
+            catch (InvalidDataException ex)
+            {
+                throw new InvalidOperationException(
+                    $"圧縮したファイルを展開できませんでした。ファイルが破損している可能性があります。\n{filePath}", ex);
+            }
+            catch (IOException ex) when (IsSharingViolation(ex))
+            {
+                throw new IOException($"ファイルの読込に失敗しました。\n別のプロセスで使用中です。\n{filePath}", ex);
+            }
+            catch (IOException ex)
+            {
+                throw new IOException($"ファイルの読込に失敗しました。\n{ex.Message}\n{filePath}", ex);
+            }
+            catch (OutOfMemoryException ex)
+            {
+                throw new InvalidOperationException(
+                    $"ファイルの読込に必要なメモリが不足しました。ほかのアプリケーションを閉じてから開き直してください。\n{filePath}", ex);
+            }
+        }
+
+        /// <summary>ほかのプロセスが開いているための失敗か (ERROR_SHARING_VIOLATION / ERROR_LOCK_VIOLATION)。</summary>
+        private static bool IsSharingViolation(IOException ex) => (ex.HResult & 0xFFFF) is 32 or 33;
 
         /// <summary>新しい版の形式なら、プログラムの更新を促して止める。</summary>
         private static void ThrowIfNewerFormat(int? formatVersion)

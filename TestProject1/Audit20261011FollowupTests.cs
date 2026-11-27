@@ -319,7 +319,7 @@ namespace TestProject1
                 horizontalAnalysisSummaryText: vm.DocxOutput.LastAnalysisSummaryText);
             Assert.IsNull(prepared.Error, prepared.Error?.ToString());
             string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"Audit20261011_{Guid.NewGuid():N}.pdjson");
-            System.IO.File.WriteAllBytes(path, prepared.Payload!);
+            System.IO.File.WriteAllBytes(path, prepared.Payload!.ToArray());
             try
             {
                 beforeLoad?.Invoke();

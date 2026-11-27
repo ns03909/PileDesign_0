@@ -51,7 +51,7 @@ namespace TestProject1
                 staleSettlementResults: MainWindowViewModel.SettlementAnalysisKeys(vm.StaleSettlementAnalyses));
             Assert.IsNull(save.Error, save.Error?.ToString());
             string path = Path.Combine(Path.GetTempPath(), $"EditUndoSaveReload_{Guid.NewGuid():N}.pdjson");
-            File.WriteAllBytes(path, save.Payload!);
+            File.WriteAllBytes(path, save.Payload!.ToArray());
             try
             {
                 var data = fileService.LoadProjectData(path);

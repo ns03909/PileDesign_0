@@ -224,7 +224,7 @@ namespace TestProject1
             string prepare = TestSource.MethodBody(src, "internal PreparedSave PrepareSave(");
             int snapshotAt = prepare.IndexOf("var inputToSave = SnapshotForSaving(", StringComparison.Ordinal);
             int validateAt = prepare.IndexOf("ValidateFinite(inputToSave)", StringComparison.Ordinal);
-            int serializeAt = prepare.IndexOf("JsonSerializer.SerializeToUtf8Bytes(", StringComparison.Ordinal);
+            int serializeAt = prepare.IndexOf("JsonSerializer.Serialize(payload", StringComparison.Ordinal);
             Assert.IsTrue(snapshotAt >= 0 && validateAt > snapshotAt && serializeAt > validateAt,
                 "NaN 検査が、写しのあと・直列化の前 (同じ時点) にありません");
 

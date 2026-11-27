@@ -38,7 +38,7 @@ namespace TestProject1
             var prepared = new FileOperationService(Options).PrepareSave(live, ana, vbcr, snapshot,
                 new DateTime(2026, 9, 26, 12, 0, 0), inputChangedSinceAnalysis: true);
             Assert.IsNull(prepared.Error, prepared.Error?.ToString());
-            return JsonSerializer.Deserialize<ProjectData>(prepared.Payload!, Options)!;
+            return JsonSerializer.Deserialize<ProjectData>(prepared.Payload!.ToArray(), Options)!;
         }
 
         [TestMethod]
