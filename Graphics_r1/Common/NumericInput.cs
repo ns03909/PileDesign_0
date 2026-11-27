@@ -125,7 +125,7 @@ namespace PileDesign.Common
             if (string.IsNullOrEmpty(entered) || entered is "-" or ".")
                 return $"空欄だったので {corrected} にしました。";
             string range = DescribeRange(min, max)?.Replace("入力範囲: ", "") ?? "";
-            return $"入力範囲 ({range}) の外なので {corrected} にしました (入力 {entered})。";
+            return $"入力範囲 ({range}) の外であるため、{corrected} にしました (入力 {entered})。";
         }
 
         /// <summary>

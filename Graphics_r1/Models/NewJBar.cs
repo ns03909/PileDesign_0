@@ -319,7 +319,7 @@ namespace PileDesign.Models
                     return $"最上部の杭区間 ({(TopSectionType.Length > 0 ? TopSectionType : "断面タイプ未設定")}) は外面に鋼管を持たないので、NewJ-BAR を溶接できません"
                         + " (NewJ-BAR は鋼管杭・SC杭・外殻鋼管場所打ちコンクリート杭の杭頭の鋼管に溶接します)";
                 if (HasInfill && PileOuterDiameter > 0 && InfillBarArea <= 0)
-                    return $"中詰補強筋の呼び名 {InfillBarSize} が分かりません";
+                    return $"中詰補強筋の呼び名 {InfillBarSize} は選択肢にありません";
                 if (HasInfill && PileOuterDiameter > 0 && InfillRadius <= 0)
                     return $"中詰補強筋の配置半径が 0 以下です (中詰めの外径 {InfillOuterDiameter:N0} mm、重心かぶり {InfillBarCover:N0} mm)";
                 return "NewJ-BAR の仮想円形断面を組めません (鋼管の外径、パイルキャップの Fc、補強筋の本数・呼び名・種類を確かめてください)";
@@ -619,7 +619,7 @@ namespace PileDesign.Models
                     + "フーチングのせん断と補強筋の長さ (フーチング上端付近まで延ばす) を別に検討してください (「NewJ-BAR 設計マニュアル (杭頭補強編)」4.2.4)");
             if (HasInfill && InfillDepth <= 0)
                 list.Add($"中詰めコンクリートの深さは、杭頂部から中詰補強筋の定着長さ + 200 = {InfillRequiredDepth:N0} mm 以上にしてください"
-                    + " (「NewJ-BAR 設計マニュアル (杭頭補強編)」4.2.1 1)。深さを入れると確かめます)");
+                    + " (「NewJ-BAR 設計マニュアル (杭頭補強編)」4.2.1 1)。深さを入力すると照査します)");
             return list;
         }
 

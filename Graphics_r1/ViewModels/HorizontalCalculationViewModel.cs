@@ -2021,7 +2021,7 @@ namespace PileDesign.ViewModels
 
                 if (needsMoreSteps)
                 {
-                    var message = $"杭の非線形解析が有効ですが、解析ステップ数が少ない可能性があります。\n\n" +
+                    var message = $"杭の非線形解析に対して、解析ステップ数が少なめです。\n\n" +
                                    suggestedAction +
                                    "\n収束性や精度を向上させるため、解析ステップ数を増やすことをお勧めします。\n" +
                                    "（推奨: レベル1は4以上、レベル2は16〜32）\n\n" +

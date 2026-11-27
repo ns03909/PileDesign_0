@@ -61,7 +61,7 @@ namespace TestProject1
                 { RoutedEvent = UIElement.PreviewTextInputEvent });
                 afterEdit = NumericInput.GetCorrectionNotice(tb);
             });
-            Assert.AreEqual("入力範囲 (1 〜 10) の外なので 10 にしました (入力 100)。", notice);
+            Assert.AreEqual("入力範囲 (1 〜 10) の外であるため、10 にしました (入力 100)。", notice);
             Assert.IsFalse(hasError, "補正した値は正しいので、エラー扱いにしない (OK の可否を HasError で決めている画面がある)");
             Assert.IsNotNull(stillThere, "文字が整え直されただけで知らせが消えています");
             Assert.IsNull(afterEdit, "入力を始めても知らせが残っています");

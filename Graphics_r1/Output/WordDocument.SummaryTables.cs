@@ -1039,7 +1039,7 @@ namespace PileDesign.Output
 
                 AddText(body,
                     $"このうち {result.OutOfScopeCount} 件は、せん断耐力の算定式 (高強度せん断補強筋の工法の指針の式) の"
-                    + "適用範囲の外である。範囲の外の限界値は指針の保証の外の値なので、"
+                    + "適用範囲の外である。範囲の外の限界値は指針の保証の外の値であるため、"
                     + "OK / NG のいずれにも数えていない (表の判定は「適用範囲外」)。"
                     + "工法の適用範囲に収まる断面に見直すか、工法を「標準」にして検討すること。");
                 AddText(body, "適用範囲の外になった理由: " + string.Join(" / ", reasons));
@@ -1218,7 +1218,7 @@ namespace PileDesign.Output
             AddHeader2(body, "検定の根拠");
             AddText(body,
                 "最大検定比の項目と NG の項目について、限界値・応答値を求めた根拠（参照した入力値・限界曲線・補間した区間・"
-                + "M/(Q·d) の内訳・式と係数）を示す。i端・j端は限界値の根拠が同じなので 1 つにまとめている。", fontSize: 9);
+                + "M/(Q·d) の内訳・式と係数）を示す。i端・j端は限界値の根拠が同じであるため、1 つにまとめている。", fontSize: 9);
 
             foreach (var item in targets.Take(MaxEvaluationBasisItems))
             {

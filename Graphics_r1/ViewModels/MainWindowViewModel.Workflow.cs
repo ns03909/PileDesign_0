@@ -212,7 +212,7 @@ namespace PileDesign.ViewModels
             {
                 inputState = $"杭 {pileCount} 本・点検できませんでした";
                 inputStatus = WorkflowStepStatus.NeedsRedo;
-                inputTip = "入力の検査を最後まで行えませんでした (件数が分かりません)。押して「入力の診断」で確かめてください。" + inputTip;
+                inputTip = "入力の検査を最後まで行えませんでした (件数を確定できません)。押して「入力の診断」で確かめてください。" + inputTip;
             }
             else
             {

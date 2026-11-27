@@ -2891,7 +2891,7 @@
                                                             <Button.ToolTip>
                                                                 <StackPanel>
                                                                     <TextBlock Text="選択した杭を 1 行上へ（Alt+↑）" />
-                                                                    <TextBlock Text="杭 No. は表の並び順なので、番号も付け直します。行見出しをドラッグしても動かせます。"/>
+                                                                    <TextBlock Text="杭 No. は表の並び順であるため、番号も付け直します。行見出しをドラッグしても動かせます。"/>
                                                                 </StackPanel>
                                                             </Button.ToolTip>
                                                         </Button>
@@ -2901,7 +2901,7 @@
                                                             <Button.ToolTip>
                                                                 <StackPanel>
                                                                     <TextBlock Text="選択した杭を 1 行下へ（Alt+↓）" />
-                                                                    <TextBlock Text="杭 No. は表の並び順なので、番号も付け直します。行見出しをドラッグしても動かせます。"/>
+                                                                    <TextBlock Text="杭 No. は表の並び順であるため、番号も付け直します。行見出しをドラッグしても動かせます。"/>
                                                                 </StackPanel>
                                                             </Button.ToolTip>
                                                         </Button>

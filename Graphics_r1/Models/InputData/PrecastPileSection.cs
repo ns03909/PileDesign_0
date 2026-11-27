@@ -1914,8 +1914,8 @@ namespace PileDesign.Models.InputData
                     rows.Add(("N", $"{F3(axialN / 1000)} kN"));
                     rows.Add(("β = β1·β2", BetaText(isFactored, F3(UltimateShearBeta))));
                     string formula = aOverD <= 1.0
-                        ? "Qu = β·sQun。a/D ≦ 1.0 なので sQun はコンクリート充填鋼管構造設計施工指針の円形鋼管のせん断強度式"
-                        : $"Qu = β·sQun。a/D > 1.0 なので sQun = {F3(SteelPipeContribution)} × (8.26) 式 (鋼管部分のみが抵抗、その半分程度を鋼管寄与分とする)";
+                        ? "Qu = β·sQun。a/D ≦ 1.0 であるため、sQun はコンクリート充填鋼管構造設計施工指針の円形鋼管のせん断強度式"
+                        : $"Qu = β·sQun。a/D > 1.0 であるため、sQun = {F3(SteelPipeContribution)} × (8.26) 式 (鋼管部分のみが抵抗、その半分程度を鋼管寄与分とする)";
                     return new ShearLimitBasis(formula, rows, GetUltimateLimitShear(monQd, axialN, isFactored));
                 }
             }

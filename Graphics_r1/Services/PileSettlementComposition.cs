@@ -148,7 +148,7 @@ namespace PileDesign.Services
 
         /// <summary>群杭沈下の記録が単杭沈下と別の荷重ケースのときの理由。</summary>
         internal static string DescribeOtherLoadCase(GroupSettlementCaseRecord record, string? singleCase)
-            => $"群杭沈下 ({CaseNameOf(record)}) は単杭沈下 ({(singleCase is null or "VL" ? "常時" : singleCase)}) と別の荷重ケースなので足していません"
+            => $"群杭沈下 ({CaseNameOf(record)}) は単杭沈下 ({(singleCase is null or "VL" ? "常時" : singleCase)}) と別の荷重ケースであるため、足していません"
                + " (同じ荷重ケースの群杭沈下を表示してください)";
 
         /// <summary>記録の呼び名 (常時の記録は「常時」)。理由の文に使う。</summary>

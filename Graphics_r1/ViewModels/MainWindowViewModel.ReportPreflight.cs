@@ -138,7 +138,7 @@ namespace PileDesign.ViewModels
             // 検定のまとめそのものが取れなかった (例外)。件数が無いことを「確かめることが無い」と同じに扱わない (2026-10-18)。
             // 以前はログに残すだけで、ほかに項目が無ければ確認の画面も出さずに作っていた
             if (evaluationUnavailable)
-                items.Add(new("検定の状態を確認できませんでした (理由はログに記録しています)。NG や判定できない項目があるかは分かりません。",
+                items.Add(new("検定の状態を確認できませんでした (理由はログに記録しています)。NG や判定できない項目の有無は、ダッシュボードで確認してください。",
                     ReportPreflightSeverity.Warning, ReportPreflightTarget.Dashboard));
 
             foreach (var part in evaluationFailures ?? [])

@@ -42,7 +42,7 @@ namespace PileDesign.Views
 
         private void AddBotGreeting()
         {
-            var greeting = "こんにちは。このプログラムの使い方や機能について、わからないことを質問してください。\n" +
+            var greeting = "このプログラムの使い方や機能について、質問を入力してください。\n" +
                            "ヘルプ文書 (help.html) を検索して、関連する項目を表示します。";
             var bubble = CreateBotBubble();
             var text = new TextBlock

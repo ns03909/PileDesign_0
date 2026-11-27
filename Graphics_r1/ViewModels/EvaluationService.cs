@@ -778,7 +778,7 @@ namespace PileDesign.ViewModels
         /// 杭の要素 (または杭頭の回転ばね) がどの杭のものか分からないときの理由。解析結果と入力のつながりが崩れている。
         /// 杭が分からないと軸力 (限界値が軸力で変わる) を決められないので、別の杭や 0 で代えずに検定不能にする。
         /// </summary>
-        internal const string UnlinkedPileReason = "どの杭の結果か分からないため検定できません (解析結果と入力の対応が崩れています。水平解析をやり直してください)";
+        internal const string UnlinkedPileReason = "解析結果と杭の対応が取れないため検定できません (入力が解析後に変わっています。水平解析をやり直してください)";
 
         internal const string NoResultReason = "この荷重条件の解析結果がありません (再解析してください)";
 
@@ -1520,7 +1520,7 @@ namespace PileDesign.ViewModels
                 var (axialN, axialSource) = ResolveCheckAxialForce(input, pile, stepResult.LoadCase?.No ?? 0, level, stepResult.LoadCombination, headFxi);
 
                 string section = $"{jbar.Count}-{jbar.Size} ({jbar.Grade})・仮想円形断面 Dc = {jbar.VirtualDiameter:N1} mm・Fc = {jbar.Fc:0.#} N/mm²"
-                    + (jbar.UsesRing ? "・補強筋は円環に置き換え" : "・補強筋 8 本未満なので配置を考えた弱軸方向")
+                    + (jbar.UsesRing ? "・補強筋は円環に置き換え" : "・補強筋 8 本未満であるため、配置を考えた弱軸方向")
                     + (jbar.HasInfill ? $"・中詰補強筋 {jbar.InfillBarCount}-{jbar.InfillBarSize} ({jbar.InfillBarGrade}) を半径 {jbar.InfillRadius:N1} mm の円環として算入" : "");
 
                 // ── 曲げ ──

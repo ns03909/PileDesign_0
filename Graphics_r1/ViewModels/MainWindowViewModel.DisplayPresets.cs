@@ -355,7 +355,7 @@ namespace PileDesign.ViewModels
             string? name = AskDisplayPresetName?.Invoke(_selectedDisplayPreset is { } s && !IsBuiltInDisplayPresetName(s) ? s : "");
             if (string.IsNullOrWhiteSpace(name)) return;
             if (!SaveDisplayPreset(name))
-                MessageService.ShowWarning($"「{name.Trim()}」は用意したプリセットの名前なので使えません。別の名前にしてください。", "表示プリセット");
+                MessageService.ShowWarning($"「{name.Trim()}」は用意したプリセットの名前であるため、使えません。別の名前にしてください。", "表示プリセット");
         }
 
         /// <summary>選んでいる保存したプリセットを消す。</summary>

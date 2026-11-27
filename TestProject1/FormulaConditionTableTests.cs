@@ -662,7 +662,7 @@ namespace TestProject1
             Assert.IsTrue(pcr < pyt && pyt < pyc, "(前提) N = 0 は (a)");
             StringAssert.Contains(table, $"$M_{{cr}} = {K(mcr)}$ kN·m・$\\phi_{{cr}} = {P3(pcr)} \\times 10^{{-3}}$ 1/m");
             StringAssert.Contains(table, $"$M_{{yt}} = {K(myt)}$ kN·m・$\\phi_{{yt}} = {P2(pyt)} \\times 10^{{-3}}$ 1/m");
-            StringAssert.Contains(table, $"$\\phi_{{yc}} = {P2(pyc)} \\times 10^{{-3}}$ 1/m なので (a)");
+            StringAssert.Contains(table, $"$\\phi_{{yc}} = {P2(pyc)} \\times 10^{{-3}}$ 1/m であるため、(a)");
             StringAssert.Contains(table, $"圧壊 ${K(mcu)}$・破断 ${K(mtf)}$ で $M_{{u0}} = {K(Math.Min(mcu, mtf))}$ kN·m");
 
             var (phis, ms) = s.GetMPhiRelationship(0); // 1/m・kN·m
@@ -1226,7 +1226,7 @@ namespace TestProject1
             double avg = soilPile.SmartMagnumShaftAverages().Ns!.Value, k = 30.0 / avg;
             Assert.AreEqual(984.0 / 19.6, avg, 1e-9, "(前提) 有効長で重み付けた平均");
             var layers = soilPile.PileCircumVerticals.OrderByDescending(p => p.Top).ToList();
-            StringAssert.Contains(table, $"$\\bar{{N}}_s = (600 + 384)/19.6 = {F1(avg)}$ で範囲の外なので、各層を $30/{F1(avg)}$ 倍して "
+            StringAssert.Contains(table, $"$\\bar{{N}}_s = (600 + 384)/19.6 = {F1(avg)}$ で範囲の外であるため、各層を $30/{F1(avg)}$ 倍して "
                 + $"$\\tau_2 = 5.0 \\times {F1(60 * k)} = {F1(layers.First().Tau2)}$・$5.0 \\times {F1(40 * k)} = {F1(layers.Last().Tau2)}$ kN/m²");
         }
 
@@ -1246,7 +1246,7 @@ namespace TestProject1
             pile.UpdateProperties();
             double avg = pile.HybridShaftAverages().Ns!.Value, k = 30.0 / avg;
             var top = pile.PileCircumVerticals.OrderByDescending(p => p.Top).First();
-            StringAssert.Contains(table, $"$\\bar{{N}}_s = (900 + 125)/25 = {F1(avg)}$ で範囲の外なので、各層を $30/{F1(avg)}$ 倍して上の層 $\\tau_2 = 4.4 \\times {F1(45 * k)} = {F1(top.Tau2)}$ kN/m²");
+            StringAssert.Contains(table, $"$\\bar{{N}}_s = (900 + 125)/25 = {F1(avg)}$ で範囲の外であるため、各層を $30/{F1(avg)}$ 倍して上の層 $\\tau_2 = 4.4 \\times {F1(45 * k)} = {F1(top.Tau2)}$ kN/m²");
         }
 
         /// <summary>

@@ -90,7 +90,7 @@ namespace PileDesign.Services
                     // どちらも杭配置の入力で、入れ忘れると群杭の影響が消えたまま計算が通る。
                     if (p.GroupPileFactor > 1.0)
                         warnings.Add(Diagnostic.Notice(affects, at, $"杭 No.{p.No}: 群杭係数 ξ = {p.GroupPileFactor:N3} が 1 を超えています " +
-                                     "(群杭は水平地盤反力を下げる側なので 1 以下が通常)。"));
+                                     "(群杭は水平地盤反力を下げる側であるため、1 以下が通常)。"));
                     if (!p.ConsidersPileSpacing) spacingUnset.Add(p);
                 }
 
@@ -721,7 +721,7 @@ namespace PileDesign.Services
                 {
                     notices.Add(Diagnostic.Notice(DiagnosticSeverity.Warning, DiagnosticTarget.PileBody(i + 1),
                         $"杭体{i + 1}: パイルキャップの Fc ({pileTop.PileCapFc:0.#} N/mm²) が 21 N/mm² 未満です。"
-                        + $"{top}は基礎部コンクリートを Fc ≧ 21 N/mm² としており、PC リングのせん断耐力の表も Fc = 21 の値なので、"
+                        + $"{top}は基礎部コンクリートを Fc ≧ 21 N/mm² としており、PC リングのせん断耐力の表も Fc = 21 の値であるため、"
                         + "PC リングのせん断の検定は耐力を過大に見ています。",
                         "パイルキャップの Fc を 21 N/mm² 以上にする"));
                 }

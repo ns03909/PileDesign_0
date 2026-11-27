@@ -29,7 +29,7 @@
             <Style.Triggers>
                 <DataTrigger Binding="{Binding IsGroupPileLoadDiaFromToe}" Value="True">
                     <Setter Property="Foreground" Value="{StaticResource ReadOnlyBrush}"/>
-                    <Setter Property="ToolTip" Value="未入力なので杭先端径を使っています。値を入れるとその値を使います。"/>
+                    <Setter Property="ToolTip" Value="未入力であるため、杭先端径を使っています。値を入れるとその値を使います。"/>
                 </DataTrigger>
             </Style.Triggers>
         </Style>

@@ -665,7 +665,7 @@ namespace PileDesign.Models.InputData
                     {
                         hasWarning = true;
                         warningMessage += $"- 土質点番号 {groundMassData.No}: 細粒分含有率 Fc が 50% を超えています ({groundMassData.Fc:0.##}%)。"
-                            + "基礎指針'19 図3.2.2 の範囲外なので、N 値の補正 ΔNf は Fc = 50% の値 (11) で読んでいます。\n";
+                            + "基礎指針'19 図3.2.2 の範囲外であるため、N 値の補正 ΔNf は Fc = 50% の値 (11) で読んでいます。\n";
                     }
                     // 最下層より深い土質点は、どの土層からも密度などを写せない。密度 0 のまま地盤の
                     // 計算に入ると、せん断ばね剛性が 0 になってその下の地盤変位が求まらない

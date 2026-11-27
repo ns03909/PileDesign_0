@@ -111,7 +111,7 @@ namespace PileDesign.ViewModels
                         // 軸の意味を説明するホバー (X = 相対変位、Y = 抵抗反力合計)
                         string axisExplain =
                             "X 軸 (相対変位): 根入部節点 (NodeI, 杭側) の変位 − 地盤側 (NodeJ) の変位 の大きさ [mm]。\n"
-                            + "        ‖ (Dx_i − Dx_j, Dy_i − Dy_j) ‖ で計算。NodeJ は固定なので実質的に\n"
+                            + "        ‖ (Dx_i − Dx_j, Dy_i − Dy_j) ‖ で計算。NodeJ は固定であるため、実質的に\n"
                             + "        「杭の根入部の絶対変位」と等価。\n"
                             + "Y 軸 (反力合計): 土圧合力ばね N 本の合計反力を載荷方向に射影 [kN]。\n"
                             + "        P-y 曲線慣用に合わせ、ばねが杭を押し戻す向き (= 抵抗) を正としている。";

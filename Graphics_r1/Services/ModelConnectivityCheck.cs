@@ -137,7 +137,7 @@ namespace PileDesign.Services
                 string nos = string.Join("・", group.Select(i => $"No.{i.No}"));
                 var targets = group.Select(i => targetOf(i.No)).ToList();
                 errors.Add(Diagnostic.Input(targets[0], $"{kind} {nos} が同じ識別子を持っています。基礎梁の端点がどれを指すか決まらないため解析できません"
-                         + " (ファイルを手で直したか、複製の不具合の可能性があります。どれかを消して入力し直してください)。")
+                         + " (保存ファイルを直接編集した場合などに起こります。どれかを削除して入力し直してください)。")
                          with { MoreTargets = targets.Skip(1).ToList() });
             }
         }
