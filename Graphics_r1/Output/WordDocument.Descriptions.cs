@@ -398,7 +398,8 @@ namespace PileDesign.Output
                 "レベル1 の荷重ケースでは、杭頭の要素の i 端の曲げモーメント", Tex(@"|M| = \sqrt{M_{y}^{2} + M_{z}^{2}}"),
                 "を、そのケースの軸力", Tex(@"N"), "(杭体の曲げ・せん断の検定と同じ軸力) に対する短期許容曲げモーメント", Tex(@"M_{a}"),
                 "と比べる (同書 3.2(3))。軸力だけで短期許容を超えるときは", Tex(@"M_{a} = 0"), "(NG) とする。",
-                "レベル2 の荷重ケースでは、杭頭回転角を限界回転角", Tex(@"\theta_{u} = 0.04\,\mathrm{rad}"), "と比べる。"]);
+                "レベル2 の荷重ケースでは、杭頭回転角を限界回転角", Tex(@"\theta_{u} = 0.04\,\mathrm{rad}"), "と比べる。",
+                "どちらも耐震グレードによらない (同書の短期・終局の照査の規定による)。"]);
             AddPCRingShearDescription(body, "キャプテンパイル工法", "表 2.2.4 (長期・短期)・表 2.2.5 (終局)", "同書 3.2(5) 式 3.2.10・式 3.2.11");
             AddText(body,
                 "同書 3.2(3) が求める、終局時に杭頭が PC リングと杭体の重なりを超えて浮き上がらないことの確認 (浮き上がり量は算定しない) と、" +
@@ -421,10 +422,26 @@ namespace PileDesign.Output
                 "杭頭の要素の i 端のせん断力", Tex(@"|Q| = \sqrt{F_{y}^{2} + F_{z}^{2}}"),
                 "を、選んだ PC リングの許容せん断力・終局せん断耐力と比べる。設計用せん断力は割増ししない。",
                 "耐力は同書 " + tables + " の値とし (杭頭諸元の表に示す)、式からは求めない。",
-                "使用限界 (長期) は長期許容せん断力", Tex(@"{}_{L}Q_{a}"), "、損傷限界は短期許容せん断力", Tex(@"{}_{s}Q_{a}"),
-                "、安全限界は終局せん断耐力", Tex(@"{}_{u}Q_{r}"), "(摩擦無視) と比べる (限界状態の割り当ては杭体の曲げ・せん断と同じ)。",
+                "使用限界は長期許容せん断力", Tex(@"{}_{L}Q_{a}"), "、損傷限界は短期許容せん断力", Tex(@"{}_{s}Q_{a}"),
+                "、安全限界は終局せん断耐力", Tex(@"{}_{u}Q_{r}"), "(摩擦無視) と比べる。",
+                JointLimitStateAssignmentText(inputModel?.FundamentalInput?.SeismicGrade),
                 "終局で圧縮側の杭頭の摩擦を見込む設定のときは、", Tex(@"{}_{u}Q_{r} = \min(\text{摩擦無視} + 0.1N,\ \text{摩擦考慮上限})"), "とする。",
                 checks == null ? "" : "照査式は " + checks + " による。"]);
+        }
+
+        /// <summary>
+        /// 杭頭接合部の検定 (NewJ-BAR・PC リングのせん断) の、荷重ケースのレベルと限界状態の対応の文。
+        /// 杭体の曲げ・せん断と同じ規則 (<see cref="PileDesign.Services.LimitStateRule"/>) から組む。
+        /// 以前は「安全限界 (レベル2)」と書いていて、耐震グレード S のレベル2 (損傷限界で検定する) と食い違った (2026-11-28 の指摘)。
+        /// </summary>
+        internal static string JointLimitStateAssignmentText(string? grade)
+        {
+            static string Of(string? g, int level) =>
+                PileDesign.Services.LimitStateRule.Name(PileDesign.Services.LimitStateRule.For(g, level).Limit);
+            string used = string.IsNullOrEmpty(grade) ? "A" : grade;
+            return $"荷重ケースとの対応は杭体の曲げ・せん断と同じで、長期は{Of(used, 0)}、レベル1 は{Of(used, 1)}、" +
+                   $"レベル2 は耐震グレード A のとき{Of("A", 2)}、S のとき{Of("S", 2)}とする" +
+                   $" (本計算は耐震グレード {used} であるため、レベル2 は{Of(used, 2)}で検定する)。";
         }
 
         // キャプリングパイル工法説明
@@ -529,7 +546,13 @@ namespace PileDesign.Output
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"M_{r}"), ": 引張定着筋による最大抵抗モーメント寄与[kN·m]、応力中心距離係数 ", Tex(@"\jmath = 7/8"), "、内部偶力アーム ", Tex(@"D/2")]);
 
             AddHeader1(body, "杭頭接合部の検定 (キャプリングパイル工法)", 2);
-            AddInlineMathParagraph(body, ["杭頭回転角を限界回転角 ", Tex(@"\theta_{u} = 0.03\,\mathrm{rad}"), " と比べる。"]);
+            // レベル2 で照査するかは基本設定 (ApplyLevel1RotationLimitToLevel2、既定は照査する)。耐震グレードによらない
+            // (EvaluationService.ResolveRotationCriterion)
+            bool rotationAtLevel2 = inputModel?.FundamentalInput?.ApplyLevel1RotationLimitToLevel2 ?? true;
+            AddInlineMathParagraph(body, ["レベル1 の荷重ケースで、杭頭回転角を限界回転角 ", Tex(@"\theta_{u} = 0.03\,\mathrm{rad}"), " と比べる。",
+                "同書の規定は短期の照査であり、レベル2 の荷重ケースでも比べるかは基本設定で選ぶ",
+                rotationAtLevel2 ? " (本計算は比べる)。" : " (本計算は比べない)。",
+                "耐震グレードによらない。"]);
             AddPCRingShearDescription(body, "キャプリングパイル工法", "2.2(4)「PC リング許容せん断力と終局せん断耐力」", null);
             AddText(body,
                 "同書の設計フローにあるパイルキャップのパンチングの検討 (3.6(1) に算定式は無い) は行わない。別途確認を要する。",
@@ -602,8 +625,10 @@ namespace PileDesign.Output
             AddInlineMathParagraph(body, [
                 "杭頭の要素の i 端の曲げモーメント ", Tex(@"|M| = \sqrt{M_{y}^{2} + M_{z}^{2}}"), " とせん断力 ",
                 Tex(@"|Q| = \sqrt{F_{y}^{2} + F_{z}^{2}}"), " を、杭体の曲げ・せん断の検定と同じ軸力で求めた限界値と比べる。",
-                "使用限界 (長期) は長期許容曲げモーメント、損傷限界 (レベル1) は短期許容曲げモーメントと ", Tex(@"Q_{a}"),
-                "、安全限界 (レベル2) は終局曲げモーメントと ", Tex(@"Q_{u}"), " とする。長期のせん断は同書に値が無いため検定しない。",
+                "使用限界は長期許容曲げモーメント、損傷限界は短期許容曲げモーメントと ", Tex(@"Q_{a}"),
+                "、安全限界は終局曲げモーメントと ", Tex(@"Q_{u}"), " とする。",
+                JointLimitStateAssignmentText(inputModel?.FundamentalInput?.SeismicGrade),
+                "長期のせん断は同書に値が無いため検定しない。",
                 "軸力が仮想円形断面の軸力の範囲を超えるときは、限界値を 0 (NG) とする。"]);
             AddText(body,
                 "水平解析では杭頭を剛接合として解く。" +

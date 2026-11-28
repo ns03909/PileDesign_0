@@ -474,6 +474,10 @@ namespace TestProject1
                 Assert.AreEqual(item.LimitName == "終局" ? 1.5 * qa : qa, item.Limit, 1e-6);
             }
 
+            // 計算書の説明の、荷重ケースと限界状態の対応 (グレード A ではレベル2 が安全限界 = 終局)
+            StringAssert.Contains(PileDesign.Output.WordDocument.JointLimitStateAssignmentText(input.FundamentalInput?.SeismicGrade),
+                "レベル2 は安全限界で検定する");
+
             // 文章化 (画面と計算書)
             var sb = new System.Text.StringBuilder();
             EvaluationTextFormatter.AppendItem(sb, moments.First(i => i.LimitName == "終局"));
@@ -481,6 +485,66 @@ namespace TestProject1
             string text = sb.ToString();
             StringAssert.Contains(text, "Mu=");
             StringAssert.Contains(text, "Qa=");
+        }
+
+        /// <summary>
+        /// 耐震グレード S では、レベル2 の杭頭接合部も杭体と同じく損傷限界 (短期許容曲げモーメントと Qa) で検定し、
+        /// 計算書の説明もそう書くこと。以前の計算書は「安全限界 (レベル2) は終局曲げモーメントと Qu」とだけ書いていて、
+        /// グレード S の計算書では説明と実際の検定が食い違った (2026-11-28 の指摘)。
+        /// </summary>
+        [TestMethod]
+        [Timeout(600000)]
+        public void UnderGradeS_Level2ChecksTheJointAtTheDamageLimit_AndTheReportSaysSo()
+        {
+            MainWindowViewModel vm;
+            try
+            {
+                vm = TestProject1.ConvergenceRegression.HeadlessHorizontalRunner.RunExampleForViewModel("Example3_5", "PileExample3_5",
+                    new TestProject1.ConvergenceRegression.HeadlessHorizontalRunner.RunOptions
+                    {
+                        Level1Steps = 4, Level2Steps = 8, Parallelism = 1,
+                        Customize = im =>
+                        {
+                            im.FundamentalInput ??= new PileDesign.Models.InputData.FundamentalInput();
+                            im.FundamentalInput.SeismicGrade = "S";
+                            foreach (var pb in im.PileBodies)
+                            {
+                                pb.PileTopType = NewJBar.PileTopTypeName;
+                                pb.PileTop.PileCapFc = 30;
+                                pb.PileTop.NewJBar = new NewJBar { Grade = "WSD490", Size = "WD38J", Count = 16 };
+                            }
+                        },
+                    });
+            }
+            catch (InvalidOperationException ex) when (ex.Message.Contains("例題ロード失敗"))
+            {
+                Assert.Inconclusive(ex.Message);
+                return;
+            }
+            var input = vm.ResultInputModel!;
+            Assert.AreEqual("S", input.FundamentalInput?.SeismicGrade, "(前提) 耐震グレード S");
+            var result = EvaluationService.BuildEvaluationResult(vm, factored: true);
+            var level2 = result.Items.Where(i => i.Level == 2 &&
+                i.Kind is EvaluationKind.PileHeadJointMoment or EvaluationKind.PileHeadJointShear).ToList();
+            TestSource.AssertScanned(level2.Count, 24, "レベル2 の杭頭接合部の検定");
+            Assert.IsTrue(level2.All(i => i.LimitName == "短期許容"),
+                "グレード S のレベル2 が短期許容 (損傷限界) で検定されていません: "
+                + string.Join(", ", level2.Select(i => i.LimitName).Distinct()));
+            var jbar = input.PileBodies[0].PileTop.NewJBarFor(NewJBar.PileTopTypeName, input.PileBodies[0].PileBodySegments[0].PileSection)!;
+            foreach (var item in level2.Where(i => i.Kind == EvaluationKind.PileHeadJointShear))
+                Assert.AreEqual(jbar.ShortTermAllowableShear * 1e-3, item.Limit, 1e-6, "グレード S のレベル2 のせん断は Qa");
+
+            // 計算書の説明 (損傷限界 = 短期許容曲げモーメントと Qa) と一致する
+            string text = PileDesign.Output.WordDocument.JointLimitStateAssignmentText(input.FundamentalInput!.SeismicGrade);
+            StringAssert.Contains(text, "レベル2 は損傷限界で検定する");
+            StringAssert.Contains(text, "S のとき損傷限界");
+            string src = TestSource.Read("Graphics_r1", "Output", "WordDocument.Descriptions.cs");
+            string newJBar = TestSource.MethodBody(src, "private void AddDescriptionNewJBar(Body body, bool hasInfill)");
+            StringAssert.Contains(newJBar, "損傷限界は短期許容曲げモーメントと ");
+            StringAssert.Contains(newJBar, "JointLimitStateAssignmentText(", "NewJ-BAR の説明が限界状態の対応を規則から組んでいません");
+            Assert.IsFalse(newJBar.Contains("(レベル2)", StringComparison.Ordinal), "レベル2 を安全限界と決め打ちしています");
+            string pcRing = TestSource.MethodBody(src, "private void AddPCRingShearDescription(");
+            StringAssert.Contains(pcRing, "JointLimitStateAssignmentText(", "PC リングのせん断の説明が限界状態の対応を規則から組んでいません");
         }
     }
 }
