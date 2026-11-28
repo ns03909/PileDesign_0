@@ -82,6 +82,11 @@ namespace PileDesign.Output
             {
                 int s = pos;
                 while (pos < len && char.IsLetter(tex[pos])) pos++;
+                // 英字でない 1 文字の空白の命令 (\, \: \; \! と "\ ")。以前は英字だけを読んだので命令名が空になり、
+                // 後ろの「,」がそのまま文字として計算書に出ていた (「300〜1200,mm」「0.03,rad」。2026-11-28)。
+                // \\ (改行) と \{ \} は従来どおり (ここでは読まない)
+                if (pos == s && pos < len && ",:;! ".Contains(tex[pos]))
+                    return tex[pos++].ToString();
                 return tex[s..pos];
             }
 
@@ -127,6 +132,7 @@ namespace PileDesign.Output
                 ":" => "\u2005",
                 ";" => "\u2003",
                 "!" => "",
+                " " => " ",
                 // 不等号コマンド
                 "ge" => "≥",
                 "geq" => "≥",

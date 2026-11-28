@@ -99,5 +99,25 @@ namespace TestProject1
                     $"\\{cmd} が空白文字に写っていません: {m.Groups[1].Value}");
             }
         }
+
+        /// <summary>
+        /// 英字でない 1 文字の空白の命令 (\, \: \; \! と "\ ") が空白になり、記号が文字として残らないこと。
+        /// 以前は命令の名前を英字だけで読んだので名前が空になり、「,」がそのまま出ていた
+        /// (計算書の「D = 300〜1200,mm」「θu = 0.03,rad」。2026-11-28 に発見)。
+        /// </summary>
+        [TestMethod]
+        public void SymbolSpacingCommands_DoNotLeaveTheirCharacter()
+        {
+            foreach (string tex in new[] { @"300\text{〜}1200\,\mathrm{mm}", @"a\:b", @"a\;b", @"a\!b", @"\min(a,\ b)" })
+            {
+                string text = PileDesign.Output.WordDocument.Tex(tex).InnerText;
+                string withoutCommaInArgs = tex.Contains("min") ? text.Replace("a,", "a") : text;
+                Assert.IsFalse(withoutCommaInArgs.Contains(',') || text.Contains(':') || text.Contains(';') || text.Contains('!'),
+                    $"{tex} → 「{text}」: 空白の命令の記号が文字として残っています");
+            }
+            StringAssert.Contains(PileDesign.Output.WordDocument.Tex(@"1200\,\mathrm{mm}").InnerText, "1200 mm");
+            // 改行 (\\) は従来どおり文字にしない
+            Assert.IsFalse(PileDesign.Output.WordDocument.Tex(@"a \\ b").InnerText.Contains('\\'));
+        }
     }
 }
