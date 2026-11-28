@@ -23,13 +23,19 @@ namespace PileDesign.Services
         internal sealed record Difference(int PileBodyNo, int PileNo, string CaseKey, double AxialN, string Detail);
 
         /// <summary>
-        /// 比べた結果。<see cref="Compared"/> は比べた控えの数 (0 なら解析時の曲線の記録が無い)、
-        /// <see cref="ComparedBodies"/> は控えを比べた杭体番号。
+        /// 比べた結果。<see cref="Compared"/> は比べた控えの数、<see cref="ComparedBodies"/> は控えを比べた杭体番号、
+        /// <see cref="UncheckedBodies"/> は照合できない控え (軸力を読めない・杭体を決められない) があった杭体番号 (決められなければ 0)。
         /// </summary>
-        internal sealed record Result(int Compared, IReadOnlyList<Difference> Differences, IReadOnlySet<int> ComparedBodies, bool HasSnapshots = false)
+        internal sealed record Result(int Compared, IReadOnlyList<Difference> Differences, IReadOnlySet<int> ComparedBodies, bool HasSnapshots = false,
+            int Unchecked = 0, IReadOnlySet<int>? UncheckedBodies = null)
         {
-            /// <summary>この杭体の M-θ を解析に使った曲線と照合し、すべて同じだったか。</summary>
-            internal bool Verified(int pileBodyNo) => ComparedBodies.Contains(pileBodyNo) && Differences.All(d => d.PileBodyNo != pileBodyNo);
+            /// <summary>
+            /// この杭体の対象の控えを<b>すべて</b>照合し、どれも同じだったか。照合できない控えが 1 件でもあれば false
+            /// (以前は 1 件でも比べられれば照合済みとし、軸力を読めない控えがあっても旧版の注記を省いていた)。
+            /// </summary>
+            internal bool Verified(int pileBodyNo) => ComparedBodies.Contains(pileBodyNo)
+                && Differences.All(d => d.PileBodyNo != pileBodyNo)
+                && UncheckedBodies?.Contains(pileBodyNo) != true && UncheckedBodies?.Contains(0) != true;
         }
 
         /// <summary>控えの理由に書いた軸力 (解析は 1 kN に丸めた値を使い、整数で書く)。</summary>
@@ -51,7 +57,8 @@ namespace PileDesign.Services
         {
             var differences = new List<Difference>();
             var bodies = new HashSet<int>();
-            int compared = 0;
+            var uncheckedBodies = new HashSet<int>();
+            int compared = 0, uncheckedCount = 0;
             bool hasSnapshots = false;
             if (input?.PileLayoutItems == null || model?.RotationalSprings == null) return new(0, differences, bodies);
             var cache = new Dictionary<(int Body, double N), PileHeadRotationDef?>();
@@ -62,13 +69,18 @@ namespace PileDesign.Services
                 var pile = spring.FindPileLayout(input.PileLayoutItems);
                 int bodyNo = pile?.PileBodyNo ?? spring.PileBodyNo ?? 0;
                 var body = input.PileBodyAt(bodyNo);
-                if (body == null) continue;
                 foreach (var (key, snap) in spring.CaseMThetaSnapshots.OrderBy(kv => kv.Key, StringComparer.Ordinal))
                 {
                     string reason = snap.SetupReason ?? "";
                     if (reason.StartsWith("Rigid(基本設定", StringComparison.Ordinal) || reason.StartsWith("Rigid(IsPileNonLinear", StringComparison.Ordinal))
                         continue;
-                    if (AxialNOf(snap) is not double n) continue;
+                    // 照合できない控え (杭体を決められない・軸力を読めない) は数えて残す。照合済みにしない
+                    if (body == null || AxialNOf(snap) is not double n)
+                    {
+                        uncheckedCount++;
+                        uncheckedBodies.Add(body == null ? 0 : bodyNo);
+                        continue;
+                    }
                     if (!cache.TryGetValue((bodyNo, n), out var def))
                     {
                         try { def = body.GetMThetaRelationship(n); }
@@ -81,7 +93,7 @@ namespace PileDesign.Services
                     if (detail != null) differences.Add(new(bodyNo, pile?.No ?? 0, key, n, detail));
                 }
             }
-            return new(compared, differences, bodies, hasSnapshots);
+            return new(compared, differences, bodies, hasSnapshots, uncheckedCount, uncheckedBodies);
         }
 
         /// <summary>控えの曲線といまの曲線の違い。同じなら null。</summary>
@@ -96,9 +108,35 @@ namespace PileDesign.Services
             MomentRotationCurve? after = snap.Mode == RotationalSpringMode.SingleDof
                 ? (spring.Dof == RotationalDof.Ry ? now.CurveY : now.CurveX)
                 : now.CurveXY;
-            if (before == null || after == null)
-                return before == null && after == null ? null : "M-θ 曲線の有無が違う";
-            if (SameCurve(before.Points, after.Points)) return null;
+            if ((before == null) != (after == null)) return "M-θ 曲線の有無が違う";
+            if (before != null && after != null && !SameCurve(before.Points, after.Points))
+                return CurveDetail(before, after);
+
+            // 曲線の無い線形ばね (鋼管杭の鉄筋定着工法の Kθ など) と、定義が剛性・ひび割れモーメントを与えるものは値で比べる。
+            // 以前は曲線がどちらも無ければ一致とし、線形ばねの剛性が変わっても見逃した (2026-11-28 の指摘)。
+            // 解析は定義の剛性があればそれをばねに入れる (無ければ曲線の初期接線などから決めるので、曲線の比較で足りる)
+            double? kNow = snap.Mode == RotationalSpringMode.SingleDof
+                ? (spring.Dof == RotationalDof.Ry ? now.Ky : now.Kx)
+                : now.KthetaXY;
+            double? kBefore = snap.Mode == RotationalSpringMode.SingleDof ? snap.Ktheta : snap.KthetaXY;
+            if (kNow is double k && k > 0.0 && !SameValue(kBefore, k))
+                return $"回転剛性 解析時 {Format(kBefore)} → 現在 {k:N0} kN·m/rad";
+            if (snap.Mode != RotationalSpringMode.SingleDof && !SameValue(snap.McrXY, now.McrXY))
+                return $"ひび割れモーメント 解析時 {Format(snap.McrXY)} → 現在 {Format(now.McrXY)} kN·m";
+            return null;
+        }
+
+        private static string Format(double? v) => v is double d ? d.ToString("N0", CultureInfo.InvariantCulture) : "なし";
+
+        /// <summary>2 つの値が同じか (どちらも無いか、相対 1e-9 で一致)。</summary>
+        internal static bool SameValue(double? a, double? b)
+        {
+            if (a is not double x || b is not double y) return a == null && b == null;
+            return Math.Abs(x - y) <= 1e-9 * Math.Max(1e-12, Math.Max(Math.Abs(x), Math.Abs(y)));
+        }
+
+        private static string CurveDetail(MomentRotationCurve before, MomentRotationCurve after)
+        {
             double mBefore = before.Points.Count == 0 ? 0 : before.Points.Max(p => Math.Abs(p.Moment));
             double mAfter = after.Points.Count == 0 ? 0 : after.Points.Max(p => Math.Abs(p.Moment));
             double kBefore = InitialSlope(before.Points), kAfter = InitialSlope(after.Points);
@@ -138,8 +176,14 @@ namespace PileDesign.Services
                     .Select(d => $"杭体 {d.PileBodyNo} (杭 No.{d.PileNo}、{d.CaseKey}、N = {d.AxialN:N0} kN): {d.Detail}");
                 return "※ 水平解析に使った杭頭の M-θ 関係が、いまの計算方法で同じ軸力から求めたものと異なる (計算方法の変更など。"
                        + $"{result.Differences.Count} 件)。" + string.Join("。", shown)
-                       + "。応力解析は解析時の M-θ 関係で、杭頭の諸元と検定はいまの計算方法で求めている。一致させるには水平解析をやり直す。";
+                       + "。応力解析は解析時の M-θ 関係で、杭頭の諸元と検定はいまの計算方法で求めている。"
+                       + (result.Unchecked > 0 ? $"ほかに照合できない控えが {result.Unchecked} 件ある。" : "")
+                       + "一致させるには水平解析をやり直す。";
             }
+            if (result.Unchecked > 0)
+                return $"※ 水平解析に使った杭頭の M-θ 関係のうち {result.Unchecked} 件は、軸力などを読めず、いまの計算方法と同じかを確かめられない"
+                       + (result.Compared > 0 ? $" (照合できた {result.Compared} 件は同じ)" : "")
+                       + "。杭頭の諸元と検定はいまの計算方法で求めている。一致させるには水平解析をやり直す。";
             // 控えはあるが比べたものが無い = どのケースも設定で剛にした (M-θ を使っていない)。断ることはない。
             // 控えそのものが無いのは、ケースごとの M-θ を保存していない旧版の結果
             if (!result.HasSnapshots && usesPileHeadRotation)
