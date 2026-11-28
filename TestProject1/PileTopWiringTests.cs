@@ -255,8 +255,8 @@ namespace TestProject1
         public void TheReport_AddsItForEverySemiRigidMethod()
         {
             var body = TestSource.MethodBody(
-                TestSource.Read("Graphics_r1", "Output", "WordDocument.PileDiagrams.cs"),
-                "IReadOnlyList<Spec>? CurrentPileTopSpecs(");  // 諸元表の中身はここで組む (2026-11-28 に分けた)
+                TestSource.Read("Graphics_r1", "Services", "PileTopSpecsBuilder.cs"),
+                "internal static IReadOnlyList<Spec>? Build(");  // 諸元表の中身はここで組む (計算書と解析の記録で共通。2026-11-28)
 
             Assert.IsTrue(body.Contains("GetPileCapConcreteSpecs"),
                 "杭頭諸元表がパイルキャップの諸元を出していません");

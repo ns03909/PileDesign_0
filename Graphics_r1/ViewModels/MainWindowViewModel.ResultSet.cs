@@ -712,6 +712,11 @@ namespace PileDesign.ViewModels
         {
             if (CurrentInputModel == null) return;
 
+            // 水平解析に使った杭頭諸元を記録に残す (いま解析を終えた入力から、解析と同じ手順で組む)。
+            // 再解析せずに計算書にしたとき、いまの計算方法の値と比べて違いを注記するため (PileTopSpecsBuilder.ChangeNote)
+            if (runMetadata is { Kind: AnalysisKind.Horizontal, PileTopSpecs.Count: 0 })
+                runMetadata.PileTopSpecs = Services.PileTopSpecsBuilder.Record(CurrentInputModel);
+
             var runRecords = AnalysisRunMetadata.Merge(_currentResultSet?.RunRecords, runMetadata, HasResultOf);
 
             // 水平解析の結果が前回のスナップショットのままで、そのあと入力が編集されている場合は

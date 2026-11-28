@@ -5,6 +5,17 @@ using System.Text.Json.Serialization;
 
 namespace PileDesign.Models;
 
+/// <summary>水平解析に使った 1 杭体の杭頭諸元 (<see cref="AnalysisRunMetadata.PileTopSpecs"/>)。</summary>
+public sealed class AnalysisPileTopSpecs
+{
+    /// <summary>杭体番号 (1 始まり、杭体の並び順)。</summary>
+    public int PileBodyNo { get; set; }
+    /// <summary>解析したときの杭頭タイプ。いまの杭頭タイプと違えば比べない。</summary>
+    public string PileTopType { get; set; } = "";
+    /// <summary>諸元 (名前 = 項目と記号、値 = 値と単位)。</summary>
+    public List<AnalysisConditionEntry> Specs { get; set; } = [];
+}
+
 /// <summary>実行条件を記録する解析の種類。記録は種類ごとに 1 件持つ。</summary>
 public enum AnalysisKind
 {
@@ -67,6 +78,13 @@ public sealed class AnalysisRunMetadata
 
     /// <summary>水平解析以外の条件 (荷重の置き方・収束の基準など)。画面に出す名前と値の組。</summary>
     public List<AnalysisConditionEntry> Conditions { get; set; } = [];
+
+    /// <summary>
+    /// 水平解析に使った杭頭諸元 (杭体ごと。Services.PileTopSpecsBuilder.Record)。
+    /// 結果付きのファイルを再解析せずに計算書にすると、応力は解析したときの値 (Ke・Mu など) で解かれているが、
+    /// 諸元の表はいまの計算方法で組み直す。記録と比べ、違えば計算書に注記する (2026-11-28 から記録する。以前の記録では空)。
+    /// </summary>
+    public List<AnalysisPileTopSpecs> PileTopSpecs { get; set; } = [];
 
     /// <summary>解析の種類の画面の呼び名。</summary>
     public static string KindLabel(AnalysisKind kind) => kind switch

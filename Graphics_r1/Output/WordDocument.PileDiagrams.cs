@@ -346,6 +346,16 @@ namespace PileDesign.Output
                     string caption = $"杭頭諸元 — 杭体 {i + 1} ({pileBody.PileTopType ?? ""})";
                     AddAutoFigureCaption(body, caption, "表");
                     AddSpecsTable(body, specs);
+                    // 再解析せずに出す結果では、応力は解析したときの杭頭諸元 (Ke・Mu など) で解かれている。
+                    // いまの計算方法の値 (この表・検定) と違えば、その項目と解析時の値を書く (記録の無い旧版の結果はその旨)
+                    string? note = Services.PileTopSpecsBuilder.ChangeNote(i + 1, pileBody.PileTopType, specs,
+                        _source.IsHorizontalAnalysisDone && anaModel != null,
+                        _source.RunRecords.FirstOrDefault(r => r.Kind == Models.AnalysisKind.Horizontal));
+                    if (note != null)
+                    {
+                        AddText(body, note, "left");
+                        _warnings.Add($"杭体 {i + 1} の杭頭諸元: " + note.TrimStart('※', ' '));
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -355,43 +365,11 @@ namespace PileDesign.Output
         }
 
         /// <summary>
-        /// 計算書に載せる杭頭の諸元。いまの入力と、解析と同じ派生値から組む。
-        ///
-        /// <para>以前は杭頭部ウィンドウで作った諸元 (<see cref="PileTop.SelectedPileTopSpecification"/>) をそのまま使っていた。
-        /// これは保存ファイルに入るので、ウィンドウを開いた後に入力や計算が変わると (以前の版で保存したファイルで
-        /// キャプリングの Ke の求め方を直したときなど)、解析・検定とは違う古い値が計算書に出た。空のときだけ組み直していた。</para>
-        ///
-        /// <para>杭頭モデルへ杭体とパイルキャップの値を配るのは解析の入口と同じ処理 (<see cref="PileBodyInput.ApplyTopSectionToPileTop"/>。
-        /// 変わっていなければ何もしない)。ここに無い杭頭タイプは保存された諸元を使う。</para>
+        /// 計算書に載せる杭頭の諸元 (<see cref="Services.PileTopSpecsBuilder.Build"/>)。いまの入力と、解析と同じ派生値から組む。
+        /// 以前は杭頭部ウィンドウで作って保存された諸元をそのまま使っていて、入力や計算方法が変わると古い値が出た。
         /// </summary>
         internal static IReadOnlyList<Spec>? CurrentPileTopSpecs(PileBodyInput pileBody, PileTop pileTop)
-        {
-            var topSection = pileBody.PileBodySegments?.FirstOrDefault()?.PileSection;
-            string type = pileBody.PileTopType ?? "";
-            if (type == Models.NewJBar.PileTopTypeName)
-            {
-                // 杭とパイルキャップから受け取る値は保存しないので、検定と同じ値にそろえた写しから作る
-                var jbar = pileTop.NewJBarFor(type, topSection);
-                return jbar == null ? null : [.. pileTop.GetPileCapConcreteSpecs(), .. jbar.GetSpecs()];
-            }
-            if (type is "キャプテンパイル工法" or "FT-Pile構法" or "キャプリングパイル工法")
-            {
-                pileBody.ApplyTopSectionToPileTop();
-                // パイルキャップの Fc・γ・Ec は杭頭 M-θ を動かす (FT-Pile は曲げ耐力 3/5·φc·Ap·Fc と K0、
-                // キャプテンは CTPConcrete、キャプリングは Ec/Eb) ので、検算できるよう先頭に置く
-                IEnumerable<Spec>? method = type switch
-                {
-                    "キャプテンパイル工法" when pileTop.CaptainPile?.PCRing != null => pileTop.CaptainPile.GetCombinedSpecs(),
-                    "キャプリングパイル工法" when pileTop.CapringPile?.PCRing != null => pileTop.CapringPile.GetCombinedSpecs(),
-                    "FT-Pile構法" when pileTop.FTPile?.FTCap != null => pileTop.FTPile.GetCombinedSpecs(),
-                    _ => null,
-                };
-                return method == null ? null : [.. pileTop.GetPileCapConcreteSpecs(), .. method];
-            }
-            if (type.Contains("鉄筋定着工法"))
-                return pileTop.BuildRebarAnchorageSpecs(pileBody.PileBodyType, topSection);
-            return pileTop.SelectedPileTopSpecification;
-        }
+            => pileBody.PileTop == pileTop ? Services.PileTopSpecsBuilder.Build(pileBody) : null;
 
         // 4 列 (項目 / 記号 / 値 / 単位) の Spec テーブル
         // 項目列を広く取り、記号・単位列を狭くして長い項目名 (引張定着筋関連) でも 1 行に収まるよう配分
