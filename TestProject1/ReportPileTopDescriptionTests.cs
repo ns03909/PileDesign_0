@@ -128,6 +128,31 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 計算書の採用グレードの表示は、検定の規則 (LimitStateRule.NormalizeGrade: S 以外は A) と同じ値にする。
+        /// 以前は入力の値をそのまま「本計算は耐震グレード …」と出していて、想定外の値では検定 (A) と食い違った (2026-11-28 の指摘)。
+        /// </summary>
+        [TestMethod]
+        public void TheGradeInTheReport_IsTheOneTheChecksUse()
+        {
+            foreach (string? grade in new[] { null, "", "A", "S", "B", "s", " S" })
+            {
+                string used = PileDesign.Services.LimitStateRule.NormalizeGrade(grade);
+                string level2 = PileDesign.Services.LimitStateRule.Name(PileDesign.Services.LimitStateRule.For(grade, 2).Limit);
+                string text = WordDocument.JointLimitStateAssignmentText(grade);
+                StringAssert.Contains(text, $"本計算は耐震グレード {used} であるため、レベル2 は{level2}で検定する", $"grade = 「{grade}」");
+                bool unexpected = !string.IsNullOrEmpty(grade) && grade != used;
+                Assert.AreEqual(unexpected, text.Contains("想定外のため A として扱う", StringComparison.Ordinal), $"grade = 「{grade}」: {text}");
+                if (unexpected) StringAssert.Contains(text, $"入力の値「{grade}」");
+            }
+
+            // 計算条件・仮定の表と検定のまとめの「耐震性能グレード」も、正規化した値を出す (同じ食い違いがあった)
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "Output", "WordDocument.Assumptions.cs"),
+                "string grade = Services.LimitStateRule.GradeOf(", "計算条件・仮定の表が入力のグレードをそのまま出しています");
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "Output", "WordDocument.SummaryTables.cs"),
+                "string grade = Services.LimitStateRule.GradeOf(", "検定のまとめが入力のグレードをそのまま出しています");
+        }
+
+        /// <summary>
         /// 計算書の式が、実装の頭打ち・下限・上限を含めて書かれていること (2026-11-28 の指摘)。
         /// 実装の該当行も照合するので、実装を変えたらここで気づく。
         /// <list type="bullet">

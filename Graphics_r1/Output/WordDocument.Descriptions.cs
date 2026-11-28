@@ -515,10 +515,13 @@ namespace PileDesign.Output
         {
             static string Of(string? g, int level) =>
                 PileDesign.Services.LimitStateRule.Name(PileDesign.Services.LimitStateRule.For(g, level).Limit);
-            string used = string.IsNullOrEmpty(grade) ? "A" : grade;
+            // 検定と同じく正規化する (S 以外は A)。以前は入力の値をそのまま「本計算は耐震グレード …」と出していて、
+            // 想定外の値 (保存データなど) では、検定は A で行うのに計算書はその値を採用グレードとして出した (2026-11-28 の指摘)
+            string used = PileDesign.Services.LimitStateRule.NormalizeGrade(grade);
+            string unexpected = !string.IsNullOrEmpty(grade) && grade != used ? $"。入力の値「{grade}」は想定外のため A として扱う" : "";
             return $"荷重ケースとの対応は杭体の曲げ・せん断と同じで、長期は{Of(used, 0)}、レベル1 は{Of(used, 1)}、" +
                    $"レベル2 は耐震グレード A のとき{Of("A", 2)}、S のとき{Of("S", 2)}とする" +
-                   $" (本計算は耐震グレード {used} であるため、レベル2 は{Of(used, 2)}で検定する)。";
+                   $" (本計算は耐震グレード {used} であるため、レベル2 は{Of(used, 2)}で検定する{unexpected})。";
         }
 
         // キャプリングパイル工法説明

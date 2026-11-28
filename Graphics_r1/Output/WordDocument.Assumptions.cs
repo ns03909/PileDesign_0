@@ -467,7 +467,8 @@ namespace PileDesign.Output
         {
             var rows = new List<(string, string, string)>();
 
-            string grade = inputModel?.FundamentalInput?.SeismicGrade ?? "A";
+            // 表示も検定と同じく正規化する (S 以外は A)。想定外の値をそのまま出すと、検定 (A) と食い違う
+            string grade = Services.LimitStateRule.GradeOf(inputModel?.FundamentalInput);
             rows.Add(("耐震性能グレード", grade,
                 ConcreteModelOptions.MapLimitStateText(
                     // レベル2 の限界状態は検定と同じ規則 (LimitStateRule) で決める

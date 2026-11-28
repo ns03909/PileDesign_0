@@ -982,7 +982,8 @@ namespace PileDesign.Output
             // H1 に昇格 (旧: H2 で親 H1 がなく、直前の無関係な H1 の子として番号付けされていた)
             AddHeader1(body, "水平解析 検定（低減後）", 1);
 
-            string grade = inputModel?.FundamentalInput?.SeismicGrade ?? "A";
+            // 表示も検定と同じく正規化する (S 以外は A)
+            string grade = Services.LimitStateRule.GradeOf(inputModel?.FundamentalInput);
             string governing = result.Governing is { } g
                 ? $"　支配ケース: {g.Category} {g.TargetName}{g.EndLabel}（{g.LoadCaseName} {g.LoadCombinationName}）"
                 : string.Empty;
