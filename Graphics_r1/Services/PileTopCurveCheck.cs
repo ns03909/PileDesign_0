@@ -87,6 +87,14 @@ namespace PileDesign.Services
                         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or ArithmeticException) { def = null; }
                         cache[(bodyNo, n)] = def;
                     }
+                    // 曲線・剛性に NaN・無限大があると、差の比較 (>) が偽になって違う曲線を同じと見なす
+                    // (控えは非有限値を含んでも複製できる。2026-11-29 の指摘)。比べずに照合できない控えとして数える
+                    if (!IsFinite(snap) || (def != null && !IsFinite(def)))
+                    {
+                        uncheckedCount++;
+                        uncheckedBodies.Add(bodyNo);
+                        continue;
+                    }
                     compared++;
                     bodies.Add(bodyNo);
                     string? detail = Describe(snap, spring, def);
@@ -95,6 +103,20 @@ namespace PileDesign.Services
             }
             return new(compared, differences, bodies, hasSnapshots, uncheckedCount, uncheckedBodies);
         }
+
+        /// <summary>控えの曲線・剛性・ひび割れモーメントがすべて有限か (無い値は問わない)。</summary>
+        internal static bool IsFinite(MThetaCaseSnapshot s) =>
+            IsFinite(s.Curve) && IsFinite(s.CurveXY) && IsFinite(s.Ktheta) && IsFinite(s.KthetaXY) && IsFinite(s.McrXY);
+
+        /// <summary>いまの M-θ 関係の曲線・剛性・ひび割れモーメントがすべて有限か (無い値は問わない)。</summary>
+        internal static bool IsFinite(PileHeadRotationDef d) =>
+            IsFinite(d.CurveX) && IsFinite(d.CurveY) && IsFinite(d.CurveXY)
+            && IsFinite(d.Kx) && IsFinite(d.Ky) && IsFinite(d.KthetaXY) && IsFinite(d.McrXY);
+
+        private static bool IsFinite(MomentRotationCurve? c) =>
+            c == null || c.Points.All(p => double.IsFinite(p.Theta) && double.IsFinite(p.Moment));
+
+        private static bool IsFinite(double? v) => v is not double d || double.IsFinite(d);
 
         /// <summary>控えの曲線といまの曲線の違い。同じなら null。</summary>
         private static string? Describe(MThetaCaseSnapshot snap, RotationalSpring spring, PileHeadRotationDef? now)
@@ -132,6 +154,7 @@ namespace PileDesign.Services
         internal static bool SameValue(double? a, double? b)
         {
             if (a is not double x || b is not double y) return a == null && b == null;
+            if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
             return Math.Abs(x - y) <= 1e-9 * Math.Max(1e-12, Math.Max(Math.Abs(x), Math.Abs(y)));
         }
 
@@ -149,10 +172,14 @@ namespace PileDesign.Services
             return p.Theta > 0 ? p.Moment / p.Theta : 0.0;
         }
 
-        /// <summary>点の数と各点の θ・M が一致するか (相対 1e-9。同じ計算なら同じ値になる)。</summary>
+        /// <summary>
+        /// 点の数と各点の θ・M が一致するか (相対 1e-9。同じ計算なら同じ値になる)。
+        /// 非有限値があれば一致としない (NaN との比較は偽なので、差を > で見ると素通りする)。
+        /// </summary>
         internal static bool SameCurve(IReadOnlyList<(double Theta, double Moment)> a, IReadOnlyList<(double Theta, double Moment)> b)
         {
             if (a.Count != b.Count) return false;
+            if (!a.Concat(b).All(p => double.IsFinite(p.Theta) && double.IsFinite(p.Moment))) return false;
             double scaleM = Math.Max(1e-12, a.Concat(b).Max(p => Math.Abs(p.Moment)));
             double scaleT = Math.Max(1e-15, a.Concat(b).Max(p => Math.Abs(p.Theta)));
             for (int i = 0; i < a.Count; i++)
@@ -181,7 +208,7 @@ namespace PileDesign.Services
                        + "一致させるには水平解析をやり直す。";
             }
             if (result.Unchecked > 0)
-                return $"※ 水平解析に使った杭頭の M-θ 関係のうち {result.Unchecked} 件は、軸力などを読めず、いまの計算方法と同じかを確かめられない"
+                return $"※ 水平解析に使った杭頭の M-θ 関係のうち {result.Unchecked} 件は、軸力を読めない・数値が有限でないなどの理由で、いまの計算方法と同じかを確かめられない"
                        + (result.Compared > 0 ? $" (照合できた {result.Compared} 件は同じ)" : "")
                        + "。杭頭の諸元と検定はいまの計算方法で求めている。一致させるには水平解析をやり直す。";
             // 控えはあるが比べたものが無い = どのケースも設定で剛にした (M-θ を使っていない)。断ることはない。

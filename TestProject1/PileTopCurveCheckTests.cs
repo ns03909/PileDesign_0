@@ -67,8 +67,38 @@ namespace TestProject1
             Assert.AreEqual(1, partly.Unchecked);
             Assert.AreEqual(0, partly.Differences.Count);
             Assert.IsFalse(partly.Verified(bodyNo), "照合できない控えがあるのに照合済みにしています");
-            StringAssert.Contains(PileTopCurveCheck.Note(partly, true), "1 件は、軸力などを読めず");
+            StringAssert.Contains(PileTopCurveCheck.Note(partly, true), "1 件は、軸力を読めない・数値が有限でない");
             spring.CaseMThetaSnapshots[key] = snap;
+
+            // 剛性が NaN の控え → 差の比較が偽になって一致と見なさず、照合できない控えとして数える
+            spring.CaseMThetaSnapshots[key] = Copy(snap, kthetaXY: double.NaN);
+            var nan = PileTopCurveCheck.Compare(input, model);
+            Assert.AreEqual(1, nan.Unchecked, "非有限値の控えを照合できないと数えていません");
+            Assert.IsFalse(nan.Verified(bodyNo), "非有限値の控えがあるのに照合済みにしています");
+            spring.CaseMThetaSnapshots[key] = snap;
+        }
+
+        /// <summary>曲線の点・値に NaN・無限大があれば一致としない (NaN との比較は偽なので、差を > で見ると素通りした)。</summary>
+        [TestMethod]
+        public void NonFiniteValues_AreNeverTheSame()
+        {
+            var a = new[] { (0.0, 0.0), (0.001, 100.0), (0.01, 200.0) };
+            var b = new[] { (0.0, 0.0), (0.001, double.NaN), (0.01, 500.0) };
+            Assert.IsTrue(PileTopCurveCheck.SameCurve(a, a));
+            Assert.IsFalse(PileTopCurveCheck.SameCurve(a, b));
+            Assert.IsFalse(PileTopCurveCheck.SameCurve(b, b));
+            Assert.IsFalse(PileTopCurveCheck.SameCurve(a, new[] { (0.0, 0.0), (0.001, 100.0), (double.PositiveInfinity, 200.0) }));
+            Assert.IsFalse(PileTopCurveCheck.SameValue(double.NaN, double.NaN));
+            Assert.IsFalse(PileTopCurveCheck.SameValue(1.0, double.PositiveInfinity));
+            Assert.IsTrue(PileTopCurveCheck.SameValue(null, null));
+
+            var snap = new MThetaCaseSnapshot
+            {
+                Mode = RotationalSpringMode.CombinedXY,
+                CurveXY = new MomentRotationCurve(b),
+            };
+            Assert.IsFalse(PileTopCurveCheck.IsFinite(snap));
+            Assert.IsTrue(PileTopCurveCheck.IsFinite(new MThetaCaseSnapshot { Mode = RotationalSpringMode.CombinedXY, KthetaXY = 1e5 }));
         }
 
         private static MThetaCaseSnapshot Copy(MThetaCaseSnapshot s, double? kthetaXY = null, double? axialN = null, string? reason = null) => new()
