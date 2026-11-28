@@ -224,7 +224,17 @@ namespace PileDesign.Output
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{1}"), ": 杭頭接合部の等価初期回転剛性"]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition,
-                [Tex(@"K_{2}"), ": 杭頭接合部の圧縮軸力時における2次回転剛性", Tex(@"K_{2} = \frac{M_{y} - M_{1}}{\theta_{y} - \theta_{1}}")]);
+                [Tex(@"K_{2}"), ": 杭頭接合部の圧縮軸力時における2次回転剛性", Tex(@"K_{2} = \min\left(\left|\frac{M_{y} - M_{1}}{\theta_{y} - \theta_{1}}\right|,\ K_{e}\right)")]);
+
+            // 同書の式は (My − M1)/(θy − θ1)。実装 (CaptainPile.GetThetaYDonCompressionSide) は絶対値を取り、初期剛性 Ke を上限にする
+            AddInlineMathParagraph(body, ["(同書の式は", Tex(@"K_{2} = \frac{M_{y} - M_{1}}{\theta_{y} - \theta_{1}}"),
+                "。本計算では、2 次剛性が初期剛性を超えないよう絶対値を取って", Tex(@"K_{e}"), "を上限とする。通常の入力では補正は働かない)"]);
+            // 実装は θy > θ1 のときだけ K2 を求め、それ以外は中間点を置かない (GetMThetaRelationship・GetThetaYDonCompressionSide)
+            AddInlineMathParagraph(body, ["上式は", Tex(@"\theta_{y} > \theta_{1}"), "のときに用いる。",
+                Tex(@"\theta_{y} \le \theta_{1}"), "のときは", Tex(@"K_{2}"), "を求めず、圧縮軸力時の M-θ 関係を (0, 0)・(",
+                Tex(@"\theta_{1}"), ", ", Tex(@"\min(M_{1},\ M_{u})"), ")・(", Tex(@"\theta_{u}"), ", ", Tex(@"M_{u}"),
+                ") の 3 点を結ぶ折れ線とする。終局時回転角", Tex(@"\theta_{y}' = \theta_{1} + (M_{u} - M_{1})/K_{2}"),
+                "は", Tex(@"\theta_{u}"), "で頭打ちとする。"]);
 
             AddInlineMathParagraph(body, ["あるいは、引張軸力時における初期回転剛性", Tex(@"K_{2} = \frac{M_{y}}{\theta_{y}}")]);
 
@@ -451,12 +461,49 @@ namespace PileDesign.Output
             AddInlineMathParagraph(body, [
                 "杭頭の要素の i 端のせん断力", Tex(@"|Q| = \sqrt{F_{y}^{2} + F_{z}^{2}}"),
                 "を、選んだ PC リングの許容せん断力・終局せん断耐力と比べる。設計用せん断力は割増ししない。",
-                "耐力は同書 " + tables + " の値とし (杭頭諸元の表に示す)、式からは求めない。",
+                "耐力は同書 " + tables + " の値とし" + (PileTopSpecsTableIsShown ? " (杭頭諸元の表に示す)" : "") + "、式からは求めない。",
                 "使用限界は長期許容せん断力", Tex(@"{}_{L}Q_{a}"), "、損傷限界は短期許容せん断力", Tex(@"{}_{s}Q_{a}"),
                 "、安全限界は終局せん断耐力", Tex(@"{}_{u}Q_{r}"), "(摩擦無視) と比べる。",
                 JointLimitStateAssignmentText(inputModel?.FundamentalInput?.SeismicGrade),
                 "終局で圧縮側の杭頭の摩擦を見込む設定のときは、", Tex(@"{}_{u}Q_{r} = \min(\text{摩擦無視} + 0.1N,\ \text{摩擦考慮上限})"), "とする。",
                 checks == null ? "" : "照査式は " + checks + " による。"]);
+
+            // 杭頭諸元の表は出力設定で省略できる。省略したときは、検定に使う耐力をここに書く
+            // (以前は省略しても「杭頭諸元の表に示す」と書き、無い表を参照していた。2026-11-28 の指摘)
+            if (!PileTopSpecsTableIsShown)
+            {
+                foreach (string line in PCRingCapacityLines(inputModel?.PileBodies, method))
+                    AddText(body, line, "left");
+            }
+        }
+
+        /// <summary>計算書に杭頭諸元の表を出すか (出力設定「杭頭諸元テーブル」)。</summary>
+        private bool PileTopSpecsTableIsShown => mainWindowViewModel?.DocxOutput?.IncludePileTopSpecs == true;
+
+        /// <summary>
+        /// PC リングの耐力 (杭頭諸元の表と同じ行) を杭体ごとに 1 行にした文。杭頭諸元の表を出さないときの本文用。
+        /// </summary>
+        internal static List<string> PCRingCapacityLines(IList<PileBodyInput>? bodies, string method)
+        {
+            var lines = new List<string>();
+            if (bodies == null) return lines;
+            for (int i = 0; i < bodies.Count; i++)
+            {
+                var pb = bodies[i];
+                if (pb?.PileTopType?.Contains(method) != true || pb.PileTop == null) continue;
+                (Models.PileLibrary.PCRingShearCapacity? capacity, bool friction, string? ring) = method switch
+                {
+                    "キャプテンパイル工法" when pb.PileTop.CaptainPile is { } cp => (cp.ShearCapacity, cp.UltimateShearConsidersFriction, cp.PCRing?.Name),
+                    "キャプリングパイル工法" when pb.PileTop.CapringPile is { } cr => (cr.ShearCapacity, cr.UltimateShearConsidersFriction, cr.PCRing?.Name),
+                    _ => (null, false, null),
+                };
+                var specs = new System.Collections.ObjectModel.ObservableCollection<Models.PileLibrary.Spec>();
+                Models.PileLibrary.PCRingShearTable.AddSpecs(specs, capacity, friction);
+                string values = string.Join("、", specs.Select(s => string.IsNullOrEmpty(s.Mark)
+                    ? $"{s.Item}: {s.Value}" : $"{s.Item} {s.Mark} = {s.Value} {s.Unit}".TrimEnd()));
+                lines.Add($"・杭体 {i + 1}{(string.IsNullOrEmpty(ring) ? "" : $" (PC リング {ring})")}: {values}");
+            }
+            return lines;
         }
 
         /// <summary>
@@ -496,11 +543,18 @@ namespace PileDesign.Output
                 " と杭頭回転角 ", Tex(@"\theta_{0}"), " の関係で表す。",
                 "初期回転剛性 ", Tex(@"K_{i}"), "、最大抵抗モーメント ", Tex(@"M_{u}"),
                 "、限界回転角 ", Tex(@"\theta_{u}"), " で定義される完全バイリニアでモデル化する。"]);
-            AddEq(body, @"M_{0}(\theta_{0}) = \begin{cases} K_{i}\cdot\theta_{0} & (0 \le \theta_{0} \le \theta_{y}) \\ M_{u} & (\theta_{y} < \theta_{0} \le \theta_{u}) \end{cases}, \quad \theta_{y} = M_{u}/K_{i}");
+            AddEq(body, @"M_{0}(\theta_{0}) = \begin{cases} \dfrac{M_{u}}{\theta_{y}}\cdot\theta_{0} & (0 \le \theta_{0} \le \theta_{y}) \\ M_{u} & (\theta_{y} < \theta_{0} \le \theta_{u}) \end{cases}, \quad \theta_{y} = \min\left(\dfrac{M_{u}}{K_{i}},\ \theta_{u}\right)");
             AddInlineMathParagraph(body, ["ここに、"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{i}"), ": 初期回転剛性[kN·m/rad]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"M_{u}"), ": 最大抵抗モーメント[kN·m]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\theta_{y}"), ": 降伏時回転角 (=", Tex(@"M_{u}/K_{i}"), ") [rad]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\theta_{y}"), ": 降伏時回転角 [rad]。", Tex(@"M_{u}/K_{i}"),
+                " が ", Tex(@"\theta_{u}"), " を超えるときは ", Tex(@"\theta_{u}"), " で頭打ちとし、その点の曲げモーメントを ", Tex(@"M_{u}"),
+                " とする (このとき ", Tex(@"M_{u} > K_{i}\theta_{u}"), " であるため、第 1 勾配は ", Tex(@"K_{i}"), " より大きい ",
+                Tex(@"M_{u}/\theta_{u}"), " になる)"]);
+            // 実装 (CapringPile.GetMThetaRelationship) は Mu = 0 なら θy = 0 とし、曲げモーメント 0 の曲線を返す。式の第 1 区間は 0/0 になるので分けて書く
+            AddInlineMathParagraph(body, [Tex(@"M_{u} = 0"),
+                " のとき (引張定着筋なしで引張、引張軸力が定着筋の降伏軸力以上など) は、", Tex(@"\theta_{0}"), " によらず ",
+                Tex(@"M_{0} = 0"), " とする (上式は用いない)。"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\theta_{u}"), ": 限界回転角 (=0.03rad)"]);
             AddInlineMathParagraph(body,
                 [Tex(@"K_{i}"), " および ", Tex(@"M_{u}"),
@@ -529,7 +583,8 @@ namespace PileDesign.Output
             AddEq(body, @"\begin{cases} \left(\dfrac{|N| - N_{ty}}{N_{ty}}\right)^{2} + \left(\dfrac{K_{e} - K_{i}}{K_{e} - K_{ty}}\right)^{2} = 1 & (0 \le |N| \le N_{ty}) \\ K_{i} = K_{ty} & (|N| > N_{ty}) \end{cases}");
             AddInlineMathParagraph(body,
                 ["最大抵抗モーメントは、定着筋の引張降伏軸力 ", Tex(@"N_{y}"), " に対する余裕に応じて低減される。"]);
-            AddEq(body, @"M_{u} = M_{r}\left(1 - \dfrac{|N|}{N_{y}}\right)");
+            AddEq(body, @"M_{u} = \max\left(M_{r}\left(1 - \dfrac{|N|}{N_{y}}\right),\ 0\right)");
+            AddInlineMathParagraph(body, ["引張軸力が定着筋の降伏軸力を超える (", Tex(@"|N| > N_{y}"), ") ときは ", Tex(@"M_{u} = 0"), " とする。"]);
 
             AddHeader1(body, "直列ばね Kp / Kc / Kb の定義", 2);
             AddInlineMathParagraph(body,

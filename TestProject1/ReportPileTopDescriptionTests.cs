@@ -128,6 +128,66 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// 計算書の式が、実装の頭打ち・下限・上限を含めて書かれていること (2026-11-28 の指摘)。
+        /// 実装の該当行も照合するので、実装を変えたらここで気づく。
+        /// <list type="bullet">
+        /// <item>キャプリングの θy は Mu/Ki を θu で頭打ち (CapringPile.GetMThetaRelationship)。</item>
+        /// <item>キャプリングの引張時の Mu = Mr(1 − |N|/Ny) は 0 未満を 0 (GetKiMu)。</item>
+        /// <item>キャプテンの K2 は絶対値を取って Ke を上限 (GetThetaYDonCompressionSide)。</item>
+        /// </list>
+        /// </summary>
+        [TestMethod]
+        public void TheFormulas_IncludeTheClampsOfTheImplementation()
+        {
+            string capringImpl = TestSource.Read("Graphics_r1", "Models", "CapringPile.cs");
+            StringAssert.Contains(capringImpl, "if (thetaY > ThetaU) thetaY = ThetaU;", "(前提) 実装の θy の頭打ち");
+            StringAssert.Contains(capringImpl, "if (mu < 0) mu = 0;", "(前提) 実装の Mu の下限 0");
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "Models", "CaptainPile.cs"),
+                "Math.Min(Math.Abs((My - M1) / (thetaY - theta1)), Ke)", "(前提) 実装の K2 の補正");
+
+            string src = TestSource.Read("Graphics_r1", "Output", "WordDocument.Descriptions.cs");
+            string capring = TestSource.MethodBody(src, "private void AddDescriptionCapringPile(Body body)");
+            StringAssert.Contains(capring, @"\theta_{y} = \min\left(\dfrac{M_{u}}{K_{i}},\ \theta_{u}\right)", "キャプリングの θy に頭打ちがありません");
+            StringAssert.Contains(capring, @"M_{u} = \max\left(M_{r}\left(1 - \dfrac{|N|}{N_{y}}\right),\ 0\right)", "キャプリングの引張時の Mu に下限 0 がありません");
+            string captain = TestSource.MethodBody(src, "private void AddDescriptionCaptainPile(Body body)");
+            StringAssert.Contains(captain, @"K_{2} = \min\left(\left|\frac{M_{y} - M_{1}}{\theta_{y} - \theta_{1}}\right|,\ K_{e}\right)", "キャプテンの K2 に補正がありません");
+
+            // 境界の扱い (2026-11-28 の指摘): θu で頭打ちのときの第 1 勾配は Ki より大きい (Mu/Ki > θu ⇔ Mu/θu > Ki)、
+            // Mu = 0 は 0/0 にせず M ≡ 0、キャプテンの K2 は θy > θ1 のときだけ (それ以外は 3 点の折れ線)
+            StringAssert.Contains(capringImpl, "double thetaY = (ki > 0 && mu > 0) ? mu / ki : 0;", "(前提) 実装は Mu = 0 で θy = 0 (曲げ 0 の曲線)");
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "Models", "CaptainPile.cs"), "if (thetaY - theta1 > 0)", "(前提) 実装は θy > θ1 のときだけ K2 を求める");
+            StringAssert.Contains(capring, "より大きい ", "θu で頭打ちのときの第 1 勾配の大小");
+            Assert.IsFalse(capring.Contains("より小さい ", StringComparison.Ordinal), "θu で頭打ちのときの第 1 勾配を Ki より小さいと書いています");
+            StringAssert.Contains(capring, "Tex(@\"M_{u} = 0\"),", "Mu = 0 の場合を分けて書いていません");
+            StringAssert.Contains(capring, "Tex(@\"M_{0} = 0\")", "Mu = 0 のときの M-θ (M ≡ 0) がありません");
+            StringAssert.Contains(captain, @"Tex(@""\theta_{y} \le \theta_{1}"")", "K2 を求めない場合 (θy ≤ θ1) がありません");
+        }
+
+        /// <summary>
+        /// 杭頭諸元の表を出さない設定のときは、PC リングの耐力を本文に書く。以前は省略しても「杭頭諸元の表に示す」と書き、
+        /// 計算書に無い表を参照していた (2026-11-28 の指摘)。
+        /// </summary>
+        [TestMethod]
+        public void WithoutTheSpecsTable_ThePCRingCapacitiesAreWrittenInTheText()
+        {
+            var (input, error) = IntegrationTests.BuildExampleInputModel("ExampleCAP3_7", "PileExampleCAP3_7");
+            if (input == null) Assert.Inconclusive($"例題ロード失敗: {error}");
+            var lines = WordDocument.PCRingCapacityLines(input!.PileBodies, "キャプリングパイル工法");
+            int bodies = input.PileBodies.Count(pb => pb.PileTopType?.Contains("キャプリングパイル工法") == true);
+            Assert.AreEqual(bodies, lines.Count, "キャプリングの杭体ごとに 1 行");
+            var capacity = input.PileBodies.First(pb => pb.PileTopType?.Contains("キャプリングパイル工法") == true).PileTop.CapringPile!.ShearCapacity!;
+            StringAssert.Contains(lines[0], $"sQa = {capacity.ShortQa:N0} kN");
+            StringAssert.Contains(lines[0], $"LQa = {capacity.LongQa:N0} kN");
+            StringAssert.Contains(lines[0], "uQr");
+            Assert.AreEqual(0, WordDocument.PCRingCapacityLines(input.PileBodies, "キャプテンパイル工法").Count, "別の工法の杭体を拾っています");
+
+            string src = TestSource.Read("Graphics_r1", "Output", "WordDocument.Descriptions.cs");
+            string pcRing = TestSource.MethodBody(src, "private void AddPCRingShearDescription(");
+            StringAssert.Contains(pcRing, "PileTopSpecsTableIsShown ? \" (杭頭諸元の表に示す)\"", "諸元表を出さないときも諸元表を参照しています");
+            StringAssert.Contains(pcRing, "PCRingCapacityLines(", "諸元表を出さないときに耐力を本文に書いていません");
+        }
+
+        /// <summary>
         /// キャプテンパイル工法の σmax は、実装 (CTPConcrete) の上限 2Fc を含めて書く。以前の計算書は σmax = Fc/ν² とだけ書いていて、
         /// ν = 0.70 では式の 2.04Fc に対し実装は 2Fc で、計算書の式で検算した値が合わなかった (2026-11-28 の指摘。以前からの食い違い)。
         /// </summary>
