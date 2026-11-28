@@ -314,6 +314,13 @@ namespace PileDesign.FEM
         [System.Text.Json.Serialization.JsonIgnore]
         public string? LastSetupReason { get; set; }
 
+        /// <summary>
+        /// 直前の M–θ 構成に使った軸力 (kN、1 kN に丸めた値)。ケースの控え (<see cref="MThetaCaseSnapshot.AxialN"/>) に写す。
+        /// 計算書が、解析に使った曲線といまの計算方法で同じ軸力から作った曲線を比べるのに使う (Services.PileTopCurveCheck)。
+        /// </summary>
+        [System.Text.Json.Serialization.JsonIgnore]
+        public double? LastSetupAxialN { get; set; }
+
         // Y 案: 解析中に caseModel (DeepCopy) のばねへ施した M-θ 構成を、
         // 元 model のばねへ「ケース別スナップショット」として書き戻す辞書。
         // GraphViewModel / AnalysisResultTableService はこの辞書を引いて、

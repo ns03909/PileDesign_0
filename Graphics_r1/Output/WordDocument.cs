@@ -527,6 +527,8 @@ namespace PileDesign.Output
             // どの解析の結果かを追えるように、結果の前提を書く (解析の種類ごとの実行条件は「計算条件・仮定」の章に置く)
             if (_source.AnalysisConditions is { } conditions)
                 AddText(body, conditions, "center");
+            // 解析に使った杭頭の M-θ といまの計算方法の照合。出力設定 (諸元表・計算条件の章) に依らず出す
+            AddPileTopConsistencyNotes(body);
 
             // モデル図（アイソメトリック）
             if (modelImageBytes != null && modelImageBytes.Length > 0)

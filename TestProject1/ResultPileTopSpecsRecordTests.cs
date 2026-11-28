@@ -62,6 +62,18 @@ namespace TestProject1
             StringAssert.Contains(changed, "初期回転剛性 (圧縮時) Ke (解析時 1,023,000 kN·m/rad → 現在 1,037,490 kN·m/rad)");
             Assert.IsFalse(changed!.Contains("基準強度", StringComparison.Ordinal), "同じ値の項目まで挙げています");
 
+            // 曲線の照合で M-θ が同じと確かめた杭体は、記録が無くても断らない。違う項目は検定などの値の違いとして書く
+            Assert.IsNull(PileTopSpecsBuilder.ChangeNote(1, "キャプリングパイル工法", Current, true, Record("1.1.0"), curveVerified: true));
+            StringAssert.Contains(PileTopSpecsBuilder.ChangeNote(1, "キャプリングパイル工法", Current, true,
+                Record("1.2.0", ("初期回転剛性 (圧縮時) Ke", "1,023,000 kN·m/rad")), curveVerified: true), "解析に使った曲線と照合して同じ");
+
+            // 曲線の照合の注記: 控えがあって比べたものが無い (どのケースも設定で剛) なら断らない。控えが無い旧版は断る
+            var none = new System.Collections.Generic.HashSet<int>();
+            Assert.IsNull(PileTopCurveCheck.Note(new PileTopCurveCheck.Result(0, [], none, HasSnapshots: true), true),
+                "杭頭を設定で剛にした (M-θ を使っていない) のに、記録が無いと書いています");
+            StringAssert.Contains(PileTopCurveCheck.Note(new PileTopCurveCheck.Result(0, [], none, HasSnapshots: false), true), "記録が無い");
+            Assert.IsNull(PileTopCurveCheck.Note(new PileTopCurveCheck.Result(0, [], none, HasSnapshots: false), false), "杭頭に M-θ が無いモデルで断っています");
+
             // 解析のあとに杭頭タイプを変えた (記録はあるが、この杭体・杭頭タイプのものが無い)
             StringAssert.Contains(PileTopSpecsBuilder.ChangeNote(1, "キャプテンパイル工法", Current, true,
                 Record("1.2.0", ("初期回転剛性 (圧縮時) Ke", "1,037,490 kN·m/rad"))), "記録されていない");
@@ -93,6 +105,8 @@ namespace TestProject1
                 var (input, error) = IntegrationTests.BuildExampleInputModel("ExampleCAP3_7", "PileExampleCAP3_7");
                 if (input == null) Assert.Inconclusive($"例題ロード失敗: {error}");
                 input!.FundamentalInput ??= new PileDesign.Models.InputData.FundamentalInput();
+                // 杭頭の M-θ を使うには杭を非線形で解く (例題は線形で、杭頭は設定で剛になる)
+                foreach (var lc in input.LoadCasesInput.AnalysisTargetSeismicLoadCases) lc.IsPileNonLinear = true;
 
                 var vm = new MainWindowViewModel { CurrentInputModel = input };
                 var hcvm = new HorizontalCalculationViewModel(vm) { BypassUiPromptsForTesting = true, MaxCaseDegreeOfParallelism = 4 };
@@ -127,36 +141,78 @@ namespace TestProject1
                 {
                     reopened.DocxOutput.SelectAllDocxSectionsCommand.Execute(null);
 
-                    // 記録と同じ: 注記なし
-                    string same = Report(reopened, Path.Combine(dir, "same.docx"));
-                    Assert.IsFalse(same.Contains("水平解析のときの値と異なる", StringComparison.Ordinal), "値が同じなのに注記しています");
+                    // 記録と同じ・曲線も同じ: 注記なし。解析に使った曲線と照合できている
+                    var curves = PileTopCurveCheck.Compare(reopened.ResultInputModel, reopened.CurrentModel);
+                    Assert.IsTrue(curves.Compared > 0, "(前提) 解析に使った M-θ 曲線の控えが保存されている");
+                    Assert.AreEqual(0, curves.Differences.Count, "再解析していないのに、解析時と今の M-θ 曲線が違うと判定しています: "
+                        + string.Join(" / ", curves.Differences.Select(d => d.Detail)));
+                    var (same, sameWarnings) = Report(reopened, Path.Combine(dir, "same.docx"));
+                    Assert.IsFalse(same.Contains("水平解析のときの値と異なる", StringComparison.Ordinal) || same.Contains("M-θ 関係が、いまの", StringComparison.Ordinal),
+                        "値が同じなのに注記しています");
 
-                    // 計算方法が変わる前に解析した結果 (記録の Ke が違う) を、再解析せずに出す
+                    // 以前の控えは軸力を入れていなかった: 理由の文字から読んで比べられる
+                    var spring = reopened.CurrentModel!.RotationalSprings.First(s => !s.CaseMThetaSnapshots.IsEmpty);
+                    foreach (var key in spring.CaseMThetaSnapshots.Keys.ToList())
+                    {
+                        var s0 = spring.CaseMThetaSnapshots[key];
+                        Assert.AreEqual(s0.AxialN, PileTopCurveCheck.AxialNOf(new PileDesign.FEM.MThetaCaseSnapshot { SetupReason = s0.SetupReason }),
+                            "理由の文字から読んだ軸力が、記録した軸力と違います");
+                    }
+
+                    // 計算方法が変わる前に解析した結果 (記録の Ke が違う) を、再解析せずに出す。諸元表を出さない設定でも警告は出る
                     var keEntry = reopenedRecord.PileTopSpecs.First(p => p.PileTopType == "キャプリングパイル工法").Specs
                         .Single(e => e.Name == "初期回転剛性 (圧縮時) Ke");
                     string recomputed = keEntry.Value;
                     keEntry.Value = "1,023,000 kN·m/rad";
-                    string changed = Report(reopened, Path.Combine(dir, "changed.docx"));
+                    var (changed, _) = Report(reopened, Path.Combine(dir, "changed.docx"));
                     StringAssert.Contains(changed, $"初期回転剛性 (圧縮時) Ke (解析時 1,023,000 kN·m/rad → 現在 {recomputed})");
-                    StringAssert.Contains(changed, "一致させるには水平解析をやり直す");
+                    reopened.DocxOutput.IncludePileTopSpecs = false;
+                    var (_, changedWarnings) = Report(reopened, Path.Combine(dir, "changed-nospecs.docx"));
+                    Assert.IsTrue(changedWarnings.Any(w => w.Contains("初期回転剛性 (圧縮時) Ke (解析時 1,023,000", StringComparison.Ordinal)),
+                        "杭頭諸元の表を出さない設定で、記録との違いを警告していません");
+                    keEntry.Value = recomputed;
 
-                    // 杭頭諸元を記録していない旧版の結果
+                    // 表示用の諸元は同じで、M-θ の算定だけが変わった (諸元に出ない Ke・軸力ごとの曲線)。曲線の照合で分かる。
+                    // 諸元表も計算条件の章も出さない設定でも、表紙と警告に出る
+                    reopened.DocxOutput.IncludeAssumptions = false;
+                    foreach (var key in spring.CaseMThetaSnapshots.Keys.ToList())
+                    {
+                        var s0 = spring.CaseMThetaSnapshots[key];
+                        var old = s0.CurveXY ?? s0.Curve;
+                        if (old == null) continue;
+                        var scaled = new PileDesign.FEM.MomentRotationCurve();
+                        foreach (var (theta, moment) in old.Points) scaled.Points.Add((theta, moment * 1.1));
+                        spring.CaseMThetaSnapshots[key] = new PileDesign.FEM.MThetaCaseSnapshot
+                        {
+                            Mode = s0.Mode, CurveXY = s0.CurveXY == null ? null : scaled, Curve = s0.Curve == null ? null : scaled,
+                            KthetaXY = s0.KthetaXY, Ktheta = s0.Ktheta, McrXY = s0.McrXY, AxialN = s0.AxialN, SetupReason = s0.SetupReason,
+                        };
+                    }
+                    var (methodChanged, methodWarnings) = Report(reopened, Path.Combine(dir, "method-changed.docx"));
+                    StringAssert.Contains(methodChanged, "水平解析に使った杭頭の M-θ 関係が、いまの計算方法で同じ軸力から求めたものと異なる");
+                    Assert.IsTrue(methodWarnings.Any(w => w.StartsWith("杭頭の M-θ 関係:", StringComparison.Ordinal)), "M-θ の違いを警告していません");
+
+                    // 曲線の控えも杭頭諸元の記録も無い旧版の結果: 確かめられないことと版を書く
+                    foreach (var s in reopened.CurrentModel.RotationalSprings) s.CaseMThetaSnapshots.Clear();
                     reopenedRecord.PileTopSpecs = [];
                     reopenedRecord.ApplicationVersion = "1.1.0";
-                    string old = Report(reopened, Path.Combine(dir, "old.docx"));
-                    StringAssert.Contains(old, "杭頭諸元を記録していない版 (プログラムの版 1.1.0)");
+                    reopened.DocxOutput.IncludePileTopSpecs = true;
+                    var (old11, oldWarnings) = Report(reopened, Path.Combine(dir, "old.docx"));
+                    StringAssert.Contains(old11, "解析に使った杭頭の M-θ 関係の記録が無い");
+                    StringAssert.Contains(old11, "杭頭諸元を記録していない版 (プログラムの版 1.1.0)");
+                    Assert.IsTrue(oldWarnings.Any(w => w.Contains("記録が無い", StringComparison.Ordinal)));
                 }
                 finally { try { Directory.Delete(dir, true); } catch (IOException) { } }
             }
         }
 
-        private static string Report(MainWindowViewModel vm, string path)
+        private static (string Text, System.Collections.Generic.IReadOnlyList<string> Warnings) Report(MainWindowViewModel vm, string path)
         {
             var input = vm.ResultInputModel ?? vm.CurrentInputModel!;
             var doc = new WordDocument(input, vm.CurrentModel!, vm);
             doc.CreateWordDocument(input, path);
             using var word = DocumentFormat.OpenXml.Packaging.WordprocessingDocument.Open(path, false);
-            return word.MainDocumentPart!.Document!.Body!.InnerText;
+            return (word.MainDocumentPart!.Document!.Body!.InnerText, doc.Warnings);
         }
 
         private static MainWindowViewModel SaveAndReopen(MainWindowViewModel vm)

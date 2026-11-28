@@ -288,6 +288,7 @@ namespace PileDesign.ViewModels
                 // (丸めた値をキーにしながら生の値で計算すると、同じキーに入る曲線が
                 //  「最初にそのキーを作った軸力」次第で変わり結果が実行履歴に依存する)。
                 axialN = QuantizeAxialNForMTheta(axialN);
+                spring.LastSetupAxialN = double.IsFinite(axialN) ? axialN : null;
                 var def = GetMThetaRelationshipCached(pb, pileBody, axialN);
 
                 // Serilog.Log.Debug(
@@ -455,6 +456,8 @@ namespace PileDesign.ViewModels
                     KthetaXY = s.KthetaXY,
                     Ktheta = s.Ktheta,
                     McrXY = s.McrXY,
+                    // 計算書が、いまの計算方法で同じ軸力から作った曲線と比べるのに使う (以前は入れておらず、理由の文字から読む)
+                    AxialN = s.LastSetupAxialN ?? 0.0,
                     SetupReason = s.LastSetupReason ?? "",
                 };
             }

@@ -1,4 +1,4 @@
-﻿using PileDesign.Constants;
+using PileDesign.Constants;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.Common;
@@ -347,21 +347,81 @@ namespace PileDesign.Output
                     AddAutoFigureCaption(body, caption, "表");
                     AddSpecsTable(body, specs);
                     // 再解析せずに出す結果では、応力は解析したときの杭頭諸元 (Ke・Mu など) で解かれている。
-                    // いまの計算方法の値 (この表・検定) と違えば、その項目と解析時の値を書く (記録の無い旧版の結果はその旨)
-                    string? note = Services.PileTopSpecsBuilder.ChangeNote(i + 1, pileBody.PileTopType, specs,
-                        _source.IsHorizontalAnalysisDone && anaModel != null,
-                        _source.RunRecords.FirstOrDefault(r => r.Kind == Models.AnalysisKind.Horizontal));
-                    if (note != null)
-                    {
+                    // いまの計算方法の値 (この表・検定) と違えば、その項目と解析時の値を書く (警告は表を出すかに依らず表紙のところで出す)
+                    if (PileTopSpecsNotes().TryGetValue(i + 1, out string? note))
                         AddText(body, note, "left");
-                        _warnings.Add($"杭体 {i + 1} の杭頭諸元: " + note.TrimStart('※', ' '));
-                    }
                 }
                 catch (Exception ex)
                 {
                     NoteOmitted(body, $"杭頭の諸元の表 (杭体 {i + 1})", ex);
                 }
             }
+        }
+
+        private Services.PileTopCurveCheck.Result? _pileTopCurves;
+        private bool _pileTopCurvesChecked;
+
+        /// <summary>
+        /// 水平解析に使った杭頭の M-θ 曲線と、いまの計算方法で同じ軸力から作った曲線の照合 (計算書 1 冊で 1 回)。
+        /// 水平解析の結果が無ければ null。
+        /// </summary>
+        private Services.PileTopCurveCheck.Result? PileTopCurves
+        {
+            get
+            {
+                if (!_pileTopCurvesChecked)
+                {
+                    _pileTopCurvesChecked = true;
+                    if (_source.IsHorizontalAnalysisDone && anaModel != null)
+                        _pileTopCurves = Services.PileTopCurveCheck.Compare(inputModel, anaModel);
+                }
+                return _pileTopCurves;
+            }
+        }
+
+        private Dictionary<int, string>? _pileTopSpecsNotes;
+
+        /// <summary>
+        /// 杭体ごとの、杭頭諸元の記録との違いの注記 (諸元表を出すかに依らず求める)。
+        /// M-θ を解析に使った曲線と照合して同じなら、記録の無い旧版でも断らない (<see cref="Services.PileTopSpecsBuilder.ChangeNote"/>)。
+        /// </summary>
+        private Dictionary<int, string> PileTopSpecsNotes()
+        {
+            if (_pileTopSpecsNotes != null) return _pileTopSpecsNotes;
+            _pileTopSpecsNotes = [];
+            bool hasHorizontal = _source.IsHorizontalAnalysisDone && anaModel != null;
+            if (!hasHorizontal || inputModel?.PileBodies == null) return _pileTopSpecsNotes;
+            var record = _source.RunRecords.FirstOrDefault(r => r.Kind == Models.AnalysisKind.Horizontal);
+            for (int i = 0; i < inputModel.PileBodies.Count; i++)
+            {
+                var pb = inputModel.PileBodies[i];
+                if (pb?.PileTop is not { } top) continue;
+                IReadOnlyList<Spec>? specs;
+                try { specs = CurrentPileTopSpecs(pb, top); }
+                catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or ArithmeticException) { continue; }
+                if (specs == null || specs.Count == 0) continue;
+                string? note = Services.PileTopSpecsBuilder.ChangeNote(i + 1, pb.PileTopType, specs, true, record,
+                    PileTopCurves?.Verified(i + 1) == true);
+                if (note != null) _pileTopSpecsNotes[i + 1] = note;
+            }
+            return _pileTopSpecsNotes;
+        }
+
+        /// <summary>
+        /// 表紙 (結果の前提) に書く、杭頭の M-θ 関係の照合の注記。どの出力設定でも出る場所に置き、警告にも出す
+        /// (以前は杭頭諸元の表の下だけで、表を出さない設定では何も知らせなかった。2026-11-28 の指摘)。
+        /// </summary>
+        private void AddPileTopConsistencyNotes(Body body)
+        {
+            bool usesRotation = inputModel?.PileBodies?.Any(pb => pb?.PileTopType is { } t
+                && (t is "キャプテンパイル工法" or "FT-Pile構法" or "キャプリングパイル工法" || t.Contains("鉄筋定着工法"))) == true;
+            if (PileTopCurves is { } curves && Services.PileTopCurveCheck.Note(curves, usesRotation) is { } curveNote)
+            {
+                AddText(body, curveNote, "left", fontSize: 9);
+                _warnings.Add("杭頭の M-θ 関係: " + curveNote.TrimStart('※', ' '));
+            }
+            foreach (var (no, note) in PileTopSpecsNotes().OrderBy(kv => kv.Key))
+                _warnings.Add($"杭体 {no} の杭頭諸元: " + note.TrimStart('※', ' '));
         }
 
         /// <summary>

@@ -91,14 +91,17 @@ namespace PileDesign.Services
         /// <item>記録が無い (杭頭諸元を記録していない版の結果): 解析に使った値と違うことがあると断る。</item>
         /// </list>
         /// </summary>
+        /// <param name="curveVerified">この杭体の M-θ を、解析に使った曲線と照合して同じだったか (PileTopCurveCheck)。
+        /// 同じなら、記録が無くても応力解析の前提は変わっていないので断らず、違う項目は検定などの値の違いとして書く。</param>
         internal static string? ChangeNote(int pileBodyNo, string? pileTopType, IReadOnlyList<Spec> current,
-            bool hasHorizontalResult, AnalysisRunMetadata? horizontalRecord)
+            bool hasHorizontalResult, AnalysisRunMetadata? horizontalRecord, bool curveVerified = false)
         {
             if (!hasHorizontalResult) return null;
             var recorded = horizontalRecord?.PileTopSpecs?
                 .FirstOrDefault(r => r.PileBodyNo == pileBodyNo && r.PileTopType == (pileTopType ?? ""));
             if (recorded == null)
             {
+                if (curveVerified) return null;
                 string version = string.IsNullOrEmpty(horizontalRecord?.ApplicationVersion) ? "不明" : horizontalRecord!.ApplicationVersion;
                 bool recordsSpecs = horizontalRecord?.PileTopSpecs is { Count: > 0 };
                 return recordsSpecs
@@ -113,6 +116,9 @@ namespace PileDesign.Services
                 .Select(e => $"{e.Name} (解析時 {e.Value} → 現在 {now[e.Name]})")
                 .ToList();
             if (changed.Count == 0) return null;
+            if (curveVerified)
+                return "※ 次の項目は、水平解析のときの値と異なる (計算方法の変更による): " + string.Join("、", changed) +
+                       "。杭頭の M-θ 関係は解析に使った曲線と照合して同じであり、検定はこの表の値で行っている。";
             return "※ 次の項目は、水平解析のときの値と異なる (計算方法の変更による): " + string.Join("、", changed) +
                    "。応力解析 (杭頭の M-θ) は解析時の値で、検定はこの表の値で行っている。一致させるには水平解析をやり直す。";
         }
