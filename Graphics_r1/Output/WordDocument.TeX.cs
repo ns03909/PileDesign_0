@@ -58,6 +58,33 @@ namespace PileDesign.Output
             body.Append(paragraph);
         }
 
+        /// <summary>
+        /// 環境の中身を行の区切り (\\) で分ける。波括弧の中の \\ と、\{ など 1 文字のエスケープは区切りにしない。
+        /// </summary>
+        internal static List<string> SplitTeXRows(string content)
+        {
+            var rows = new List<string>();
+            int depth = 0, start = 0;
+            for (int i = 0; i < content.Length; i++)
+            {
+                char c = content[i];
+                if (c == '\\' && i + 1 < content.Length)
+                {
+                    if (content[i + 1] == '\\' && depth == 0)
+                    {
+                        rows.Add(content[start..i]);
+                        start = i + 2;
+                    }
+                    i++; // エスケープした次の 1 文字 (\{ \} \\) は数えない
+                    continue;
+                }
+                if (c == '{') depth++;
+                else if (c == '}') depth--;
+            }
+            rows.Add(content[start..]);
+            return rows.Where(r => !string.IsNullOrWhiteSpace(r)).Select(r => r.Trim()).ToList();
+        }
+
         // 追加: 簡易 TeX -> OfficeMath パーサ（WordDocument クラス内の任意の場所に追加）
         public static DocumentFormat.OpenXml.Math.OfficeMath ParseTeXToOfficeMath(string tex)
         {
@@ -296,6 +323,42 @@ namespace PileDesign.Output
                             if (pos < len && tex[pos] == '}') pos++;
                             baseRun = GetTopBarredRun(CombineRunsToRun(inner));
                         }
+                        else if (string.Equals(cmd, "begin", StringComparison.Ordinal))
+                        {
+                            // \begin{cases} 行 \\ 行 \end{cases} → 左を { で囲んだ数式配列 (m:eqArr)。& は空白にする。
+                            // 以前は begin・cases・& が文字のまま出て、場合分けを読み分けられなかった
+                            // (キャプリングの M-θ 関係・引張時の回転剛性。2026-11-28 の指摘)
+                            SkipSpaces();
+                            string env = "";
+                            if (Peek() == '{')
+                            {
+                                int close = tex.IndexOf('}', pos);
+                                if (close < 0) close = len - 1;
+                                env = tex[(pos + 1)..close];
+                                pos = close + 1;
+                            }
+                            string endTag = @"\end{" + env + "}";
+                            int endAt = tex.IndexOf(endTag, pos, StringComparison.Ordinal);
+                            if (endAt < 0) endAt = len;
+                            string content = tex[pos..endAt];
+                            pos = System.Math.Min(len, endAt + endTag.Length);
+
+                            var array = new DocumentFormat.OpenXml.Math.EquationArray();
+                            foreach (string row in SplitTeXRows(content))
+                            {
+                                var rowMath = ParseTeXToOfficeMath(row.Replace("&", @"\quad "));
+                                array.Append(new DocumentFormat.OpenXml.Math.Base(rowMath.ChildElements.Select(c => c.CloneNode(true))));
+                            }
+                            baseRun = env == "cases"
+                                ? new DocumentFormat.OpenXml.Math.Run(new DocumentFormat.OpenXml.Math.Delimiter(
+                                    new DocumentFormat.OpenXml.Math.DelimiterProperties
+                                    {
+                                        BeginChar = new DocumentFormat.OpenXml.Math.BeginChar { Val = "{" },
+                                        EndChar = new DocumentFormat.OpenXml.Math.EndChar { Val = "" },
+                                    },
+                                    new DocumentFormat.OpenXml.Math.Base(array)))
+                                : new DocumentFormat.OpenXml.Math.Run(array);
+                        }
                         else if (string.Equals(cmd, "left", StringComparison.OrdinalIgnoreCase))
                         {
                             // \left<delim> ... \right<matching>
@@ -305,6 +368,28 @@ namespace PileDesign.Output
                             {
                                 char beginChar = tex[pos];
                                 pos++;
+                                // エスケープした区切り (\{ \| と \lbrace \langle \vert)。以前は「\」を区切りとして読み、
+                                // \right\} と対応が取れずに括弧の構造が崩れていた (キャプテンパイルのコンクリートの
+                                // 応力度式など。2026-11-28 の指摘)
+                                if (beginChar == '\\' && pos < len)
+                                {
+                                    if (char.IsLetter(tex[pos]))
+                                    {
+                                        string name = ReadWhileLetter();
+                                        beginChar = name.ToLowerInvariant() switch
+                                        {
+                                            "lbrace" => '{',
+                                            "langle" or "lang" => '<',
+                                            "vert" or "lvert" => '|',
+                                            _ => '(',
+                                        };
+                                    }
+                                    else
+                                    {
+                                        beginChar = tex[pos];
+                                        pos++;
+                                    }
+                                }
                                 char expected = MatchingRight(beginChar);
                                 // parse until \right<expected>
                                 var inner = ParseSequence('\0', expected);

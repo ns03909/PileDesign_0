@@ -119,5 +119,50 @@ namespace TestProject1
             // 改行 (\\) は従来どおり文字にしない
             Assert.IsFalse(PileDesign.Output.WordDocument.Tex(@"a \\ b").InnerText.Contains('\\'));
         }
+
+        /// <summary>
+        /// エスケープした区切り (\left\{ … \right\}、\left\lbrace) が波括弧の区切りになり、後ろの式を飲み込まないこと。
+        /// 以前は \left の直後の「\」を区切りとして読み、\right\} と対応が取れずに括弧の構造が崩れていた
+        /// (キャプテンパイルのコンクリートの応力度式。2026-11-28 の指摘)。
+        /// </summary>
+        [TestMethod]
+        public void EscapedDelimiters_BecomeBraces()
+        {
+            foreach (string tex in new[] { @"6.75\left\{ e^{-x} - e^{-y} \right\}\,\sigma", @"6.75\left\lbrace e^{-x} - e^{-y} \right\rbrace\,\sigma" })
+            {
+                var math = PileDesign.Output.WordDocument.Tex(tex);
+                var d = math.Descendants<DocumentFormat.OpenXml.Math.Delimiter>().Single();
+                var pr = d.GetFirstChild<DocumentFormat.OpenXml.Math.DelimiterProperties>()!;
+                Assert.AreEqual("{", pr.BeginChar?.Val?.Value, tex);
+                Assert.AreEqual("}", pr.EndChar?.Val?.Value, tex);
+                StringAssert.Contains(d.InnerText, "e", "括弧の中身がありません");
+                Assert.IsFalse(d.InnerText.Contains('σ'), "括弧の後ろの σ を括弧の中に飲み込んでいます: " + d.InnerText);
+                StringAssert.EndsWith(math.InnerText, "σ", "括弧の後ろが落ちています");
+                Assert.IsFalse(math.InnerText.Contains('\\') || math.InnerText.Contains("brace"), "命令が文字として残っています: " + math.InnerText);
+            }
+        }
+
+        /// <summary>
+        /// \begin{cases} が、左を { で囲んだ行ごとの数式配列になること。以前は begin・cases・& が文字のまま出て、
+        /// 場合分けを読み分けられなかった (キャプリングの M-θ 関係と引張時の回転剛性。2026-11-28 の指摘)。
+        /// </summary>
+        [TestMethod]
+        public void Cases_BecomeABracedEquationArray()
+        {
+            var math = PileDesign.Output.WordDocument.Tex(
+                @"M = \begin{cases} K\cdot\theta & (0 \le \theta \le \theta_{y}) \\ M_{u} & (\theta_{y} < \theta) \end{cases}, \quad \theta_{y} = \min\left(a,\ b\right)");
+            var array = math.Descendants<DocumentFormat.OpenXml.Math.EquationArray>().Single();
+            Assert.AreEqual(2, array.Elements<DocumentFormat.OpenXml.Math.Base>().Count(), "場合分けの行の数");
+            var brace = math.Descendants<DocumentFormat.OpenXml.Math.Delimiter>()
+                .First(d => d.Descendants<DocumentFormat.OpenXml.Math.EquationArray>().Any());
+            Assert.AreEqual("{", brace.GetFirstChild<DocumentFormat.OpenXml.Math.DelimiterProperties>()!.BeginChar?.Val?.Value);
+            string text = math.InnerText;
+            foreach (string leaked in new[] { "begin", "end", "cases", "&", "\\" })
+                Assert.IsFalse(text.Contains(leaked, StringComparison.Ordinal), $"「{leaked}」が文字として残っています: {text}");
+            StringAssert.Contains(text, "θy= min", "場合分けの後ろの式が落ちています");
+
+            CollectionAssert.AreEqual(new[] { "a & b", @"c\{d\}" }, PileDesign.Output.WordDocument.SplitTeXRows(@" a & b \\ c\{d\} ").ToArray(),
+                "行の区切りは波括弧の外の \\\\ だけ");
+        }
     }
 }
