@@ -689,6 +689,8 @@ namespace PileDesign.ViewModels
             CurrentInputModel.UpdateCountLists();
             // バイリニアコンクリート・オプションを同期し M-φ/NM キャッシュを破棄
             ApplyConcreteModelOptions();
+            // 杭頭モデルが杭体から受け取る値 (保存しない) を、合わせ直した Ec で配る (解析の入口と同じ)
+            CurrentInputModel.ApplyPileTopModelsFromSections();
 
             // 地震時軸力モード (絶対 / 変動) を InputModel から復元し、AxialForceModeContext + UI に反映。
             // VL/L1/L2 の値は既にロード済みなので、Context フラグの設定で即時に変動列の表示も切替可能。
@@ -1200,6 +1202,8 @@ namespace PileDesign.ViewModels
                 // 杭断面の Ec は読込の時点の (前の作業の) 材料モデル化オプションで導かれている。
                 // 控えは控え自身の基本設定で求め直す (今の入力は ApplyConcreteModelOptions が合わせる。控えには届かない)
                 snapshot.RecalculateConcreteEWithOwnOptions();
+                // 杭頭モデルが杭体から受け取る値 (保存しない) を、求め直した Ec で配る (解析の入口と同じ)
+                snapshot.ApplyPileTopModelsFromSections();
 
                 // 単杭沈下の曲線は入力の節に書き出さないので、スナップショットの
                 // 土層-杭セットには入っていない。結果表示はスナップショットを読むため写す。

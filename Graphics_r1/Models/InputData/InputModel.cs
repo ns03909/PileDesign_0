@@ -1541,6 +1541,23 @@ namespace PileDesign.Models.InputData
             foreach (var pb in PileBodies) pb?.SyncPileTopFromTopSection();
         }
 
+        /// <summary>
+        /// すべての杭体の半剛接合の杭頭モデル (キャプテン・キャプリング・F.T.Pile) へ、杭体の最上段の断面と
+        /// パイルキャップの値を配る (<see cref="PileBodyInput.ApplyTopSectionToPileTop"/>。変わっていなければ何もしない)。
+        ///
+        /// <para>受け取る値 (キャプテンの杭体 Fc・Ec、キャプリングの Ep・EI) は保存せず JSON の複製にも入らないので、
+        /// 解析結果の控え (JSON で複製する) と読み込んだ入力では、配るまで失われている。解析は入口で配るので正しいが、
+        /// 検定・グラフは控えを読み、配らないまま計算していた。キャプテンの Ma は σmax の Fc にパイルキャップの Fc だけを使い
+        /// (杭体の Fc のほうが小さいとき過大。例題の Fc を 36 にして 14,005.7 に対し正しくは 12,779.2 kN·m)、
+        /// M-θ のグラフは Ep = 40,000 の Ke で描いていた。しかも検定の途中で M-θ を作ると配られるので、結果が計算の順に依った
+        /// (2026-11-28)。控えを作ったとき・読み込んで Ec を求め直したあとに呼ぶ。</para>
+        /// </summary>
+        internal void ApplyPileTopModelsFromSections()
+        {
+            if (PileBodies == null) return;
+            foreach (var pb in PileBodies) pb?.ApplyTopSectionToPileTop();
+        }
+
         internal void EnsureAnalysisTargetDefaults()
         {
             if (LoadCasesInput == null) return;

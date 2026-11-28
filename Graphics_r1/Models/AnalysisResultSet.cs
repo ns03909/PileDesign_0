@@ -133,6 +133,10 @@ namespace PileDesign.Models
                     return null;
                 }
 
+                // 杭頭モデルが杭体から受け取る値は JSON の複製に入らないので、解析の入口と同じく配り直す
+                // (配らないと、控えを読む検定・グラフがキャプテンの Ma・M-θ を違う Fc・Ec で求める)
+                copy.InputModel.ApplyPileTopModelsFromSections();
+
                 var set = new AnalysisResultSet
                 {
                     InputSnapshot = copy.InputModel,
