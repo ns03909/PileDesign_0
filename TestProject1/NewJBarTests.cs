@@ -540,7 +540,8 @@ namespace TestProject1
             StringAssert.Contains(text, "S のとき損傷限界");
             string src = TestSource.Read("Graphics_r1", "Output", "WordDocument.Descriptions.cs");
             string newJBar = TestSource.MethodBody(src, "private void AddDescriptionNewJBar(Body body, bool hasInfill)");
-            StringAssert.Contains(newJBar, "損傷限界は短期許容曲げモーメントと ");
+            StringAssert.Contains(newJBar, "損傷限界は短期許容曲げモーメント、");
+            StringAssert.Contains(newJBar, "損傷限界は \", Tex(@\"Q_{a}\")");
             StringAssert.Contains(newJBar, "JointLimitStateAssignmentText(", "NewJ-BAR の説明が限界状態の対応を規則から組んでいません");
             Assert.IsFalse(newJBar.Contains("(レベル2)", StringComparison.Ordinal), "レベル2 を安全限界と決め打ちしています");
             string pcRing = TestSource.MethodBody(src, "private void AddPCRingShearDescription(");

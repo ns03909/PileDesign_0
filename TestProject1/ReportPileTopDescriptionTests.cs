@@ -89,6 +89,45 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// NewJ-BAR の説明が実装の分岐と食い違わないこと (2026-11-28 の指摘 2 件)。
+        /// <list type="bullet">
+        /// <item>中詰補強筋は本数によらず円環だが、NewJ-BAR は 8 本未満なら中詰補強筋があっても個々の位置で弱軸方向を求める。
+        /// 以前は「2 段の円環」と書いていて、同じ章の前段 (8 本未満は弱軸方向) と矛盾した。</item>
+        /// <item>軸力が範囲外で限界値 0 (NG) にするのは曲げだけで、せん断は軸力によらない支圧の耐力。
+        /// 以前は曲げとせん断をまとめて「同じ軸力で求めた限界値」「範囲外なら限界値 0」と書いていた。</item>
+        /// </list>
+        /// </summary>
+        [TestMethod]
+        public void TheNewJBarDescription_FollowsTheBranchesOfTheImplementation()
+        {
+            // 実装の前提: 8 本未満は中詰補強筋があっても円環にしない。せん断の耐力は軸力を取らない
+            var few = new PileDesign.Models.NewJBar { Grade = "WSD490", Size = "WD38J", Count = 6,
+                InfillBarCount = 12, InfillBarSize = "D25", InfillBarGrade = "SD390", InfillBarCover = 100 };
+            Assert.IsTrue(few.HasInfill);
+            Assert.IsFalse(few.UsesRing, "(前提) 8 本未満の NewJ-BAR は中詰補強筋があっても円環にしない");
+            Assert.IsTrue(new PileDesign.Models.NewJBar { Count = 8 }.UsesRing, "(前提) 8 本以上は円環");
+
+            string body = TestSource.MethodBody(TestSource.Read("Graphics_r1", "Output", "WordDocument.Descriptions.cs"),
+                "private void AddDescriptionNewJBar(Body body, bool hasInfill)");
+            int infillAt = body.IndexOf("\"中詰補強筋\", 2", StringComparison.Ordinal);
+            int shearAt = body.IndexOf("\"せん断\", 2", StringComparison.Ordinal);
+            Assert.IsTrue(infillAt > 0 && shearAt > infillAt, "(前提) 中詰補強筋とせん断の節");
+            string infill = body[infillAt..shearAt];
+            Assert.IsFalse(infill.Contains("2 段の円環", StringComparison.Ordinal), "中詰補強筋の節で、8 本未満の NewJ-BAR まで円環と書いています");
+            StringAssert.Contains(infill, "8 本未満は個々の位置");
+            StringAssert.Contains(infill, "中詰補強筋は本数によらず円環");
+
+            int checkAt = body.IndexOf("\"杭頭接合部の検定 (NewJ-BAR)\"", StringComparison.Ordinal);
+            string check = body[checkAt..];
+            int shearPara = check.IndexOf("\"せん断は、", StringComparison.Ordinal);
+            Assert.IsTrue(shearPara > 0, "検定の説明で、曲げとせん断を分けていません");
+            string bending = check[..shearPara], shear = check[shearPara..];
+            StringAssert.Contains(bending, "限界値を 0 (NG)", "軸力が範囲外の扱いは曲げの段落に書く");
+            Assert.IsFalse(shear.Contains("限界値を 0", StringComparison.Ordinal), "せん断にも軸力範囲外で 0 にすると読めます");
+            StringAssert.Contains(shear, "軸力によらず");
+        }
+
+        /// <summary>
         /// キャプテンパイル工法の Mu の説明は、同書の規定 (最大曲げモーメント) と本計算の取り方を分け、
         /// 本計算の取り方はそのモデルの設定どおりに書く。以前は ⑥ で「Mu は最大曲げモーメントとする」と断定し、
         /// 直後に既定 (εcu = 0.005) を書いていたので、計算書だけを読むと採用した Mu を取り違えた (2026-11-28 の指摘)。
