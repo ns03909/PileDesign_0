@@ -74,7 +74,7 @@ namespace TestProject1
             // 検定の内容: キャプテンは Ma (レベル1)・PC リングのせん断、キャプリングは PC リングのせん断
             StringAssert.Contains(captain, "AddPCRingShearDescription(", "キャプテンパイル工法の PC リングのせん断の検定がありません");
             StringAssert.Contains(captain, "短期許容曲げモーメント\", Tex(@\"M_{a}\")", "キャプテンパイル工法の Ma の検定がありません");
-            StringAssert.Contains(captain, @"\varepsilon_{cu} = 0.005", "キャプテンパイル工法の Mu の既定 (εcu = 0.005) がありません");
+            StringAssert.Contains(captain, "CaptainUltimateMomentText(", "キャプテンパイル工法の本計算の Mu の取り方がありません");
             Assert.IsFalse(captain.Contains(@"\varepsilon_{0}", StringComparison.Ordinal), "e 関数に定義の無い ε0 が残っています (εB)");
             StringAssert.Contains(capring, "AddPCRingShearDescription(", "キャプリングパイル工法の PC リングのせん断の検定がありません");
             StringAssert.Contains(capring, "ケース①′", "キャプリングパイル工法の引張定着筋なし・引張のケースがありません");
@@ -86,6 +86,42 @@ namespace TestProject1
 
             string report = TestSource.Read("Graphics_r1", "Output", "WordDocument.cs");
             StringAssert.Contains(report, "AddDescriptionNewJBar(", "NewJ-BAR の説明を計算書に出していません");
+        }
+
+        /// <summary>
+        /// キャプテンパイル工法の Mu の説明は、同書の規定 (最大曲げモーメント) と本計算の取り方を分け、
+        /// 本計算の取り方はそのモデルの設定どおりに書く。以前は ⑥ で「Mu は最大曲げモーメントとする」と断定し、
+        /// 直後に既定 (εcu = 0.005) を書いていたので、計算書だけを読むと採用した Mu を取り違えた (2026-11-28 の指摘)。
+        /// </summary>
+        [TestMethod]
+        public void TheCaptainUltimateMoment_IsDescribedAsTheModelComputesIt()
+        {
+            var byStrain = new PileDesign.Models.CaptainPile();   // 既定: εcu = 0.005・強度倍率 1.1
+            string text = WordDocument.CaptainUltimateMomentText([(1, byStrain)]);
+            StringAssert.Contains(text, "εcu = 0.005 に達したとき");
+            StringAssert.Contains(text, "強度倍率 1.1");
+            StringAssert.Contains(text, "整合する設定");
+            Assert.IsFalse(text.Contains("全塑性", StringComparison.Ordinal), "既定なのに全塑性と書いています: " + text);
+
+            var plastic = new PileDesign.Models.CaptainPile { UseMaximumUltimateMoment = true, UltimateRebarStrengthFactor = 1.0 };
+            text = WordDocument.CaptainUltimateMomentText([(1, plastic)]);
+            StringAssert.Contains(text, "最大曲げモーメント (全塑性");
+            StringAssert.Contains(text, "強度倍率 1 を");
+            StringAssert.Contains(text, "とは異なる");
+            Assert.IsFalse(text.Contains("εcu = 0.005 に達したとき", StringComparison.Ordinal));
+
+            // 杭体ごとに違えば、杭体番号を添えて分けて書く
+            text = WordDocument.CaptainUltimateMomentText([(1, byStrain), (2, plastic), (3, new PileDesign.Models.CaptainPile())]);
+            StringAssert.Contains(text, "杭体 1・3 では圧縮縁のひずみ");
+            StringAssert.Contains(text, "杭体 2 では最大曲げモーメント");
+
+            // ⑥ は同書の規定として書き、本計算の仮定として断定しない
+            string captain = TestSource.MethodBody(TestSource.Read("Graphics_r1", "Output", "WordDocument.Descriptions.cs"),
+                "private void AddDescriptionCaptainPile(Body body)");
+            Assert.IsFalse(captain.Contains("\"は、最大曲げモーメントとする。\"", StringComparison.Ordinal),
+                "⑥ で Mu を最大曲げモーメントと断定しています");
+            StringAssert.Contains(captain, "同書では最大曲げモーメントとしている");
+            StringAssert.Contains(captain, "CaptainUltimateMomentText(", "本計算の Mu の取り方をモデルの設定から書いていません");
         }
     }
 }

@@ -1,6 +1,7 @@
 using DocumentFormat.OpenXml.Wordprocessing;
 using PileDesign.Models.InputData;
 using System.Collections.Generic;
+using System.Linq;
 using Body = DocumentFormat.OpenXml.Wordprocessing.Body;
 
 namespace PileDesign.Output
@@ -300,7 +301,7 @@ namespace PileDesign.Output
             AddHeader1(body, "降伏曲げモーメントおよび終局曲げモーメント", 4);
 
             AddInlineMathParagraph(body, ["降伏曲げモーメント", Tex(@"M_{y}"), "および終局曲げモーメント", Tex(@"M_{u}"),
-                "については、以下の仮定に基づいて算定する。"]);
+                "については、同書 3.4 の以下の仮定に基づいて算定する。ただし、", Tex(@"M_{u}"), "の取り方 (⑥) は本計算の設定による。"]);
 
             AddInlineMathParagraph(body, ["① 断面力の釣合いとひずみ度の適合条件を考慮した塑性曲げ理論に基づいて算定する。"]);
 
@@ -316,17 +317,19 @@ namespace PileDesign.Output
                 "は、引張定着筋降伏時と圧縮降伏時の曲げモーメントのうち小さい方の値とする。" +
                 "ただし、引張定着筋を配置しない場合の降伏時曲げモーメントは、上記④に達したときの値とする。"]);
 
+            // ⑥ は同書の規定と本計算の取り方が違うことがあるので、分けて書く。本計算の取り方は既定ではなく
+            // このモデルの設定から組む (以前は ⑥ で「最大曲げモーメントとする」と断定し、直後に既定 (εcu 0.005) を
+            // 書いていたので、計算書だけを読むとどちらで求めたか決められなかった。2026-11-28 の指摘)
             AddInlineMathParagraph(body, ["⑥ 終局時の曲げモーメント", Tex(@"M_{u}"),
-                "は、最大曲げモーメントとする。"]);
-
-            // 同書には圧縮縁の限界ひずみも強度の割増しも無い。本プログラムの取り方 (既定は設計例に合わせた値) を書く。
-            // 実際に使った取り方と強度倍率は杭頭諸元の表に出る (CaptainPile.GetCombinedSpecs)
-            AddInlineMathParagraph(body, [
-                "同書には圧縮縁の限界ひずみの規定が無いため、本計算では杭頭諸元の表の「終局時曲げモーメントの取り方」により",
-                Tex(@"M_{u}"), "を求める。既定は圧縮縁ひずみ", Tex(@"\varepsilon_{cu} = 0.005"),
-                "に達したときの曲げモーメントとし、引張定着筋の降伏強度", Tex(@"\sigma_{y}"),
-                "に強度倍率 1.1 を乗じる (降伏曲げモーメント", Tex(@"M_{y}"), "には乗じない)。",
-                "この既定値は、同書 3.5 節の設計例の Q-α 図から求めた", Tex(@"M_{u}"), "に合わせたものである。"]);
+                "は、同書では最大曲げモーメントとしている。同書には圧縮縁の限界ひずみの規定が無く、",
+                "コンクリートの応力度は", Tex(@"\varepsilon_{B}"), "を超えても", Tex(@"\sigma_{max}"),
+                "のまま下がらない (⑦) ため、最大曲げモーメントは曲率を限りなく大きくした極限 (全塑性) になる。"]);
+            var captainSettings = inputModel?.PileBodies?
+                .Select((pb, i) => (No: i + 1, Captain: pb?.PileTopType?.Contains("キャプテンパイル工法") == true ? pb.PileTop?.CaptainPile : null))
+                .Where(x => x.Captain != null)
+                .Select(x => (x.No, x.Captain!))
+                .ToList() ?? [];
+            AddText(body, CaptainUltimateMomentText(captainSettings), "left");
 
             AddInlineMathParagraph(body, [ "⑦ コンクリートの応力度", Tex(@"\sigma"),
                 "とひずみ度", Tex(@"\varepsilon"), "の関係は下式とする。" ]);
@@ -409,6 +412,31 @@ namespace PileDesign.Output
             AddText(body,
                 "出典: キャプテンパイル協会「キャプテンパイル工法 (場所打ちコンクリート杭用杭頭半固定工法) 設計・施工マニュアル」 (第 6 版、2026 年 4 月、BCJ 評定-FD0230-05)",
                 "left");
+        }
+
+        /// <summary>
+        /// キャプテンパイル工法の、本計算での終局時曲げモーメント Mu の取り方の文。杭体ごとの設定
+        /// (<see cref="Models.CaptainPile.UseMaximumUltimateMoment"/>・εcu・強度倍率) から組む。
+        /// 杭体で設定が違えば、杭体番号を添えて設定ごとに書く。
+        /// </summary>
+        internal static string CaptainUltimateMomentText(IReadOnlyList<(int No, Models.CaptainPile Captain)> bodies)
+        {
+            static string Describe(Models.CaptainPile c)
+            {
+                string how = c.UseMaximumUltimateMoment
+                    ? "最大曲げモーメント (全塑性: 圧縮側のコンクリートは一様に σmax、引張定着筋は ±σy) とし"
+                    : $"圧縮縁のひずみが εcu = {c.UltimateConcreteStrain:0.####} に達したときの曲げモーメントとし";
+                string consistent = c.IsUltimateSettingConsistentWithDesignExample
+                    ? "同書 3.5 節の設計例の Q-α 図から求めた Mu と整合する設定"
+                    : $"同書 3.5 節の設計例と整合する設定 (εcu = {Models.CaptainPile.DefaultUltimateConcreteStrain:0.###}・強度倍率 {Models.CaptainPile.DefaultUltimateRebarStrengthFactor:0.#}) とは異なる";
+                return $"{how}、引張定着筋の降伏強度 σy に強度倍率 {c.UltimateRebarStrengthFactor:0.##} を乗じる (降伏曲げモーメント My には乗じない。{consistent})";
+            }
+            if (bodies.Count == 0) return "本計算の Mu の取り方は、杭頭諸元の表の「終局時曲げモーメントの取り方」による。";
+            var groups = bodies.GroupBy(b => Describe(b.Captain)).ToList();
+            if (groups.Count == 1)
+                return $"本計算の Mu は、{groups[0].Key}。";
+            return "本計算の Mu は、" + string.Join("。", groups.Select(g =>
+                $"杭体 {string.Join("・", g.Select(b => b.No))} では{g.Key}")) + "。";
         }
 
         /// <summary>
