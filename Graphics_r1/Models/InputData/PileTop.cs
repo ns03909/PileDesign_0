@@ -394,6 +394,13 @@ namespace PileDesign.Models.InputData
         ];
 
         public void UpdateRebarAnchorageSpecs(string pileBodyType, PileSection? pileSection)
+            => SelectedPileTopSpecification = BuildRebarAnchorageSpecs(pileBodyType, pileSection);
+
+        /// <summary>
+        /// 鉄筋定着工法 の諸元を入力値・派生値から組む (<see cref="SelectedPileTopSpecification"/> は書き換えない)。
+        /// 計算書は保存された諸元でなくこれを使う (杭頭部ウィンドウを開いた時点の値が保存されていて、古いことがある)。
+        /// </summary>
+        internal ObservableCollection<Spec> BuildRebarAnchorageSpecs(string? pileBodyType, PileSection? pileSection)
         {
             var specs = new ObservableCollection<Spec>(GetPileCapConcreteSpecs())
             {
@@ -457,7 +464,7 @@ namespace PileDesign.Models.InputData
                 }
             }
 
-            SelectedPileTopSpecification = specs;
+            return specs;
         }
 
         // コンクリート肉厚

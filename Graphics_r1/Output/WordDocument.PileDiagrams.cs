@@ -338,42 +338,8 @@ namespace PileDesign.Output
                 var pileBody = inputModel.PileBodies[i];
                 if (pileBody?.PileTop is not { } pileTop) continue;
 
-                // SelectedPileTopSpecification が空 (PileTopWindow を開かずに F9→計算書出力した等) の場合、
-                // 工法別ライブラリから動的に諸元を生成する。
-                var specs = pileTop.SelectedPileTopSpecification;
-                // NewJ-BAR は画面で作った諸元を使わず、検定と同じ値にそろえた写しから作る
-                // (杭とパイルキャップから受け取る値は保存しないので、画面を開いていないと古い・空のことがある)
-                if (pileBody.PileTopType == Models.NewJBar.PileTopTypeName)
-                {
-                    var jbar = pileTop.NewJBarFor(pileBody.PileTopType, pileBody.PileBodySegments?.FirstOrDefault()?.PileSection);
-                    specs = jbar == null ? null : [.. pileTop.GetPileCapConcreteSpecs(), .. jbar.GetSpecs()];
-                }
-                else if (specs == null || specs.Count == 0)
-                {
-                    if (pileBody.PileTopType == "キャプリングパイル工法" && pileTop.CapringPile?.PCRing != null)
-                    {
-                        specs = pileTop.CapringPile.GetCombinedSpecs();
-                    }
-                    else if (pileBody.PileTopType == "キャプテンパイル工法" && pileTop.CaptainPile?.PCRing != null)
-                    {
-                        specs = pileTop.CaptainPile.GetCombinedSpecs();
-                    }
-                    else if (pileBody.PileTopType == "FT-Pile構法" && pileTop.FTPile?.FTCap != null)
-                    {
-                        specs = pileTop.FTPile.GetCombinedSpecs();
-                    }
-                }
+                var specs = CurrentPileTopSpecs(pileBody, pileTop);
                 if (specs == null || specs.Count == 0) continue;
-
-                // 半剛接合の 3 工法は、パイルキャップの Fc・γ・Ec が杭頭 M-θ を
-                // 動かす (FT-Pile は曲げ耐力 3/5·φc·Ap·Fc と K0、キャプテンは
-                // CTPConcrete、キャプリングは Ec/Eb/Ep)。それなのに諸元表に出て
-                // おらず、計算書だけを見ても検算できなかった。鉄筋定着工法の
-                // 諸元 (UpdateRebarAnchorageSpecs) には元から入っている。
-                if (pileBody.PileTopType is "キャプテンパイル工法" or "FT-Pile構法" or "キャプリングパイル工法")
-                {
-                    specs = [.. pileTop.GetPileCapConcreteSpecs(), .. specs];
-                }
 
                 try
                 {
@@ -386,6 +352,45 @@ namespace PileDesign.Output
                     NoteOmitted(body, $"杭頭の諸元の表 (杭体 {i + 1})", ex);
                 }
             }
+        }
+
+        /// <summary>
+        /// 計算書に載せる杭頭の諸元。いまの入力と、解析と同じ派生値から組む。
+        ///
+        /// <para>以前は杭頭部ウィンドウで作った諸元 (<see cref="PileTop.SelectedPileTopSpecification"/>) をそのまま使っていた。
+        /// これは保存ファイルに入るので、ウィンドウを開いた後に入力や計算が変わると (以前の版で保存したファイルで
+        /// キャプリングの Ke の求め方を直したときなど)、解析・検定とは違う古い値が計算書に出た。空のときだけ組み直していた。</para>
+        ///
+        /// <para>杭頭モデルへ杭体とパイルキャップの値を配るのは解析の入口と同じ処理 (<see cref="PileBodyInput.ApplyTopSectionToPileTop"/>。
+        /// 変わっていなければ何もしない)。ここに無い杭頭タイプは保存された諸元を使う。</para>
+        /// </summary>
+        internal static IReadOnlyList<Spec>? CurrentPileTopSpecs(PileBodyInput pileBody, PileTop pileTop)
+        {
+            var topSection = pileBody.PileBodySegments?.FirstOrDefault()?.PileSection;
+            string type = pileBody.PileTopType ?? "";
+            if (type == Models.NewJBar.PileTopTypeName)
+            {
+                // 杭とパイルキャップから受け取る値は保存しないので、検定と同じ値にそろえた写しから作る
+                var jbar = pileTop.NewJBarFor(type, topSection);
+                return jbar == null ? null : [.. pileTop.GetPileCapConcreteSpecs(), .. jbar.GetSpecs()];
+            }
+            if (type is "キャプテンパイル工法" or "FT-Pile構法" or "キャプリングパイル工法")
+            {
+                pileBody.ApplyTopSectionToPileTop();
+                // パイルキャップの Fc・γ・Ec は杭頭 M-θ を動かす (FT-Pile は曲げ耐力 3/5·φc·Ap·Fc と K0、
+                // キャプテンは CTPConcrete、キャプリングは Ec/Eb) ので、検算できるよう先頭に置く
+                IEnumerable<Spec>? method = type switch
+                {
+                    "キャプテンパイル工法" when pileTop.CaptainPile?.PCRing != null => pileTop.CaptainPile.GetCombinedSpecs(),
+                    "キャプリングパイル工法" when pileTop.CapringPile?.PCRing != null => pileTop.CapringPile.GetCombinedSpecs(),
+                    "FT-Pile構法" when pileTop.FTPile?.FTCap != null => pileTop.FTPile.GetCombinedSpecs(),
+                    _ => null,
+                };
+                return method == null ? null : [.. pileTop.GetPileCapConcreteSpecs(), .. method];
+            }
+            if (type.Contains("鉄筋定着工法"))
+                return pileTop.BuildRebarAnchorageSpecs(pileBody.PileBodyType, topSection);
+            return pileTop.SelectedPileTopSpecification;
         }
 
         // 4 列 (項目 / 記号 / 値 / 単位) の Spec テーブル

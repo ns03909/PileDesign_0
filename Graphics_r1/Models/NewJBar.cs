@@ -951,7 +951,7 @@ namespace PileDesign.Models
                 new("中詰補強筋の配置半径", "rn", HasInfill ? Fmt(InfillRadius, "N1") : "-", "mm"),
                 new("中詰補強筋 許容応力度 (短期・長期)", "", HasInfill ? $"{InfillF:N0}・{InfillLongTermAllowableStress:N0}" : "-", "N/mm2"),
                 new("中詰補強筋 終局強度", "", HasInfill ? $"{InfillUltimateStrength:N1}" : "-", "N/mm2"),
-                new("中詰めの深さ (下限)", "", HasInfill ? (InfillDepth > 0 ? $"{InfillDepth:N0}" : "未入力") + $" (≧ {InfillRequiredDepth:N0})" : "-", "mm"),
+                new("中詰めの深さ (括弧内は下限)", "", HasInfill ? (InfillDepth > 0 ? $"{InfillDepth:N0}" : "未入力") + $" (≧ {InfillRequiredDepth:N0})" : "-", "mm"),
                 new("ヤング係数比", "n", $"{YoungRatio:0}", ""),
                 new("短期許容曲げモーメント (N=0)", "Ma", Fmt(GetAllowableMoment(0.0) * 1e-6, "N1"), "kN·m"),
                 new("終局曲げモーメント (N=0)", "Mu", Fmt(GetUltimateMoment(0.0) * 1e-6, "N1"), "kN·m"),

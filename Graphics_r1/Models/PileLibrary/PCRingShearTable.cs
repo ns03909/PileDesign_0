@@ -42,7 +42,7 @@ namespace PileDesign.Models.PileLibrary
     {
         /// <summary>キャプテンパイル工法 (第 6 版 表 2.2.4・表 2.2.5、パイルキャップ Fc = 21 の場合)。</summary>
         public const string CaptainFile = "CaptainPCRingShear.csv";
-        /// <summary>キャプリングパイル工法 (設計マニュアル 2023 年 4 月版 2.2(4))。</summary>
+        /// <summary>キャプリングパイル工法 (設計・施工マニュアル 第 6 版 2023 年 4 月 2.2(4))。</summary>
         public const string CapringFile = "CapringPCRingShear.csv";
 
         /// <summary>表の値の前提のパイルキャップの Fc (N/mm²)。キャプテンパイルは表の注記、キャプリングは使用材料の下限。</summary>

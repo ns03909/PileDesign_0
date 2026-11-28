@@ -1707,7 +1707,7 @@ namespace PileDesign.ViewModels
                     new("限界値", limitDescription),
                     new("出典", isCaptain
                         ? "キャプテンパイル工法 設計・施工マニュアル 第 6 版 表 2.2.4・表 2.2.5 (パイルキャップ Fc = 21 N/mm² の場合)"
-                        : "キャプリングパイル工法 設計マニュアル (2023 年 4 月版) 2.2(4) の表"),
+                        : "キャプリングパイル工法 設計・施工マニュアル (第 6 版、2023 年 4 月) 2.2(4) の表"),
                     new("応答", "杭頭の要素の i 端のせん断力 |Q| = √(Fy² + Fz²) (割増ししない)"),
                 };
                 if (axialN is double na) basis.Add(new("軸力 N", $"{na:N1} kN ({axialSource})"));

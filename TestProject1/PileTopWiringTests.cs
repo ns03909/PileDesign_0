@@ -256,7 +256,7 @@ namespace TestProject1
         {
             var body = TestSource.MethodBody(
                 TestSource.Read("Graphics_r1", "Output", "WordDocument.PileDiagrams.cs"),
-                "void AddPileTopSpecsTables(");
+                "IReadOnlyList<Spec>? CurrentPileTopSpecs(");  // 諸元表の中身はここで組む (2026-11-28 に分けた)
 
             Assert.IsTrue(body.Contains("GetPileCapConcreteSpecs"),
                 "杭頭諸元表がパイルキャップの諸元を出していません");

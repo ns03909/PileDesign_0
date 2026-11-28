@@ -49,7 +49,7 @@ namespace TestProject1
             var last = PCRingShearTable.Find(PCRingShearTable.CaptainFile, "3000-S2")!;
             Assert.AreEqual((3930.0, 7870.0, 8880.0, 18760.0), (last.LongQa, last.ShortQa, last.UltNoFriction, last.UltFrictionMax));
 
-            // キャプリングの設計例 3.5 の 800N: sQr = 720 kN (表 3-9)
+            // キャプリングの設計例 3.7.1 の 800N: sQr = 720 kN (表 3-9)
             var r = PCRingShearTable.Find(PCRingShearTable.CapringFile, "800N")!;
             Assert.AreEqual((360.0, 720.0, 910.0, 560.0, 1060.0, 960.0, 1470.0), (r.LongQa, r.ShortQa, r.RaU, r.Rb1U, r.Rb2U, r.UltNoFriction, r.UltFrictionMax));
             Assert.AreEqual(3190.0, PCRingShearTable.Find(PCRingShearTable.CapringFile, "1200S2")!.UltFrictionMax);

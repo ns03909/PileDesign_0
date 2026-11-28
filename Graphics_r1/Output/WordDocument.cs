@@ -920,7 +920,7 @@ namespace PileDesign.Output
                 });
             }
 
-            // 杭頭工法の説明（FT-Pile / キャプテンパイル / キャプリングパイル）
+            // 杭頭工法の説明（FT-Pile / キャプテンパイル / キャプリングパイル / NewJ-BAR）
             // 数式を含むが、設計クライテリア（許容回転角 θa・θu 等）や適用範囲を含むため、
             // 計算書レベルによらず常に出力する（旧実装は 詳細(>=2) のみだった）。
             if (HasFTPile())
@@ -938,6 +938,14 @@ namespace PileDesign.Output
             if (HasCapringPile())
             {
                 AddDescriptionCapringPile(body);
+                AddLineBreak(body);
+            }
+
+            // NewJ-BAR は計算法の説明が無く、諸元と検定の結果だけが出ていた (ヘルプには説明がある。2026-11-28)
+            var newJBarBodies = inputModel.PileBodies.Where(pb => pb?.PileTopType == Models.NewJBar.PileTopTypeName).ToList();
+            if (newJBarBodies.Count > 0)
+            {
+                AddDescriptionNewJBar(body, newJBarBodies.Any(pb => pb.PileTop?.NewJBar?.HasInfill == true));
                 AddLineBreak(body);
             }
 

@@ -212,7 +212,7 @@ namespace PileDesign.Output
         {
             AddHeader1(body, "キャプテンパイル工法", 1);
             //AddText(body, "キャプテンパイル工法", "left");
-            AddText(body, "(BCJ評定-FD0230-01)", "left");
+            AddText(body, "(BCJ評定-FD0230-05、「キャプテンパイル工法 設計・施工マニュアル」第 6 版)", "left");
             //AddText(body, "杭頭接合部の曲げモーメント-回転角関係の評価", "left");
             AddHeader1(body, "杭頭接合部の曲げモーメント-回転角関係の評価", 2);
             //AddText(body, "（1）杭頭接合部構造性能モデル化", "left");
@@ -251,21 +251,21 @@ namespace PileDesign.Output
 
             AddInlineMathParagraph(body, [Tex(@"K_{p} = \frac{E_{p}\cdot I_{p}}{H_{p}}")]);
 
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{p}"), ": 杭体のヤング係数[kN/m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{p}"), ": 杭体のヤング係数[kN/m<^2>]、杭体の最上段の断面のコンクリートの値とする"]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{p}"), ": 杭体の断面二次モーメント、絞り部ありの場合は絞り部径を杭径とみなす[m<^4>]"]);
 
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{p}"), ": 杭体とPCリングの重なり長さ[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{p}"), ": 杭体とPCリングの重なり長さ[m]、杭径 2,100 mm 未満は 0.09、以上は 0.11 とする (同書 2.4(3) 図 2.4.3)"]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{c}"), ": PCリング内コンクリートの回転剛性(kNm/rad)"]);
 
             AddInlineMathParagraph(body, [Tex(@"K_{c} = \frac{E_{c}\cdot I_{c}}{H_{c}}")]);
 
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{c}"), ": 杭体のヤング係数[kN/m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{c}"), ": PCリング内のパイルキャップコンクリートのヤング係数[kN/m<^2>]"]);
 
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{c}"), ": PCリング内側コンクリートの断面二次モーメント、絞り部有無によらない[m<^4>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{c}"), ": PCリング内側コンクリートの断面二次モーメント、絞り部有無にかかわらず杭径", Tex(@"D"), "の断面とする[m<^4>]"]);
 
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{c}"), ": 杭頭接合面からPCリング上端までの長さ[m]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{c}"), ": 杭頭接合面からPCリング上端までの長さ[m]、", Tex(@"H_{c} = h_{r} - H_{p}"), " (", Tex(@"h_{r}"), ": PCリング高さ)"]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{b}"), ": パイルキャップ部分の回転剛性(kNm/rad)"]);
 
@@ -273,7 +273,7 @@ namespace PileDesign.Output
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{b}"), ": パイルキャップコンクリートのヤング係数[kN/m<^2>]"]);
 
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{b}"), ": 仮想円柱のコンクリートの断面二次モーメント、絞り部有無によらない[m<^4>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{b}"), ": 仮想円柱のコンクリートの断面二次モーメント、絞り部有無にかかわらずPCリング内径", Tex(@"r_{D1}"), "の断面とする[m<^4>]"]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{b}"), ": 仮想円柱の高さ(=D/2)[m]"]);
 
@@ -319,13 +319,22 @@ namespace PileDesign.Output
             AddInlineMathParagraph(body, ["⑥ 終局時の曲げモーメント", Tex(@"M_{u}"),
                 "は、最大曲げモーメントとする。"]);
 
+            // 同書には圧縮縁の限界ひずみも強度の割増しも無い。本プログラムの取り方 (既定は設計例に合わせた値) を書く。
+            // 実際に使った取り方と強度倍率は杭頭諸元の表に出る (CaptainPile.GetCombinedSpecs)
+            AddInlineMathParagraph(body, [
+                "同書には圧縮縁の限界ひずみの規定が無いため、本計算では杭頭諸元の表の「終局時曲げモーメントの取り方」により",
+                Tex(@"M_{u}"), "を求める。既定は圧縮縁ひずみ", Tex(@"\varepsilon_{cu} = 0.005"),
+                "に達したときの曲げモーメントとし、引張定着筋の降伏強度", Tex(@"\sigma_{y}"),
+                "に強度倍率 1.1 を乗じる (降伏曲げモーメント", Tex(@"M_{y}"), "には乗じない)。",
+                "この既定値は、同書 3.5 節の設計例の Q-α 図から求めた", Tex(@"M_{u}"), "に合わせたものである。"]);
+
             AddInlineMathParagraph(body, [ "⑦ コンクリートの応力度", Tex(@"\sigma"),
                 "とひずみ度", Tex(@"\varepsilon"), "の関係は下式とする。" ]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\varepsilon \le 0"), ": ", Tex(@"\sigma = 0")]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition,
                 [Tex(@"0 < \varepsilon \le \varepsilon_{B}"), ": ",
-                Tex(@"\sigma = 6.75\left\{ e^{-0.812\frac{\varepsilon}{\varepsilon_{0}}} - e^{-1.218\frac{\varepsilon}{\varepsilon_{0}}} \right\}\,\sigma_{max}")]);
+                Tex(@"\sigma = 6.75\left\{ e^{-0.812\frac{\varepsilon}{\varepsilon_{B}}} - e^{-1.218\frac{\varepsilon}{\varepsilon_{B}}} \right\}\,\sigma_{max}")]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\varepsilon_{B} < \varepsilon"), ": ", Tex(@"\sigma = \sigma_{max}")]);
 
             AddInlineMathParagraph(body, ["ここに、"]);
@@ -334,7 +343,7 @@ namespace PileDesign.Output
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\sigma_{max}"), ": コンクリートの最大強度で", Tex(@"\sigma_{max} = \frac{F_{c}}{\nu^{2}}"), "とする。"]);
 
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"F_{c}"), ": コンクリートの設計基準強度で杭体、パイルキャップの設計基準強度のうち、最小の値とする。"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"F_{c}"), ": コンクリートの設計基準強度で杭体、パイルキャップの設計基準強度のうち、最小の値とする。杭体は最上段の断面の値とする。"]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\nu"), ": 絞り係数"]);
 
@@ -363,7 +372,7 @@ namespace PileDesign.Output
 
             AddInlineMathParagraph(body, ["ここに"]);
 
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [mathPhiy(), ": 前項c.で算定される", Tex(@"M_{y}"), "時曲率"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [mathPhiy(), ": 前項で算定される", Tex(@"M_{y}"), "時曲率"]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [ Tex(@"D"), ": 杭径 " +
                 "ただし、杭頭接合部に絞り部がある場合には杭径を絞り部径とみなす。" ]);
@@ -383,6 +392,39 @@ namespace PileDesign.Output
             AddInlineMathParagraph(body, ["①最外縁の引張定着筋が降伏するとき"]);
             AddInlineMathParagraph(body, ["②圧縮縁コンクリートが短期許容圧縮応力度(",
                 mathShortTermAllowableStressEq(), "(", Tex(@"\nu"), ": 絞り係数))に達するとき"]);
+
+            AddHeader1(body, "杭頭接合部の検定 (キャプテンパイル工法)", 3);
+            AddInlineMathParagraph(body, [
+                "レベル1 の荷重ケースでは、杭頭の要素の i 端の曲げモーメント", Tex(@"|M| = \sqrt{M_{y}^{2} + M_{z}^{2}}"),
+                "を、そのケースの軸力", Tex(@"N"), "(杭体の曲げ・せん断の検定と同じ軸力) に対する短期許容曲げモーメント", Tex(@"M_{a}"),
+                "と比べる (同書 3.2(3))。軸力だけで短期許容を超えるときは", Tex(@"M_{a} = 0"), "(NG) とする。",
+                "レベル2 の荷重ケースでは、杭頭回転角を限界回転角", Tex(@"\theta_{u} = 0.04\,\mathrm{rad}"), "と比べる。"]);
+            AddPCRingShearDescription(body, "キャプテンパイル工法", "表 2.2.4 (長期・短期)・表 2.2.5 (終局)", "同書 3.2(5) 式 3.2.10・式 3.2.11");
+            AddText(body,
+                "同書 3.2(3) が求める、終局時に杭頭が PC リングと杭体の重なりを超えて浮き上がらないことの確認 (浮き上がり量は算定しない) と、" +
+                "設計フロー (図 3.3.1 の 9) のパイルキャップのパンチングの検討 (同書に算定式は無い) は行わない。別途確認を要する。",
+                "left");
+
+            AddText(body,
+                "出典: キャプテンパイル協会「キャプテンパイル工法 (場所打ちコンクリート杭用杭頭半固定工法) 設計・施工マニュアル」 (第 6 版、2026 年 4 月、BCJ 評定-FD0230-05)",
+                "left");
+        }
+
+        /// <summary>
+        /// PC リングのせん断の検定 (キャプテンパイル工法・キャプリングパイル工法で共通)。耐力は同書の表の値で、
+        /// 実際に使った値は杭頭諸元の表に出る。<paramref name="tables"/> は耐力の表、<paramref name="checks"/> は照査式の所在。
+        /// </summary>
+        private void AddPCRingShearDescription(Body body, string method, string tables, string? checks)
+        {
+            AddHeader1(body, $"PC リングのせん断の検定 ({method})", 3);
+            AddInlineMathParagraph(body, [
+                "杭頭の要素の i 端のせん断力", Tex(@"|Q| = \sqrt{F_{y}^{2} + F_{z}^{2}}"),
+                "を、選んだ PC リングの許容せん断力・終局せん断耐力と比べる。設計用せん断力は割増ししない。",
+                "耐力は同書 " + tables + " の値とし (杭頭諸元の表に示す)、式からは求めない。",
+                "使用限界 (長期) は長期許容せん断力", Tex(@"{}_{L}Q_{a}"), "、損傷限界は短期許容せん断力", Tex(@"{}_{s}Q_{a}"),
+                "、安全限界は終局せん断耐力", Tex(@"{}_{u}Q_{r}"), "(摩擦無視) と比べる (限界状態の割り当ては杭体の曲げ・せん断と同じ)。",
+                "終局で圧縮側の杭頭の摩擦を見込む設定のときは、", Tex(@"{}_{u}Q_{r} = \min(\text{摩擦無視} + 0.1N,\ \text{摩擦考慮上限})"), "とする。",
+                checks == null ? "" : "照査式は " + checks + " による。"]);
         }
 
         // キャプリングパイル工法説明
@@ -422,6 +464,11 @@ namespace PileDesign.Output
             AddText(body, "引張定着筋を配置しない場合は、軸力 N による圧着のみで回転を抵抗する。", "left");
             AddEq(body, @"K_{i} = K_{e} = \dfrac{1}{\dfrac{1}{K_{p}} + \dfrac{1}{K_{c}} + \dfrac{1}{K_{b}}}, \quad M_{u} = \dfrac{D}{2}\cdot N");
 
+            AddHeader1(body, "ケース①′ 引張定着筋なし × 軸力引張", 2);
+            AddInlineMathParagraph(body, [
+                "引張定着筋を配置せず、軸力", Tex(@"N"), "が引張側 (", Tex(@"N < 0"), ") の場合は、杭頭は引張力に抵抗できないとして",
+                Tex(@"M_{u} = 0"), " (曲げ剛性 0) とし、解析では当該杭頭の軸方向の拘束も解放する。"]);
+
             AddHeader1(body, "ケース② 引張定着筋あり × 軸力圧縮", 2);
             AddInlineMathParagraph(body, ["軸力 N による圧着に加え、引張定着筋による曲げ抵抗 ", Tex(@"M_{r}"), " が加算される。"]);
             AddEq(body, @"K_{i} = K_{e} = \dfrac{1}{\dfrac{1}{K_{p}} + \dfrac{1}{K_{c}} + \dfrac{1}{K_{b}}}, \quad M_{u} = \dfrac{D}{2}\cdot N + M_{r}");
@@ -446,11 +493,11 @@ namespace PileDesign.Output
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{p}"), ": 杭体部分の回転剛性[kN·m/rad]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{p}"), ": 杭体のヤング係数[kN/m<^2>] (最上段の杭断面の値)"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{p}"), ": 杭体の断面二次モーメント[m<^4>] (最上段の杭断面の ", Tex(@"EI/E_{p}"),
-                "。鋼管杭は ", Tex(@"E_{p}I_{p} = E_{s}I_{pipe} + E_{c}I_{fill}"), " とする)"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{p}"), ": 杭体と PC リングとの重なり長さ[m]、", Tex(@"H_{p} = 0.07"), " とする"]);
+                "。鋼管杭は ", Tex(@"E_{p}I_{p} = E_{s}I_{pipe} + E_{c}I_{fill}"), " とする。", Tex(@"E_{c}"), " はパイルキャップの値)"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{p}"), ": 杭体と PC リングとの重なり長さ[m]、", Tex(@"H_{p} = 0.07"), " とする (同書 3.7.1 設計例 (5))"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{c}"), ": PC リング内コンクリート部分の回転剛性[kN·m/rad]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{c}"), ": PC リング内コンクリートのヤング係数[kN/m<^2>]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{c}"), ": PC リング内側コンクリートの断面二次モーメント[m<^4>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{c}"), ": PC リングに囲まれたパイルキャップコンクリートのヤング係数[kN/m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"I_{c}"), ": PC リング内側コンクリートの断面二次モーメント[m<^4>]、PC リング内径 ", Tex(@"r_{D1}"), " の断面とする"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"H_{c}"), ": 杭頭接合面から PC リング上端までの長さ[m]、", Tex(@"H_{c} = h_{r} - H_{p}"), " (", Tex(@"h_{r}"), ": PC リング高さ)"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{b}"), ": パイルキャップ部分仮想円柱の回転剛性[kN·m/rad]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{b}"), ": パイルキャップコンクリートのヤング係数[kN/m<^2>]、", Tex(@"E_{b} = E_{c}"), " とする"]);
@@ -475,14 +522,96 @@ namespace PileDesign.Output
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"n_{s}"), ": 引張定着筋の本数"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"a_{s}"), ": 引張定着筋 1 本あたりの断面積[m<^2>]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\sigma_{y}"), ": 引張定着筋の規格降伏強度[kN/m<^2>]"]);
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{s}"), ": 引張定着筋のヤング係数[kN/m<^2>]"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"E_{s}"), ": 引張定着筋のヤング係数[kN/m<^2>] (", Tex(@"2.05 \times 10^{8}"), ")"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"N_{y}"), ": 引張定着筋の総降伏軸力[kN]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"N_{ty}"), ": 引張軸力時の遷移境界軸力[kN]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"K_{ty}"), ": 引張軸力 ", Tex(@"|N|\ge N_{ty}"), " における初期回転剛性[kN·m/rad]"]);
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"M_{r}"), ": 引張定着筋による最大抵抗モーメント寄与[kN·m]、応力中心距離係数 ", Tex(@"\jmath = 7/8"), "、内部偶力アーム ", Tex(@"D/2")]);
 
+            AddHeader1(body, "杭頭接合部の検定 (キャプリングパイル工法)", 2);
+            AddInlineMathParagraph(body, ["杭頭回転角を限界回転角 ", Tex(@"\theta_{u} = 0.03\,\mathrm{rad}"), " と比べる。"]);
+            AddPCRingShearDescription(body, "キャプリングパイル工法", "2.2(4)「PC リング許容せん断力と終局せん断耐力」", null);
             AddText(body,
-                "出典: 一般社団法人キャプリングパイル工法協会 (CAPIA) 「キャプリングパイル工法 設計マニュアル」 (2023年4月版)",
+                "同書の設計フローにあるパイルキャップのパンチングの検討 (3.6(1) に算定式は無い) は行わない。別途確認を要する。",
+                "left");
+
+            AddText(body,
+                "出典: キャプリングパイル協会 (CAPIA) 「キャプリングパイル工法 (既製杭用杭頭半固定工法) 設計・施工マニュアル」 (第 6 版、2023 年 4 月、BCJ 評定-FD0060-05)",
+                "left");
+        }
+
+        /// <summary>
+        /// NewJ-BAR (鋼管に溶接する杭頭補強筋) の計算法。ヘルプの「NewJ-BAR」の節と同じ内容を計算書の文体で書く。
+        /// 値 (仮想円形断面の外径・配置半径・Ma・Mu・Qa・Qu・定着長さ) は杭頭諸元の表に出る (NewJBar.GetSpecs)。
+        /// </summary>
+        private void AddDescriptionNewJBar(Body body, bool hasInfill)
+        {
+            AddHeader1(body, "NewJ-BAR (鋼管に溶接する杭頭補強筋)", 1);
+            AddText(body,
+                "杭頭の鋼管の外面に開先付き異形棒鋼 NewJ-BAR (WSD390・WSD490) を補強筋として溶接し、フーチングに定着する。" +
+                "杭頭部の設計は「NewJ-BAR 設計マニュアル (杭頭補強編)」(2026 年 9 月改訂) に従う。" +
+                "杭体のいちばん上の区間の鋼管の公称外径・板厚・規格 (腐食代を見込まない) に溶接するものとする。",
+                "left");
+
+            AddHeader1(body, "杭頭部の断面", 2);
+            AddInlineMathParagraph(body, [
+                "杭頭部は、NewJ-BAR を主筋とする鉄筋コンクリートの仮想円形断面とみなす (同書 4.3.1)。",
+                "仮想円形断面の外径は、杭径 ", Tex(@"D"), " が 250 mm 以上 500 mm 未満なら ", Tex(@"D + 200"),
+                "、500 mm 以上なら ", Tex(@"D + 2d + 200"), " (", Tex(@"d"), " は補強筋の呼び名の数値) とし、",
+                "コンクリートはフーチング (パイルキャップ) の ", Tex(@"F_{c}"), " とする。",
+                "補強筋の中心の半径は ", Tex(@"r' = D/2 + (\text{公称直径})/2"), " とする。",
+                "主筋 8 本以上は円環に置き換え、8 本未満は配置の向きを ", Tex(@"\pi/m"), "〜", Tex(@"2\pi/m"),
+                " の範囲で 11 通り変え、最も小さい値を採る (弱軸方向)。"]);
+
+            AddHeader1(body, "許容曲げモーメント", 2);
+            AddInlineMathParagraph(body, [
+                "引張側のコンクリートを無視し、圧縮側は補強筋をヤング係数比 ", Tex(@"n"),
+                " 倍した等価断面とする円形断面の式による (同書 4.4.3)。コンクリートの圧縮縁・引張側の補強筋・圧縮側の補強筋のいずれかが",
+                "許容応力度に達するときの曲げモーメントを、軸力ごとに求める。",
+                "短期はコンクリート ", Tex(@"\frac{2}{3}F_{c}"), "・補強筋 ", Tex(@"F"),
+                " (WSD390 は 390、WSD490 は 490 N/mm²)、長期は ", Tex(@"\frac{1}{3}F_{c}"), "・195 N/mm² とする。"]);
+
+            AddHeader1(body, "終局曲げモーメント", 2);
+            AddInlineMathParagraph(body, [
+                "層分割法 (仮想径を 400 層に分割) により、圧縮縁のひずみ 0.003 (または引張側の補強筋のひずみ 0.2) を終局とする (同書 4.4.4)。",
+                "コンクリートは ", Tex(@"E_{c} = 3.35 \times 10^{4} (\gamma/24)^{2} (F_{c}/60)^{1/3}"), " の直線のあと ", Tex(@"F_{c}"),
+                " で頭打ち、補強筋は ", Tex(@"E_{r} = 2.05 \times 10^{5}"), " の直線のあと終局強度 (WSD490 は 490、WSD390 は ",
+                Tex(@"1.1 \times 390"), ") で頭打ちとする。補強筋の位置のコンクリートは差し引く。"]);
+
+            if (hasInfill)
+            {
+                AddHeader1(body, "中詰補強筋", 2);
+                AddInlineMathParagraph(body, [
+                    "中詰めコンクリートの中に置く補強筋 (中詰補強筋) は、同書に計算法の本文が無いため、",
+                    "NewJ-BAR と中詰補強筋を半径の違う 2 段の円環とし、それぞれの材料で上の許容曲げモーメント・終局曲げモーメントの計算",
+                    "(平面保持の仮定) を行う。配置半径 ", Tex(@"r_{n}"), " は中詰めの外径の半分から重心かぶりを引いた値",
+                    " (中詰めの外径は、鋼管杭・外殻鋼管は鋼管の内径、SC 杭は中空部の径) とし、本数によらず円環に置き換える。",
+                    "許容応力度は短期 ", Tex(@"F"), "、長期 ", Tex(@"\min(F/1.5,\ 215)"), " (D29 以上は 195)、終局強度は ",
+                    Tex(@"1.1F"), " (SD490 は ", Tex(@"F"), ") とする。",
+                    "中詰めコンクリートの深さは、中詰補強筋の定着長さ (SD490 は ", Tex(@"42d"), "、それ以外は ", Tex(@"35d"),
+                    ") + 200 mm 以上とする (同書 4.2.1 1))。"]);
+            }
+
+            AddHeader1(body, "せん断", 2);
+            AddInlineMathParagraph(body, [
+                "杭頭の埋込み部の側面のフーチングコンクリートの支圧により、", Tex(@"Q_{a} = D \cdot L \cdot f_{cc}"),
+                " (", Tex(@"f_{cc} = 2 \times \frac{2}{3}F_{c}"), "、", Tex(@"L"), " は埋込み深さ)、終局は ",
+                Tex(@"Q_{u} = 1.5\,Q_{a}"), " とする (同書 4.3.1 2)・(4.7) 式)。"]);
+
+            AddHeader1(body, "杭頭接合部の検定 (NewJ-BAR)", 2);
+            AddInlineMathParagraph(body, [
+                "杭頭の要素の i 端の曲げモーメント ", Tex(@"|M| = \sqrt{M_{y}^{2} + M_{z}^{2}}"), " とせん断力 ",
+                Tex(@"|Q| = \sqrt{F_{y}^{2} + F_{z}^{2}}"), " を、杭体の曲げ・せん断の検定と同じ軸力で求めた限界値と比べる。",
+                "使用限界 (長期) は長期許容曲げモーメント、損傷限界 (レベル1) は短期許容曲げモーメントと ", Tex(@"Q_{a}"),
+                "、安全限界 (レベル2) は終局曲げモーメントと ", Tex(@"Q_{u}"), " とする。長期のせん断は同書に値が無いため検定しない。",
+                "軸力が仮想円形断面の軸力の範囲を超えるときは、限界値を 0 (NG) とする。"]);
+            AddText(body,
+                "水平解析では杭頭を剛接合として解く。" +
+                "溶接は標準溶接長で施工するものとし、溶接部の計算は行わない (同書 4.1.4)。",
+                "left");
+
+            AddText(body,
+                "出典: 株式会社ブレイブ・株式会社クラウン「開先付き異形棒鋼 NewJ-BAR WSD390 WSD490 設計マニュアル (杭頭補強編)」 (2026 年 9 月改訂)",
                 "left");
         }
     }

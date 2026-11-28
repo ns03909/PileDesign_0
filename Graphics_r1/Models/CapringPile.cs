@@ -41,7 +41,7 @@ namespace PileDesign.Models
         public const double EsSteelPipe = 2.05e5;
         /// <summary>
         /// 杭体と PC リングとの重なり長さ Hp (mm)。
-        /// 出典: 設計マニュアル (2023 年 4 月版) 3.5 設計例「杭体と PC リングの重なり長さ Hp = 0.07m」・
+        /// 出典: 設計・施工マニュアル (第 6 版、2023 年 4 月) 3.7.1 設計例 (5)「杭体と PC リングの重なり長さ Hp = 0.07m」・
         /// 「Hc = 0.15 − 0.07 = 0.08 m」、Q&amp;A (5-9)「PC リングと杭頭との重なり 70mm … せん断力の伝達に必要な重なり」。
         /// 以前は「標準値の明記なし」としてリング高さの半分 (75 mm、hr = 200 では 100 mm) を使っていた (2026-11-25 修正)。
         /// </summary>
@@ -98,7 +98,7 @@ namespace PileDesign.Models
 
         /// <summary>
         /// 杭体の Ep と EI を最上段の杭断面から受け取り、変わったときだけ組み直す。変わったら true。
-        /// マニュアル 3.4 (3-2) の Kp = Ep·Ip/Hp は杭体の値 (設計例 3.5 は PHC 800 の Ep = 39,200 N/mm²、Ip は中空の環で
+        /// マニュアル 3.4 (3-2) の Kp = Ep·Ip/Hp は杭体の値 (設計例 3.7.1 は PHC 800 の Ep = 39,200 N/mm²、Ip は中空の環で
         /// 1.46×10⁻² m⁴)。以前は杭断面から何も渡っておらず、Ep にパイルキャップの Ec、Ip に杭径の中実円を使っていた (2026-11-25 修正)。
         /// </summary>
         /// <param name="ep">杭体のヤング係数 (N/mm²)。コンクリート杭は杭体コンクリートの Ec、鋼管杭は鋼材の Es</param>
@@ -155,7 +155,7 @@ namespace PileDesign.Models
         private bool _ultimateShearConsidersFriction;
         /// <summary>
         /// PC リングの終局せん断耐力に、圧縮軸力を受ける杭頭の接合面摩擦 μN (μ = 0.1) を見込むか。既定は見込まない。
-        /// 設計マニュアル (2023 年 4 月版) 2.2(4)「終局せん断耐力は『摩擦無視』を用いる。ただし、終局時圧縮軸力を受ける杭頭では
+        /// 設計・施工マニュアル (第 6 版、2023 年 4 月) 2.2(4)「終局せん断耐力は『摩擦無視』を用いる。ただし、終局時圧縮軸力を受ける杭頭では
         /// (2-9) 式を用い、『摩擦考慮上限』まで使用可能」。
         /// </summary>
         public bool UltimateShearConsidersFriction
@@ -495,7 +495,7 @@ namespace PileDesign.Models
             // PC リングから派生
             double rd1 = PCRing.RD1;          // mm
             double hr = PCRing.Hr;            // mm
-            // Hp = 70 mm、Hc = hr − Hp (設計例 3.5)。標準の PC リングは hr = 150・200 なので Hc > 0。
+            // Hp = 70 mm、Hc = hr − Hp (設計例 3.7.1 (5))。標準の PC リングは hr = 150・200 なので Hc > 0。
             // 70 mm 以下のリング (カタログには無い) だけは以前の折半で、Hc が 0 以下にならないようにする
             if (hr > PileRingOverlap)
             {

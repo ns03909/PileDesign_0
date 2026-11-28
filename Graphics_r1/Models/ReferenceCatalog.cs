@@ -72,9 +72,9 @@ namespace PileDesign.Models
             new Dictionary<string, DesignReference>
             {
                 ["キャプテンパイル工法"] = new(
-                    "キャプテンパイル工法協会",
-                    "キャプテンパイル工法 (場所打ち杭用杭頭半固定構法) 設計・施工マニュアル",
-                    "第6版、2026年4月改定",
+                    "キャプテンパイル協会",
+                    "キャプテンパイル工法 (場所打ちコンクリート杭用杭頭半固定工法) 設計・施工マニュアル",
+                    "第6版、2026年4月",
                     "杭頭半固定接合の回転剛性 M-θ と許容回転角",
                     ReferenceKind.Method),
                 ["F.T.Pile構法"] = new(
@@ -84,9 +84,9 @@ namespace PileDesign.Models
                     "既製杭の杭頭半固定接合の回転剛性と許容値",
                     ReferenceKind.Method),
                 ["キャプリングパイル工法"] = new(
-                    "一般社団法人キャプリングパイル工法協会 (CAPIA)",
-                    "キャプリングパイル工法 設計マニュアル",
-                    "2023年4月版",
+                    "キャプリングパイル協会 (CAPIA)",
+                    "キャプリングパイル工法 (既製杭用杭頭半固定工法) 設計・施工マニュアル",
+                    "第6版、2023年4月",
                     "杭頭半固定接合の回転剛性と許容値",
                     ReferenceKind.Method),
                 [NewJBar.PileTopTypeName] = new(
