@@ -344,7 +344,9 @@ namespace PileDesign.Output
 
             AddInlineMathParagraph(body, [Tex(@"\varepsilon_{B}"), ": コンクリート最大強度時のひずみ度で", Tex(@"\varepsilon_{B}"), " = 0.003 とする。"]);
 
-            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\sigma_{max}"), ": コンクリートの最大強度で", Tex(@"\sigma_{max} = \frac{F_{c}}{\nu^{2}}"), "とする。"]);
+            AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"\sigma_{max}"), ": コンクリートの最大強度で", Tex(@"\sigma_{max} = \min\left(\frac{F_{c}}{\nu^{2}},\ 2F_{c}\right)"),
+                "とする (同書の式は ", Tex(@"F_{c}/\nu^{2}"), "。", Tex(@"\nu"), " が小さいとき過大にならないよう ", Tex(@"2F_{c}"),
+                " を上限とする。", Tex(@"\nu = 0.70"), " では ", Tex(@"F_{c}/\nu^{2} = 2.04F_{c}"), " に対し ", Tex(@"2F_{c}"), ")。"]);
 
             AddSymbolDescriptionWithTab(body, symbolDescTabPosition, [Tex(@"F_{c}"), ": コンクリートの設計基準強度で杭体、パイルキャップの設計基準強度のうち、最小の値とする。杭体は最上段の断面の値とする。"]);
 

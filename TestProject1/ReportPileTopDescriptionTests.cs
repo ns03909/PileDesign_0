@@ -128,6 +128,25 @@ namespace TestProject1
         }
 
         /// <summary>
+        /// キャプテンパイル工法の σmax は、実装 (CTPConcrete) の上限 2Fc を含めて書く。以前の計算書は σmax = Fc/ν² とだけ書いていて、
+        /// ν = 0.70 では式の 2.04Fc に対し実装は 2Fc で、計算書の式で検算した値が合わなかった (2026-11-28 の指摘。以前からの食い違い)。
+        /// </summary>
+        [TestMethod]
+        public void TheCaptainSigmaMax_IncludesTheCapUsedByTheImplementation()
+        {
+            const double fc = 24.0;
+            var narrow = new PileDesign.Models.CTPConcrete(fc, 0.70, 1200);
+            Assert.AreEqual(2 * fc, narrow.SigmaMax, 1e-9, "(前提) ν = 0.70 では σmax = 2Fc");
+            Assert.IsTrue(fc / (0.70 * 0.70) > 2 * fc, "(前提) 同書の式は 2Fc を超える");
+            Assert.AreEqual(fc / (0.85 * 0.85), new PileDesign.Models.CTPConcrete(fc, 0.85, 1200).SigmaMax, 1e-9, "(前提) ν = 0.85 は上限にかからない");
+
+            string captain = TestSource.MethodBody(TestSource.Read("Graphics_r1", "Output", "WordDocument.Descriptions.cs"),
+                "private void AddDescriptionCaptainPile(Body body)");
+            StringAssert.Contains(captain, @"\sigma_{max} = \min\left(\frac{F_{c}}{\nu^{2}},\ 2F_{c}\right)", "計算書の σmax に上限 2Fc がありません");
+            StringAssert.Contains(TestSource.Read("Graphics_r1", "Help", "help.html"), @"\sigma_{max} = \min(F_c/\nu^2,\ 2F_c)", "ヘルプの σmax の定義に上限がありません");
+        }
+
+        /// <summary>
         /// キャプテンパイル工法の Mu の説明は、同書の規定 (最大曲げモーメント) と本計算の取り方を分け、
         /// 本計算の取り方はそのモデルの設定どおりに書く。以前は ⑥ で「Mu は最大曲げモーメントとする」と断定し、
         /// 直後に既定 (εcu = 0.005) を書いていたので、計算書だけを読むと採用した Mu を取り違えた (2026-11-28 の指摘)。

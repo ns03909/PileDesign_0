@@ -15137,7 +15137,7 @@ iter  4 [MNR] ω=0.50  ‖R‖²=3.41E+002>1.0E-006 max|δu|=2.12E-04  K=[1.0E+0
         <ul class="symbol-list">
             <li class="symbol-intro">ここに、</li>
             <li><span class="symbol-label">$\epsilon_B$</span>コンクリート最大強度時のひずみ度で$\epsilon_B=0.003$とする。</li>
-            <li><span class="symbol-label">$\sigma_{max}$</span>コンクリートの最大強度で$\sigma_{max}=\frac{F_c}{\nu^2}$とする。</li>
+            <li><span class="symbol-label">$\sigma_{max}$</span>コンクリートの最大強度で$\sigma_{max}=\frac{F_c}{\nu^2}$とする (同書の式)。本プログラムは $\nu$ が小さいとき過大にならないよう $2F_c$ を上限とし、$\sigma_{max} = \min(F_c/\nu^2,\ 2F_c)$ とします ($\nu = 0.70$ では $2.04F_c$ に対し $2F_c$。下の「実装上の補正」①)。</li>
             <li><span class="symbol-label">$F_c$</span>コンクリートの設計基準強度で杭体、パイルキャップの設計基準強度のうち、最小の値とする。杭体は最上段の断面の $F_c$ です。</li>
             <li><span class="symbol-label">$\nu$</span>絞り係数。</li>
         </ul>
